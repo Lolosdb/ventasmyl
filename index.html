@@ -2,20 +2,17 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    
     <link rel="icon" type="image/svg+xml" href="./logo_MyL.png" />
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
     <title>Gestión de Ventas</title>
     
-    <script type="module" crossorigin src="./index-nvvwigcp.js"></script>
-    <link rel="stylesheet" crossorigin href="./index-cqvvk0bb.css">
+    <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
+    <link rel="stylesheet" crossorigin href="./index-CQvVk0Bb.css">
     
     <link rel="manifest" href="./manifest.webmanifest">
-    
     <script id="vite-plugin-pwa:register-sw" src="./borrar_registerSW.js"></script>
   </head>
   <body>
@@ -24,13 +21,9 @@
     <script>
       (function() {
         try {
-          // 1. Forzar el año 2026
           localStorage.setItem('selectedYear', '2026'); 
-          
-          // 2. Inyectar 2026 en los datos
           const dataKey = 'ventas-storage'; 
           const rawData = localStorage.getItem(dataKey);
-          
           if (rawData) {
             let data = JSON.parse(rawData);
             if (data.years && Array.isArray(data.years)) {
