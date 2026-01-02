@@ -1,1 +1,20 @@
-{"name":"Gestión de Ventas","short_name":"Ventas","start_url":"/","display":"standalone","background_color":"#f8fafc","lang":"en","scope":"/","description":"App para el control de ventas y pedidos","theme_color":"#3b82f6","orientation":"portrait","icons":[{"src":"app_icon.png","sizes":"192x192 512x512","type":"image/png","purpose":"any maskable"}]}
+{
+  "name": "Gestión de Ventas",
+  "short_name": "Ventas",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "lang": "es",
+  "scope": "./",
+  "description": "App para el control de ventas y pedidos",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "app_icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
