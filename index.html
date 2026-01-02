@@ -5,43 +5,75 @@
     <link rel="icon" type="image/svg+xml" href="./logo_MyL.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
     <title>Gestión de Ventas</title>
-    <script type="module" crossorigin src="./assets/index-NVVWiGcP.js"></script>
+    
+    <style>
+      #pantalla-error { 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: white; color: red; z-index: 9999; padding: 20px; 
+        font-family: sans-serif; display: none; 
+      }
+    </style>
+
     <link rel="stylesheet" crossorigin href="./assets/index-CQvVk0Bb.css">
     <link rel="manifest" href="./manifest.webmanifest">
-    <script id="vite-plugin-pwa:register-sw" src="./borrar_registerSW.js"></script>
   </head>
   <body>
+    <div id="pantalla-error">
+      <h3>Estado de la carga:</h3>
+      <ul id="lista-errores"></ul>
+    </div>
+
     <div id="root"></div>
 
     <script>
+      // Si hay un error, mostramos la pantalla de error
+      window.onerror = function(msg, url, line) {
+        document.getElementById('pantalla-error').style.display = 'block';
+        var item = document.createElement('li');
+        item.textContent = "Error: " + msg + " (Línea " + line + ")";
+        document.getElementById('lista-errores').appendChild(item);
+      };
+
+      // Verificar si el archivo JS principal carga
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          // Si después de 1 segundo el div "root" está vacío, algo anda mal
+          if (document.getElementById('root').innerHTML.trim() === "") {
+             document.getElementById('pantalla-error').style.display = 'block';
+             var item = document.createElement('li');
+             item.textContent = "La app no ha arrancado. Posiblemente no encuentra el archivo .js en la carpeta assets.";
+             document.getElementById('lista-errores').appendChild(item);
+          }
+        }, 2000);
+      });
+    </script>
+
+    <script type="module" crossorigin src="./assets/index-NVVWiGcP.js"></script>
+
+    <script>
       (function() {
+        // Registro del SW manual para evitar el archivo externo
+        if('serviceWorker' in navigator) {
+           // Usamos ./sw.js para que funcione en GitHub
+           navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(console.error);
+        }
+
+        // Persistencia del año 2026
         try {
-          // 1. Forzar el año seleccionado en la memoria
           localStorage.setItem('selectedYear', '2026'); 
-          
-          // 2. Intentar inyectar 2026 en los datos de la App
           const dataKey = 'ventas-storage'; 
           const rawData = localStorage.getItem(dataKey);
-          
           if (rawData) {
             let data = JSON.parse(rawData);
-            if (data.years && Array.isArray(data.years)) {
-              // Añadimos 2026 si no existe
-              if (!data.years.includes(2026)) {
-                data.years.push(2026);
-                // Ordenamos para que salga primero
-                data.years.sort((a, b) => b - a); 
-                localStorage.setItem(dataKey, JSON.stringify(data));
-              }
+            if (data.years && !data.years.includes(2026)) {
+               data.years.push(2026);
+               data.years.sort((a,b)=>b-a);
+               localStorage.setItem(dataKey, JSON.stringify(data));
             }
           }
-          console.log("Sistema de persistencia M&L 2026 activado.");
-        } catch (e) {
-          console.error("Error en el parche de persistencia:", e);
-        }
+        } catch (e) { console.error("Error persistencia", e); }
       })();
     </script>
   </body>
