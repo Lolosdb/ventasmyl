@@ -10,7 +10,7 @@
     <title>Gestión de Ventas</title>
     
     <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
-
+    
     <link rel="stylesheet" crossorigin href="./index-cqvvk0bb.css">
     
     <link rel="manifest" href="./manifest.webmanifest">
@@ -18,29 +18,5 @@
   </head>
   <body>
     <div id="root"></div>
-
-    <script>
-      (function() {
-        try {
-          localStorage.setItem('selectedYear', '2026'); 
-          const dataKey = 'ventas-storage'; 
-          const rawData = localStorage.getItem(dataKey);
-          if (rawData) {
-            let data = JSON.parse(rawData);
-            if (data.years && Array.isArray(data.years)) {
-              if (!data.years.includes(2026)) {
-                data.years.push(2026);
-                data.years.sort((a, b) => b - a); 
-                localStorage.setItem(dataKey, JSON.stringify(data));
-              }
-            }
-          }
-          console.log("Sistema de persistencia M&L 2026 activado.");
-        } catch (e) {
-          console.error("Error en el parche:", e);
-        }
-      })();
-    </script>
   </body>
-
 </html>
