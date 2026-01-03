@@ -17,40 +17,22 @@
   </head>
   <body>
     <div id="root"></div>
-
-    <script>
-      (function() {
-        try {
-          // 1. Buscamos en todas las cajas de memoria del navegador
-          Object.keys(localStorage).forEach(function(key) {
-            try {
-              var raw = localStorage.getItem(key);
-              // 2. Si la caja tiene datos de años (parece ser la base de datos de la app)
-              if (raw && raw.indexOf('years') !== -1 && raw.indexOf('[') !== -1) {
-                var data = JSON.parse(raw);
-                if (data.years && Array.isArray(data.years)) {
-                  // 3. Si falta el 2026, lo metemos a la fuerza
-                  if (!data.years.includes(2026)) {
-                    data.years.push(2026);
-                    data.years.sort((a, b) => b - a); // Ordenar años
-                    localStorage.setItem(key, JSON.stringify(data));
-                    console.log("Año 2026 inyectado con éxito en: " + key);
-                  }
-                }
-              }
-            } catch (err) {
-              // Ignorar cosas que no sean datos de la app
-            }
-          });
+<script>
+  (function() {
+    // CONFIGURACIÓN DEL GUARDIÁN
+    const STORAGE_KEY = 'mentaylimon_storage_years'; // Nombre interno posible
+    // Nota: El script busca patrones, no depende solo del nombre exacto
+    
+    function protectYears() {
+      try {
+        // 1. Buscamos la caja de datos correcta en la memoria del navegador
+        Object.keys(localStorage).forEach(function(key) {
+          const raw = localStorage.getItem(key);
           
-          // Forzamos también la selección del año por si acaso
-          localStorage.setItem('selectedYear', '2026');
-          
-        } catch (e) {
-          console.error("Error en el script de persistencia:", e);
-        }
-      })();
-    </script>
+          // Detectamos si esta caja tiene los años (buscamos la firma de la app)
+          if (raw && raw.indexOf('years')!== -1 && raw.indexOf(' Con este nuevo código, el script se queda "vigilando" en segundo plano. Si detecta que el año 2026 (o el futuro 2027) ha desaparecido porque la app lo borró, lo vuelve a escribir automáticamente en menos de 2 segundos.
+    
   </body>
 </html>
+
 
