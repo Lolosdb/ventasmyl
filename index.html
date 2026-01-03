@@ -10,7 +10,6 @@
     <title>Gestión de Ventas</title>
     
     <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
-    
     <link rel="stylesheet" crossorigin href="./index-cqvvk0bb.css">
     
     <link rel="manifest" href="./manifest.webmanifest">
@@ -18,28 +17,40 @@
   </head>
   <body>
     <div id="root"></div>
- <script>
-  (function() {
-    try {
-      localStorage.setItem('selectedYear', '2026');
-      const dataKey = 'ventas-storage';
-      const rawData = localStorage.getItem(dataKey);
-      if (rawData) {
-        let data = JSON.parse(rawData);
-        if (data.years && Array.isArray(data.years)) {
-          if (!data.years.includes(2026)) {
-             data.years.push(2026);
-             data.years.sort((a, b) => b - a);
-             localStorage.setItem(dataKey, JSON.stringify(data));
-          }
+
+    <script>
+      (function() {
+        try {
+          // 1. Buscamos en todas las cajas de memoria del navegador
+          Object.keys(localStorage).forEach(function(key) {
+            try {
+              var raw = localStorage.getItem(key);
+              // 2. Si la caja tiene datos de años (parece ser la base de datos de la app)
+              if (raw && raw.indexOf('years') !== -1 && raw.indexOf('[') !== -1) {
+                var data = JSON.parse(raw);
+                if (data.years && Array.isArray(data.years)) {
+                  // 3. Si falta el 2026, lo metemos a la fuerza
+                  if (!data.years.includes(2026)) {
+                    data.years.push(2026);
+                    data.years.sort((a, b) => b - a); // Ordenar años
+                    localStorage.setItem(key, JSON.stringify(data));
+                    console.log("Año 2026 inyectado con éxito en: " + key);
+                  }
+                }
+              }
+            } catch (err) {
+              // Ignorar cosas que no sean datos de la app
+            }
+          });
+          
+          // Forzamos también la selección del año por si acaso
+          localStorage.setItem('selectedYear', '2026');
+          
+        } catch (e) {
+          console.error("Error en el script de persistencia:", e);
         }
-      }
-      console.log("Sistema de persistencia M&L 2026 activado.");
-    } catch (e) {
-      console.error("Error en el parche:", e);
-    }
-  })();
-</script>
+      })();
+    </script>
   </body>
 </html>
 
