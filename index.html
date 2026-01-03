@@ -1,108 +1,134 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./logo_MyL.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
-    <title>Gestión de Ventas</title>
-    
-    <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
-    <link rel="stylesheet" crossorigin href="./index-cqvvk0bb.css">
-    
-    <link rel="manifest" href="./manifest.webmanifest">
-    <script id="vite-plugin-pwa:register-sw" src="./borrar_registerSW.js"></script>
-  </head>
-  <body>
-    <div id="root"></div>
 
-    <script>
-      (function() {
-        // NOMBRE DE LA COPIA DE SEGURIDAD (Memoria paralela)
-        const BACKUP_KEY = 'mentaylimon_backup_years'; 
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="./logo_MyL.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
+  <title>Gestión de Ventas</title>
 
-        // Función principal que protege tus datos
-        function protectYears() {
-          try {
-            // 1. Buscamos dónde está guardando los datos la app
-            Object.keys(localStorage).forEach(function(key) {
-              const raw = localStorage.getItem(key);
-              
-              // Verificamos si esta caja tiene los datos de la app (busca "years" y corchetes)
-              if (raw && raw.indexOf('years')!== -1 && raw.indexOf('[')!== -1) {
-                
-                // Intentamos leer los datos
-                var data;
-                try {
-                    data = JSON.parse(raw);
-                } catch(e) {
-                    return; // Si el dato está corrupto, lo ignoramos
-                }
-                
-                if (data.years && Array.isArray(data.years)) {
-                  let years = data.years;
-                  let modified = false;
+  <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
 
-                  // 2. RECUPERAR DATOS DE LA COPIA DE SEGURIDAD
-                  // Si el usuario ya creó años (ej. 2027) y la app los borró, los recuperamos aquí
-                  const backupRaw = localStorage.getItem(BACKUP_KEY);
-                  if (backupRaw) {
-                    try {
-                        const backupYears = JSON.parse(backupRaw);
-                        if (Array.isArray(backupYears)) {
-                            backupYears.forEach(function(y) {
-                                // Si el backup tiene un año que falta en la app, lo devolvemos
-                                if (!years.includes(y)) {
-                                    years.push(y);
-                                    modified = true;
-                                    console.log("Guardián: Año restaurado -> " + y);
-                                }
-                            });
-                        }
-                    } catch(e) {}
-                  }
+  <link rel="stylesheet" crossorigin href="./index-cqvvk0bb.css">
 
-                  // 3. ASEGURAR SIEMPRE EL 2026 (Mínimo obligatorio solicitado)
-                  if (!years.includes(2026)) {
-                    years.push(2026);
-                    modified = true;
-                    console.log("Guardián: Año 2026 inyectado.");
-                  }
+  <link rel="manifest" href="./manifest.webmanifest">
+  <script id="vite-plugin-pwa:register-sw" src="./borrar_registerSW.js"></script>
+</head>
 
-                  // 4. GUARDAR CORRECCIONES EN LA APP (Si hubo cambios)
-                  if (modified) {
-                    years.sort(function(a, b) { return b - a; }); // Ordenar descendente (2027, 2026...)
-                    data.years = years;
-                    localStorage.setItem(key, JSON.stringify(data));
-                  }
+<body>
+  <div id="root"></div>
 
-                  // 5. ACTUALIZAR LA COPIA DE SEGURIDAD
-                  // Guardamos la lista completa actual para protegerla de futuros reinicios
-                  localStorage.setItem(BACKUP_KEY, JSON.stringify(years));
-                }
-              }
-            });
-            
-            // Forzar selección del año 2026 si no hay nada seleccionado
-            if (!localStorage.getItem('selectedYear')) {
-                localStorage.setItem('selectedYear', '2026');
+  <script>
+    (function () {
+      try {
+        localStorage.setItem('selectedYear', '2026');
+        const dataKey = 'ventas-storage';
+        const rawData = localStorage.getItem(dataKey);
+        if (rawData) {
+          let data = JSON.parse(rawData);
+          if (data.years && Array.isArray(data.years)) {
+            if (!data.years.includes(2026)) {
+              data.years.push(2026);
+              data.years.sort((a, b) => b - a);
+              localStorage.setItem(dataKey, JSON.stringify(data));
             }
-            
-          } catch (e) {
-            // Silencio en caso de error para no detener la app
           }
         }
+        console.log("Sistema de persistencia M&L 2026 activado.");
+      } catch (e) {
+        console.error("Error en el parche:", e);
+      }
+    })();
+  </script>
+  <script>
+    // --- SISTEMA DE RESPALDO AUTOMÁTICO (Auto-Backup) ---
+    (function () {
+      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVYxW9uXRPIANntN4rwZ4mmEEEnEwVMEJ6g1oIpm93Fn4Q6iAy9vuGEpBD0g3AWcCT/exec";
+      const BACKUP_HOUR = 21; // 21:00 (9 PM)
 
-        // EJECUCIÓN:
-        // 1. Ejecutar inmediatamente al cargar
-        protectYears();
+      function log(msg) { console.log("[AutoBackup] " + msg); }
 
-        // 2. Ejecutar cada segundo (1000ms) para vigilar si la app intenta borrar los datos al refrescar
-        setInterval(protectYears, 1000);
-        
-      })();
-    </script>
-  </body>
+      async function performBackup() {
+        try {
+          log("Iniciando proceso de copia de seguridad...");
+          const rawData = localStorage.getItem('ventas-storage');
+          if (!rawData) {
+            log("No hay datos en ventas-storage para respaldar.");
+            return;
+          }
+
+          const now = new Date();
+          const filename = `backup_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.json`;
+
+          const payload = {
+            action: 'uploadBackup',
+            file: rawData,
+            filename: filename,
+            mimetype: 'application/json'
+          };
+
+          const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+
+          const result = await response.json();
+
+          if (result.success || result.result === 'success') {
+            log("Copia guardada con éxito: " + filename);
+            const todayStr = new Date().toISOString().split('T')[0];
+            localStorage.setItem('backup_last_run', todayStr);
+          } else {
+            log("Error en la respuesta del servidor: " + JSON.stringify(result));
+          }
+        } catch (e) {
+          log("Error crítico al intentar la copia: " + e.message);
+        }
+      }
+
+      function checkBackupSchedule() {
+        const now = new Date();
+        const currentHour = now.getHours();
+
+        // Si es antes de las 21:00, no hacer nada
+        if (currentHour < BACKUP_HOUR) return;
+
+        // Verificar si es fin de semana (0=Domingo, 6=Sábado)
+        const currentDay = now.getDay();
+        if (currentDay === 0 || currentDay === 6) {
+          // log("Es fin de semana. No se hace backup.");
+          return;
+        }
+
+        const lastRun = localStorage.getItem('backup_last_run');
+        const todayStr = now.toISOString().split('T')[0];
+
+        // Si ya se hizo hoy, no hacer nada
+        if (lastRun === todayStr) {
+          // log("Copia de hoy ya realizada.");
+          return;
+        }
+
+        // Si es hora (>= 21:00) y no se ha hecho hoy -> EJECUTAR
+        log("Son pasadas las " + BACKUP_HOUR + ":00 y no hay copia de hoy. Ejecutando...");
+        performBackup();
+      }
+
+      // Exponer función manual para pruebas
+      window.triggerBackup = performBackup;
+
+      // Verificar al inicio
+      setTimeout(checkBackupSchedule, 5000); // Esperar 5s a que cargue todo
+
+      // Verificar cada 5 minutos
+      setInterval(checkBackupSchedule, 5 * 60 * 1000);
+
+      log("Sistema activo. Hora programada: " + BACKUP_HOUR + ":00");
+    })();
+  </script>
+</body>
+
 </html>
