@@ -20,9 +20,10 @@
 
     <script>
       (function() {
-        // Clave para la copia de seguridad independiente
+        // NOMBRE DE LA COPIA DE SEGURIDAD (Memoria paralela)
         const BACKUP_KEY = 'mentaylimon_backup_years'; 
 
+        // Función principal que protege tus datos
         function protectYears() {
           try {
             // 1. Buscamos dónde está guardando los datos la app
@@ -31,38 +32,50 @@
               
               // Verificamos si esta caja tiene los datos de la app (busca "years" y corchetes)
               if (raw && raw.indexOf('years')!== -1 && raw.indexOf('[')!== -1) {
-                const data = JSON.parse(raw);
+                
+                // Intentamos leer los datos
+                var data;
+                try {
+                    data = JSON.parse(raw);
+                } catch(e) {
+                    return; // Si el dato está corrupto, lo ignoramos
+                }
                 
                 if (data.years && Array.isArray(data.years)) {
                   let years = data.years;
                   let modified = false;
 
                   // 2. RECUPERAR DATOS DE LA COPIA DE SEGURIDAD
-                  // Si ya guardamos años en el pasado (ej. 2027), los recuperamos aquí
+                  // Si el usuario ya creó años (ej. 2027) y la app los borró, los recuperamos aquí
                   const backupRaw = localStorage.getItem(BACKUP_KEY);
                   if (backupRaw) {
-                    const backupYears = JSON.parse(backupRaw);
-                    backupYears.forEach(y => {
-                      // Si el backup tiene un año que la app ha borrado, lo re-inyectamos
-                      if (!years.includes(y)) {
-                        years.push(y);
-                        modified = true;
-                      }
-                    });
+                    try {
+                        const backupYears = JSON.parse(backupRaw);
+                        if (Array.isArray(backupYears)) {
+                            backupYears.forEach(function(y) {
+                                // Si el backup tiene un año que falta en la app, lo devolvemos
+                                if (!years.includes(y)) {
+                                    years.push(y);
+                                    modified = true;
+                                    console.log("Guardián: Año restaurado -> " + y);
+                                }
+                            });
+                        }
+                    } catch(e) {}
                   }
 
-                  // 3. ASEGURAR SIEMPRE EL 2026 (Mínimo obligatorio)
+                  // 3. ASEGURAR SIEMPRE EL 2026 (Mínimo obligatorio solicitado)
                   if (!years.includes(2026)) {
                     years.push(2026);
                     modified = true;
+                    console.log("Guardián: Año 2026 inyectado.");
                   }
 
-                  // 4. GUARDAR CORRECCIONES EN LA APP
+                  // 4. GUARDAR CORRECCIONES EN LA APP (Si hubo cambios)
                   if (modified) {
-                    years.sort((a, b) => b - a); // Ordenar (2027, 2026, 2025...)
+                    years.sort(function(a, b) { return b - a; }); // Ordenar descendente (2027, 2026...)
                     data.years = years;
                     localStorage.setItem(key, JSON.stringify(data));
-                    console.log("Sistema Guardián: Años restaurados exitosamente:", years);
                   }
 
                   // 5. ACTUALIZAR LA COPIA DE SEGURIDAD
@@ -71,16 +84,24 @@
                 }
               }
             });
+            
+            // Forzar selección del año 2026 si no hay nada seleccionado
+            if (!localStorage.getItem('selectedYear')) {
+                localStorage.setItem('selectedYear', '2026');
+            }
+            
           } catch (e) {
             // Silencio en caso de error para no detener la app
           }
         }
 
-        // Ejecutar inmediatamente al cargar
+        // EJECUCIÓN:
+        // 1. Ejecutar inmediatamente al cargar
         protectYears();
 
-        // Ejecutar cada segundo para vigilar si la app intenta borrar los datos
+        // 2. Ejecutar cada segundo (1000ms) para vigilar si la app intenta borrar los datos al refrescar
         setInterval(protectYears, 1000);
+        
       })();
     </script>
   </body>
