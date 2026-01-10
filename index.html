@@ -2,133 +2,288 @@
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="./logo_MyL.png" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
-  <title>Gestión de Ventas</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./logo_myl.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
+    <title>Gestión de Ventas</title>
 
-  <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
+    <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
+    <link rel="stylesheet" href="./index-cqvvk0bb.css?v=final">
+    <link rel="manifest" href="./manifest.webmanifest">
 
-  <link rel="stylesheet" crossorigin href="./index-cqvvk0bb.css">
+    <style>
+        /* --- ESTILOS QUIRÚRGICOS --- */
 
-  <link rel="manifest" href="./manifest.webmanifest">
-  <script id="vite-plugin-pwa:register-sw" src="./borrar_registerSW.js"></script>
+        /* 1. Contador de pedidos (Limpio y profesional) */
+        .contador-pedidos-extra {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* 2. Arreglo Símbolo Euro en Menú */
+        .euro-menu-fix {
+            font-size: 24px !important;
+            display: inline-block;
+            line-height: 1;
+            transform: translateY(1px);
+        }
+
+        /* 3. Textos Ventas (Anteriormente Anual) */
+        .texto-ventas {
+            text-transform: uppercase !important;
+            font-weight: 700 !important;
+            color: #3b82f6 !important;
+        }
+
+        /* 4. Fechas (Ficha Cliente) */
+        .fecha-espanol {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #94a3b8 !important;
+            margin-bottom: 2px !important;
+            display: block !important;
+        }
+    </style>
 </head>
 
 <body>
-  <div id="root"></div>
+    <div id="root"></div>
 
-  <script>
-    (function () {
-      try {
-        localStorage.setItem('selectedYear', '2026');
-        const dataKey = 'ventas-storage';
-        const rawData = localStorage.getItem(dataKey);
-        if (rawData) {
-          let data = JSON.parse(rawData);
-          if (data.years && Array.isArray(data.years)) {
-            if (!data.years.includes(2026)) {
-              data.years.push(2026);
-              data.years.sort((a, b) => b - a);
-              localStorage.setItem(dataKey, JSON.stringify(data));
+    <script>
+        // ==========================================
+        // 1. CÁLCULO DE PEDIDOS (Lógica Reforzada)
+        // ==========================================
+        function contarPedidos() {
+            const resultado = { 'ASTURIAS': 0, 'CANTABRIA': 0, 'LEON': 0, 'GALICIA': 0 };
+            try {
+                const raw = localStorage.getItem('ventas-storage');
+                if (!raw) return resultado;
+
+                const db = JSON.parse(raw);
+                if (!db.orders) return resultado;
+
+                const anio = localStorage.getItem('selectedYear') || new Date().getFullYear().toString();
+
+                // --- MAPEO DE CLIENTES (Nombre y Código) ---
+                const mapaClientes = {};
+                if (db.clients) {
+                    db.clients.forEach(c => {
+                        // Datos del cliente
+                        const prov = c.province || c.provincia || c.Provincia || c.region;
+
+                        if (prov) {
+                            const provinciaNorm = prov.trim().toUpperCase();
+
+                            // Mapeamos por NOMBRE
+                            if (c.name) mapaClientes[c.name.trim().toUpperCase()] = provinciaNorm;
+                            if (c.nombre) mapaClientes[c.nombre.trim().toUpperCase()] = provinciaNorm;
+                            if (c.razonSocial) mapaClientes[c.razonSocial.trim().toUpperCase()] = provinciaNorm;
+
+                            // Mapeamos por CÓDIGO (Clave para que funcione si usan IDs)
+                            if (c.code) mapaClientes[String(c.code).trim()] = provinciaNorm;
+                            if (c.id) mapaClientes[String(c.id).trim()] = provinciaNorm;
+                            if (c.codigo) mapaClientes[String(c.codigo).trim()] = provinciaNorm;
+                        }
+                    });
+                }
+
+                // --- CONTEO ---
+                db.orders.forEach(o => {
+                    // Verificamos fecha (flexible por si acaso)
+                    if (o.date && String(o.date).startsWith(anio)) {
+
+                        // Intentamos encontrar la provincia usando Nombre O Código
+                        let prov = null;
+
+                        // Intento 1: Por nombre
+                        if (o.clientName) prov = mapaClientes[o.clientName.trim().toUpperCase()];
+
+                        // Intento 2: Por código/ID (si falla el nombre)
+                        if (!prov && o.clientId) prov = mapaClientes[String(o.clientId).trim()];
+                        if (!prov && o.clientCode) prov = mapaClientes[String(o.clientCode).trim()];
+
+                        if (prov) {
+                            if (prov.includes('ASTURIAS')) resultado['ASTURIAS']++;
+                            else if (prov.includes('CANTABRIA')) resultado['CANTABRIA']++;
+                            else if (prov.includes('LEON') || prov.includes('LEÓN')) resultado['LEON']++;
+                            else if (['LUGO', 'ORENSE', 'PONTEVEDRA', 'CORUÑA', 'A CORUÑA', 'A CORUNA'].some(x => prov.includes(x))) resultado['GALICIA']++;
+                        }
+                    }
+                });
+            } catch (e) { console.error("Error contadores:", e); }
+            return resultado;
+        }
+
+        // ==========================================
+        // 2. EL ARREGLADOR VISUAL (Intervalo)
+        // ==========================================
+        setInterval(() => {
+
+            // --- A. MENÚ INFERIOR (ESTRATEGIA SEGURA) ---
+            // 1. Buscamos el texto "Dash"
+            const dashSpans = Array.from(document.querySelectorAll('span, p, div')).filter(e => e.textContent.trim() === 'Dash');
+            let barraMenu = null;
+
+            // 2. Identificamos cuál es el del menú de abajo (por posición)
+            for (const span of dashSpans) {
+                const rect = span.getBoundingClientRect();
+                // Si está en los últimos 100px de la pantalla, ES EL MENÚ
+                if (rect.top > window.innerHeight - 100) {
+                    // Buscamos el contenedor padre (la barra entera)
+                    // Subimos 2 o 3 niveles hasta encontrar el contenedor flex
+                    let candidato = span.parentElement;
+                    for (let k = 0; k < 3; k++) {
+                        if (candidato && candidate.parentElement) {
+                            // Si el padre tiene varios hijos (botones), es la barra
+                            if (candidato.parentElement.children.length > 4) {
+                                barraMenu = candidate.parentElement;
+                                break;
+                            }
+                        }
+                        candidato = candidate.parentElement;
+                    }
+                }
+                if (barraMenu) break;
             }
-          }
-        }
-        console.log("Sistema de persistencia M&L 2026 activado.");
-      } catch (e) {
-        console.error("Error en el parche:", e);
-      }
-    })();
-  </script>
-  <script>
-    // --- SISTEMA DE RESPALDO AUTOMÁTICO (Auto-Backup) ---
-    (function () {
-      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVYxW9uXRPIANntN4rwZ4mmEEEnEwVMEJ6g1oIpm93Fn4Q6iAy9vuGEpBD0g3AWcCT/exec";
-      const BACKUP_HOUR = 21; // 21:00 (9 PM)
 
-      function log(msg) { console.log("[AutoBackup] " + msg); }
+            // 3. Si encontramos la barra, aplicamos estilos SOLO A SUS HIJOS
+            if (barraMenu) {
+                Array.from(barraMenu.children).forEach(boton => {
+                    // Limpieza base
+                    boton.style.backgroundColor = 'transparent';
+                    boton.style.boxShadow = 'none';
+                    boton.style.border = 'none';
 
-      async function performBackup() {
-        try {
-          log("Iniciando proceso de copia de seguridad...");
-          const rawData = localStorage.getItem('ventas-storage');
-          if (!rawData) {
-            log("No hay datos en ventas-storage para respaldar.");
-            return;
-          }
+                    // Color blanco a textos e iconos
+                    const hijos = boton.querySelectorAll('*');
+                    hijos.forEach(hijo => {
+                        // Texto blanco
+                        if (hijo.tagName !== 'SVG' && hijo.tagName !== 'IMG') {
+                            hijo.style.color = '#ffffff';
+                        }
+                        // Arreglo especial Euro
+                        if (hijo.textContent.includes('€') && !hijo.classList.contains('euro-menu-fix')) {
+                            hijo.classList.add('euro-menu-fix');
+                        }
+                    });
 
-          const now = new Date();
-          const filename = `backup_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.json`;
+                    // Iconos SVG -> Blanco
+                    const iconos = boton.querySelectorAll('svg, img');
+                    iconos.forEach(ico => ico.style.filter = 'brightness(0) invert(1)');
 
-          const payload = {
-            action: 'uploadBackup',
-            file: rawData,
-            filename: filename,
-            mimetype: 'application/json'
-          };
+                    // Borde activo (si tiene fondo azul o clase active)
+                    const estilo = window.getComputedStyle(boton);
+                    if (boton.className.includes('active') || estilo.backgroundColor.includes('235') || location.href.includes(boton.textContent.trim().toLowerCase())) {
+                        boton.style.borderBottom = '3px solid white';
+                        boton.style.paddingBottom = '4px';
+                    } else {
+                        boton.style.borderBottom = 'none';
+                    }
+                });
+            }
 
-          const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
+            // --- B. CONTADORES DE PEDIDOS ---
+            const contadores = contarPedidos();
+            const zonas = ['ASTURIAS', 'CANTABRIA', 'LEON', 'LEÓN', 'GALICIA'];
 
-          const result = await response.json();
+            document.querySelectorAll('h3, span, div, p').forEach(el => {
+                const texto = el.textContent.trim().toUpperCase();
+                if (zonas.includes(texto)) {
+                    // Buscar tarjeta padre
+                    let tarjeta = el.parentElement;
+                    let encontrada = false;
+                    for (let i = 0; i < 5; i++) {
+                        if (!tarjeta) break;
+                        const s = window.getComputedStyle(tarjeta);
+                        // Detectar tarjeta blanca
+                        if (s.backgroundColor.includes('255, 255, 255') || s.boxShadow !== 'none') {
+                            encontrada = true;
+                            break;
+                        }
+                        tarjeta = tarjeta.parentElement;
+                    }
 
-          if (result.success || result.result === 'success') {
-            log("Copia guardada con éxito: " + filename);
-            const todayStr = new Date().toISOString().split('T')[0];
-            localStorage.setItem('backup_last_run', todayStr);
-          } else {
-            log("Error en la respuesta del servidor: " + JSON.stringify(result));
-          }
-        } catch (e) {
-          log("Error crítico al intentar la copia: " + e.message);
-        }
-      }
+                    if (encontrada && tarjeta) {
+                        const key = (texto === 'LEÓN') ? 'LEON' : texto;
+                        const num = contadores[key];
 
-      function checkBackupSchedule() {
-        const now = new Date();
-        const currentHour = now.getHours();
+                        // 1. Ordenar Precio (debajo del título)
+                        const precio = Array.from(tarjeta.querySelectorAll('*')).find(x => x.textContent.includes('€') && x !== tarjeta);
+                        if (precio && el.nextElementSibling !== precio) {
+                            el.after(precio);
+                            precio.style.display = 'block';
+                            precio.style.marginBottom = '4px';
+                        }
 
-        // Si es antes de las 21:00, no hacer nada
-        if (currentHour < BACKUP_HOUR) return;
+                        // 2. Inyectar Contador (Debajo del precio si existe)
+                        let contadorEl = tarjeta.querySelector('.contador-pedidos-extra');
+                        if (!contadorEl) {
+                            contadorEl = document.createElement('div');
+                            contadorEl.className = 'contador-pedidos-extra';
+                            if (precio) precio.after(contadorEl);
+                            else tarjeta.appendChild(contadorEl);
+                        }
 
-        // Verificar si es fin de semana (0=Domingo, 6=Sábado)
-        const currentDay = now.getDay();
-        if (currentDay === 0 || currentDay === 6) {
-          // log("Es fin de semana. No se hace backup.");
-          return;
-        }
+                        const textoFinal = `📦 ${num} Pedidos`;
+                        if (contadorEl.textContent !== textoFinal) {
+                            contadorEl.textContent = textoFinal;
+                        }
+                    }
+                }
+            });
 
-        const lastRun = localStorage.getItem('backup_last_run');
-        const todayStr = now.toISOString().split('T')[0];
+            // --- C. TEXTOS GENERALES ---
+            document.querySelectorAll('*').forEach(el => {
+                if (el.children.length === 0 && el.textContent.trim()) {
+                    const t = el.textContent.trim().toUpperCase();
+                    if (t === "HISTÓRICO" || t === "HISTORICO" || t === "ANUAL" || el.textContent.trim().toUpperCase() === "HISTÓRICO" || el.textContent.trim().toUpperCase() === "ANUAL") {
+                        el.textContent = "VENTAS";
+                        el.classList.add('texto-ventas');
+                    }
+                    if (t === "MEDIA MENSUAL GLOBAL") {
+                        el.textContent = "MEDIA ANUAL";
+                    }
+                    if (t === "HISTÓRICO VENTAS" || el.textContent.trim().toUpperCase() === "HISTÓRICO VENTAS") {
+                        el.textContent = "Medias mensuales";
+                    }
+                }
+            });
 
-        // Si ya se hizo hoy, no hacer nada
-        if (lastRun === todayStr) {
-          // log("Copia de hoy ya realizada.");
-          return;
-        }
+            // --- D. TOP CLIENTES (CIFRAS MÁS GRANDES) ---
+            document.querySelectorAll('*').forEach(el => {
+                if (el.children.length === 0 && el.textContent.includes(' €') && !el.classList.contains('euro-menu-fix')) {
+                    // Si el tamaño es pequeño (ej. 0.75rem o 12px), lo subimos un poco
+                    const s = window.getComputedStyle(el);
+                    const size = parseFloat(s.fontSize);
+                    if (size < 13) {
+                        el.style.fontSize = '13px';
+                        el.style.fontWeight = '600';
+                        el.style.opacity = '0.9';
+                    }
+                }
+            });
 
-        // Si es hora (>= 21:00) y no se ha hecho hoy -> EJECUTAR
-        log("Son pasadas las " + BACKUP_HOUR + ":00 y no hay copia de hoy. Ejecutando...");
-        performBackup();
-      }
+            // --- E. FECHAS (FORMATO Y TAMAÑO) ---
+            document.querySelectorAll('*').forEach(el => {
+                if (el.children.length === 0) {
+                    const t = el.textContent.trim();
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+                        const [y, m, d] = t.split('-');
+                        el.textContent = `${d}-${m}-${y}`;
+                        el.classList.add('fecha-espanol');
+                    }
+                }
+            });
 
-      // Exponer función manual para pruebas
-      window.triggerBackup = performBackup;
-
-      // Verificar al inicio
-      setTimeout(checkBackupSchedule, 5000); // Esperar 5s a que cargue todo
-
-      // Verificar cada 5 minutos
-      setInterval(checkBackupSchedule, 5 * 60 * 1000);
-
-      log("Sistema activo. Hora programada: " + BACKUP_HOUR + ":00");
-    })();
-  </script>
+        }, 500);
+    </script>
 </body>
 
 </html>
