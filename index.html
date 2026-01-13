@@ -44,11 +44,9 @@
             display: block !important;
         }
         
-        /* 5. Ocultar mensaje de precisión molesto */
-        /* Intenta ocultar cualquier div que contenga el texto de progreso si tiene una clase específica, 
-           pero como es dinámico, lo mejor es que el mapa tape todo */
+        /* 5. Asegurar Mapa visible */
         #custom-leaflet-map {
-            z-index: 99999 !important; /* Asegura que el mapa esté encima de mensajes de carga */
+            z-index: 99999 !important;
         }
     </style>
 </head>
@@ -61,7 +59,6 @@
         // 2. EL ARREGLADOR VISUAL
         // ==========================================
         setInterval(() => {
-            // ... (Código de limpieza visual mantenido igual) ...
             
             // --- A. MENÚ INFERIOR ---
             const dashSpans = Array.from(document.querySelectorAll('span, p, div')).filter(e => e.textContent.trim() === 'Dash');
@@ -109,15 +106,14 @@
                 });
             }
 
-            // --- Ocultar mensaje "Mejorando precisión" si aparece en el DOM ---
-            // Buscamos elementos que contengan el texto y los ocultamos
+            // --- Ocultar mensaje "Mejorando precisión" ---
             document.querySelectorAll('div, span, p').forEach(el => {
                 if (el.textContent && el.textContent.includes('Mejorando precisión') && el.style.display !== 'none') {
-                    el.style.display = 'none'; // Ocultar mensaje molesto
+                    el.style.display = 'none';
                 }
             });
 
-            // ... (Resto de arreglos visuales mantenidos) ...
+            // --- Textos Generales ---
             document.querySelectorAll('*').forEach(el => {
                 if (el.children.length === 0 && el.textContent.trim()) {
                     const t = el.textContent.trim().toUpperCase();
@@ -170,39 +166,52 @@
         }, 500);
 
         // ==========================================
-        // 3. SISTEMA DE MAPAS (LEAFLET + NOMINATIM) - CORREGIDO
+        // 3. SISTEMA DE MAPAS (LEAFLET + REPARACIÓN)
         // ==========================================
         (function () {
-            console.log("Inicializando sistema de mapas avanzado (Optimizado)...");
+            console.log("Inicializando sistema de mapas (Modo Reparación)...");
 
             const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org/search";
             let mapInstance = null;
             let markerCluster = null;
-            let lastDataSignature = ""; // Para evitar recargas innecesarias
+            let lastDataSignature = "";
 
-            // --- A. GEOCODIFICADOR AUTOMÁTICO (Más lento para no saturar) ---
+            // --- A. GEOCODIFICADOR AUTOMÁTICO (Con Reporte Visual) ---
             async function autoGeocode() {
                 const clientsStr = localStorage.getItem('clients');
                 if (!clientsStr) return;
                 let clients = [];
                 try { clients = JSON.parse(clientsStr); } catch (e) { return; }
 
-                const pending = clients.find(c =>
+                // Filtrar pendientes que tengan dirección válida
+                const allPending = clients.filter(c =>
                     (c.address || c.direccion) &&
                     (!c.lat || !c.lon || c.lat === 0 || c.lon === 0)
                 );
 
+                // Actualizar contador visual si existe
+                const statusEl = document.getElementById('geo-status-text');
+                if (statusEl) {
+                    if (allPending.length > 0) {
+                        statusEl.innerHTML = `Buscando direcciones...<br>Pendientes: <b>${allPending.length}</b>`;
+                        statusEl.style.color = '#eab308'; // Amarillo
+                    } else {
+                        statusEl.innerHTML = `¡Todo localizado!<br>Clientes en mapa.`;
+                        statusEl.style.color = '#22c55e'; // Verde
+                    }
+                }
+
+                // Tomar el primero para procesar
+                const pending = allPending[0];
+
                 if (pending) {
-                    // Si encontramos uno pendiente, intentamos geocodificar
                     const address = pending.address || pending.direccion || "";
                     const city = pending.city || pending.poblacion || "";
                     const province = pending.province || pending.provincia || "";
                     
-                    // Si no hay dirección válida, marcar como 'fallido' temporalmente para no reintentar infinito
                     if (!address || address.length < 3) return; 
 
                     const query = `${address}, ${city}, ${province}, España`;
-                    // console.log(`[GEO] Buscando: ${query}`);
 
                     try {
                         const res = await fetch(`${NOMINATIM_BASE_URL}?q=${encodeURIComponent(query)}&format=json&limit=1`);
@@ -217,21 +226,24 @@
                                 if (index !== -1) {
                                     clients[index] = pending;
                                     localStorage.setItem('clients', JSON.stringify(clients));
-                                    // NO recargamos el mapa inmediatamente para evitar "saltos"
+                                    // Recargar marcadores para ver aparecer la chincheta
+                                    reloadMarkers(true);
                                 }
+                            } else {
+                                // No encontrado - Marcar como "no encontrado" para no buclear infinitamente?
+                                // De momento lo dejamos para que reintente en el futuro o si se corrige la dirección
                             }
                         }
                     } catch (err) { }
                 }
             }
-            // Ejecutar geocodificación cada 3 segundos (más relajado)
-            setInterval(autoGeocode, 3000);
+            // Ejecutar cada 2 segundos
+            setInterval(autoGeocode, 2000);
 
-            // --- B. INTERCEPTOR DE VISTA DE MAPA ---
+            // --- B. VISTA DE MAPA Y CONTROLES ---
             function checkMapView() {
                 const myMap = document.getElementById('custom-leaflet-map');
                 
-                // Detectar si estamos en vista mapa
                 const isMapActive = Array.from(document.querySelectorAll('span, div, p')).some(el =>
                     el.textContent.trim() === 'Mapa' &&
                     (el.classList.contains('active') || el.closest('.active') || el.style.color === 'white' || location.href.includes('map'))
@@ -247,9 +259,53 @@
                         overlay.style.left = '0';
                         overlay.style.width = '100%';
                         overlay.style.height = 'calc(100% - 120px)';
-                        overlay.style.zIndex = '99999'; // Z-Index alto para tapar mensajes de carga
+                        overlay.style.zIndex = '99999';
                         overlay.style.backgroundColor = 'white';
                         document.body.appendChild(overlay);
+
+                        // --- PANEL DE CONTROL (NUEVO) ---
+                        const controls = document.createElement('div');
+                        controls.style.position = 'absolute';
+                        controls.style.top = '10px';
+                        controls.style.right = '10px';
+                        controls.style.zIndex = '10000';
+                        controls.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                        controls.style.padding = '10px';
+                        controls.style.borderRadius = '8px';
+                        controls.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                        controls.style.maxWidth = '200px';
+                        controls.style.fontSize = '12px';
+                        controls.style.textAlign = 'center';
+                        
+                        controls.innerHTML = `
+                            <div id="geo-status-text" style="margin-bottom:8px; font-weight:600; color:#444;">Estado: Listo</div>
+                            <button id="btn-reset-geo" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer; width:100%;">
+                                🗑️ Resetear Ubicaciones
+                            </button>
+                            <div style="font-size:10px; color:#888; margin-top:5px;">Pulsa si las ubicaciones son incorrectas.</div>
+                        `;
+                        overlay.appendChild(controls);
+
+                        // Lógica del botón Reset
+                        document.getElementById('btn-reset-geo').onclick = function() {
+                            if(confirm("¿Estás seguro?\n\nEsto borrará TODAS las posiciones actuales del mapa y obligará al sistema a buscarlas de nuevo por dirección.\n\nPuede tardar varios minutos en volver a colocar a todos los clientes.")) {
+                                try {
+                                    const c = JSON.parse(localStorage.getItem('clients')||'[]');
+                                    let count = 0;
+                                    c.forEach(x => {
+                                        if (x.lat && x.lon) {
+                                            x.lat = 0;
+                                            x.lon = 0;
+                                            count++;
+                                        }
+                                    });
+                                    localStorage.setItem('clients', JSON.stringify(c));
+                                    alert(`Se han reseteado ${count} clientes. El mapa se recargará y empezará la búsqueda automática.`);
+                                    location.reload();
+                                } catch(e) { alert("Error al resetear: " + e); }
+                            }
+                        };
+
 
                         // Inicializar Leaflet
                         mapInstance = L.map('custom-leaflet-map').setView([40.4168, -3.7038], 6);
@@ -266,11 +322,9 @@
                         });
                         mapInstance.addLayer(markerCluster);
 
-                        // Cargar por primera vez
                         reloadMarkers(true);
                     } else {
                         myMap.style.display = 'block';
-                        // SOLO recargar si hay cambios sustanciales, no cada 500ms
                         reloadMarkers(false);
                     }
                 } else {
@@ -287,23 +341,12 @@
                 const ordersStr = localStorage.getItem('orders');
                 if (!clientsStr) return;
 
-                // Generar firma simple de los datos para saber si han cambiado
-                // Usamos la longitud del string + los primeros 100 caracteres como hash rápido
                 const currentDataSig = clientsStr.length + "-" + (ordersStr ? ordersStr.length : 0);
-
-                // Si no es forzado y los datos son iguales, NO HACER NADA (Evita parpadeo)
                 if (!force && currentDataSig === lastDataSignature) return;
-                
                 lastDataSignature = currentDataSig;
 
-                // Limpiar marcadores antiguos del cluster
                 if (window.markerCluster) {
                     markerCluster.clearLayers();
-                } else {
-                    // Fallback limpieza manual
-                    mapInstance.eachLayer((layer) => {
-                        if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
-                    });
                 }
 
                 try {
@@ -313,8 +356,6 @@
                     const thirtyDaysAgo = new Date();
                     thirtyDaysAgo.setDate(now.getDate() - 30);
 
-                    // Definir Icono de Chincheta (Google Style)
-                    // Usamos una URL CDN estándar para chinchetas de colores
                     const createIcon = (colorUrl) => {
                         return new L.Icon({
                             iconUrl: colorUrl,
@@ -332,7 +373,8 @@
                     const markersToAdd = [];
 
                     clients.forEach(c => {
-                        if (c.lat && c.lon) {
+                        // Solo pintar si tiene coords válidas y NO son 0,0
+                        if (c.lat && c.lon && (c.lat !== 0 || c.lon !== 0)) {
                             let lastOrderDate = null;
                             const clientOrders = orders.filter(o =>
                                 o.cliente_id == c.id || o.client_code == c.code || (o.cliente && o.cliente.includes(c.name))
@@ -346,15 +388,12 @@
                                 }
                             }
 
-                            // Determinar Icono (Verde o Rojo)
                             let iconToUse = redIcon;
                             if (lastOrderDate && lastOrderDate >= thirtyDaysAgo) {
                                 iconToUse = greenIcon;
                             }
 
-                            // USAR MARKER (CHINCHETA) EN LUGAR DE CIRCLEMARKER
                             const marker = L.marker([c.lat, c.lon], { icon: iconToUse });
-
                             const name = c.name || c.nombre || "Cliente";
                             const address = c.address || c.direccion || "";
                             const lastDateStr = lastOrderDate ? lastOrderDate.toLocaleDateString() : "Sin pedidos recientes";
@@ -368,12 +407,10 @@
                                     </div>
                                 </div>
                             `);
-
                             markersToAdd.push(marker);
                         }
                     });
 
-                    // Añadir todos de golpe al cluster
                     if (markersToAdd.length > 0) {
                         markerCluster.addLayers(markersToAdd);
                     }
