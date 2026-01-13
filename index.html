@@ -12,20 +12,13 @@
     <link rel="stylesheet" href="./index-cqvvk0bb.css?v=final">
     <link rel="manifest" href="./manifest.webmanifest">
 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <style>
         /* --- ESTILOS QUIRÚRGICOS --- */
-
-        /* 1. Contador de pedidos (Limpio y profesional) */
-        .contador-pedidos-extra {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-top: 4px;
-            color: #64748b;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
 
         /* 2. Arreglo Símbolo Euro en Menú */
         .euro-menu-fix {
@@ -35,20 +28,27 @@
             transform: translateY(1px);
         }
 
-        /* 3. Textos Ventas (Anteriormente Anual) */
+        /* 3. Textos Ventas */
         .texto-ventas {
             text-transform: uppercase !important;
             font-weight: 700 !important;
-            color: #3b82f6 !important;
+            color: #ffffff !important;
         }
 
-        /* 4. Fechas (Ficha Cliente) */
+        /* 4. Fechas */
         .fecha-espanol {
             font-size: 11px !important;
             font-weight: 700 !important;
             color: #94a3b8 !important;
             margin-bottom: 2px !important;
             display: block !important;
+        }
+        
+        /* 5. Ocultar mensaje de precisión molesto */
+        /* Intenta ocultar cualquier div que contenga el texto de progreso si tiene una clase específica, 
+           pero como es dinámico, lo mejor es que el mapa tape todo */
+        #custom-leaflet-map {
+            z-index: 99999 !important; /* Asegura que el mapa esté encima de mensajes de carga */
         }
     </style>
 </head>
@@ -58,127 +58,47 @@
 
     <script>
         // ==========================================
-        // 1. CÁLCULO DE PEDIDOS (Lógica Reforzada)
-        // ==========================================
-        function contarPedidos() {
-            const resultado = { 'ASTURIAS': 0, 'CANTABRIA': 0, 'LEON': 0, 'GALICIA': 0 };
-            try {
-                const raw = localStorage.getItem('ventas-storage');
-                if (!raw) return resultado;
-
-                const db = JSON.parse(raw);
-                if (!db.orders) return resultado;
-
-                const anio = localStorage.getItem('selectedYear') || new Date().getFullYear().toString();
-
-                // --- MAPEO DE CLIENTES (Nombre y Código) ---
-                const mapaClientes = {};
-                if (db.clients) {
-                    db.clients.forEach(c => {
-                        // Datos del cliente
-                        const prov = c.province || c.provincia || c.Provincia || c.region;
-
-                        if (prov) {
-                            const provinciaNorm = prov.trim().toUpperCase();
-
-                            // Mapeamos por NOMBRE
-                            if (c.name) mapaClientes[c.name.trim().toUpperCase()] = provinciaNorm;
-                            if (c.nombre) mapaClientes[c.nombre.trim().toUpperCase()] = provinciaNorm;
-                            if (c.razonSocial) mapaClientes[c.razonSocial.trim().toUpperCase()] = provinciaNorm;
-
-                            // Mapeamos por CÓDIGO (Clave para que funcione si usan IDs)
-                            if (c.code) mapaClientes[String(c.code).trim()] = provinciaNorm;
-                            if (c.id) mapaClientes[String(c.id).trim()] = provinciaNorm;
-                            if (c.codigo) mapaClientes[String(c.codigo).trim()] = provinciaNorm;
-                        }
-                    });
-                }
-
-                // --- CONTEO ---
-                db.orders.forEach(o => {
-                    // Verificamos fecha (flexible por si acaso)
-                    if (o.date && String(o.date).startsWith(anio)) {
-
-                        // Intentamos encontrar la provincia usando Nombre O Código
-                        let prov = null;
-
-                        // Intento 1: Por nombre
-                        if (o.clientName) prov = mapaClientes[o.clientName.trim().toUpperCase()];
-
-                        // Intento 2: Por código/ID (si falla el nombre)
-                        if (!prov && o.clientId) prov = mapaClientes[String(o.clientId).trim()];
-                        if (!prov && o.clientCode) prov = mapaClientes[String(o.clientCode).trim()];
-
-                        if (prov) {
-                            if (prov.includes('ASTURIAS')) resultado['ASTURIAS']++;
-                            else if (prov.includes('CANTABRIA')) resultado['CANTABRIA']++;
-                            else if (prov.includes('LEON') || prov.includes('LEÓN')) resultado['LEON']++;
-                            else if (['LUGO', 'ORENSE', 'PONTEVEDRA', 'CORUÑA', 'A CORUÑA', 'A CORUNA'].some(x => prov.includes(x))) resultado['GALICIA']++;
-                        }
-                    }
-                });
-            } catch (e) { console.error("Error contadores:", e); }
-            return resultado;
-        }
-
-        // ==========================================
-        // 2. EL ARREGLADOR VISUAL (Intervalo)
+        // 2. EL ARREGLADOR VISUAL
         // ==========================================
         setInterval(() => {
-
-            // --- A. MENÚ INFERIOR (ESTRATEGIA SEGURA) ---
-            // 1. Buscamos el texto "Dash"
+            // ... (Código de limpieza visual mantenido igual) ...
+            
+            // --- A. MENÚ INFERIOR ---
             const dashSpans = Array.from(document.querySelectorAll('span, p, div')).filter(e => e.textContent.trim() === 'Dash');
             let barraMenu = null;
-
-            // 2. Identificamos cuál es el del menú de abajo (por posición)
             for (const span of dashSpans) {
                 const rect = span.getBoundingClientRect();
-                // Si está en los últimos 100px de la pantalla, ES EL MENÚ
                 if (rect.top > window.innerHeight - 100) {
-                    // Buscamos el contenedor padre (la barra entera)
-                    // Subimos 2 o 3 niveles hasta encontrar el contenedor flex
                     let candidato = span.parentElement;
                     for (let k = 0; k < 3; k++) {
-                        if (candidato && candidate.parentElement) {
-                            // Si el padre tiene varios hijos (botones), es la barra
+                        if (candidato && candidato.parentElement) {
                             if (candidato.parentElement.children.length > 4) {
-                                barraMenu = candidate.parentElement;
+                                barraMenu = candidato.parentElement;
                                 break;
                             }
                         }
-                        candidato = candidate.parentElement;
+                        candidato = candidato ? candidato.parentElement : null;
                     }
                 }
                 if (barraMenu) break;
             }
 
-            // 3. Si encontramos la barra, aplicamos estilos SOLO A SUS HIJOS
             if (barraMenu) {
                 Array.from(barraMenu.children).forEach(boton => {
-                    // Limpieza base
                     boton.style.backgroundColor = 'transparent';
                     boton.style.boxShadow = 'none';
                     boton.style.border = 'none';
-
-                    // Color blanco a textos e iconos
                     const hijos = boton.querySelectorAll('*');
                     hijos.forEach(hijo => {
-                        // Texto blanco
                         if (hijo.tagName !== 'SVG' && hijo.tagName !== 'IMG') {
                             hijo.style.color = '#ffffff';
                         }
-                        // Arreglo especial Euro
                         if (hijo.textContent.includes('€') && !hijo.classList.contains('euro-menu-fix')) {
                             hijo.classList.add('euro-menu-fix');
                         }
                     });
-
-                    // Iconos SVG -> Blanco
                     const iconos = boton.querySelectorAll('svg, img');
                     iconos.forEach(ico => ico.style.filter = 'brightness(0) invert(1)');
-
-                    // Borde activo (si tiene fondo azul o clase active)
                     const estilo = window.getComputedStyle(boton);
                     if (boton.className.includes('active') || estilo.backgroundColor.includes('235') || location.href.includes(boton.textContent.trim().toLowerCase())) {
                         boton.style.borderBottom = '3px solid white';
@@ -189,80 +109,35 @@
                 });
             }
 
-            // --- B. CONTADORES DE PEDIDOS ---
-            const contadores = contarPedidos();
-            const zonas = ['ASTURIAS', 'CANTABRIA', 'LEON', 'LEÓN', 'GALICIA'];
-
-            document.querySelectorAll('h3, span, div, p').forEach(el => {
-                const texto = el.textContent.trim().toUpperCase();
-                if (zonas.includes(texto)) {
-                    // Buscar tarjeta padre
-                    let tarjeta = el.parentElement;
-                    let encontrada = false;
-                    for (let i = 0; i < 5; i++) {
-                        if (!tarjeta) break;
-                        const s = window.getComputedStyle(tarjeta);
-                        // Detectar tarjeta blanca
-                        if (s.backgroundColor.includes('255, 255, 255') || s.boxShadow !== 'none') {
-                            encontrada = true;
-                            break;
-                        }
-                        tarjeta = tarjeta.parentElement;
-                    }
-
-                    if (encontrada && tarjeta) {
-                        const key = (texto === 'LEÓN') ? 'LEON' : texto;
-                        const num = contadores[key];
-
-                        // 1. Ordenar Precio (debajo del título)
-                        const precio = Array.from(tarjeta.querySelectorAll('*')).find(x => x.textContent.includes('€') && x !== tarjeta);
-                        if (precio && el.nextElementSibling !== precio) {
-                            el.after(precio);
-                            precio.style.display = 'block';
-                            precio.style.marginBottom = '4px';
-                        }
-
-                        // 2. Inyectar Contador (Debajo del precio si existe)
-                        let contadorEl = tarjeta.querySelector('.contador-pedidos-extra');
-                        if (!contadorEl) {
-                            contadorEl = document.createElement('div');
-                            contadorEl.className = 'contador-pedidos-extra';
-                            if (precio) precio.after(contadorEl);
-                            else tarjeta.appendChild(contadorEl);
-                        }
-
-                        const textoFinal = `📦 ${num} Pedidos`;
-                        if (contadorEl.textContent !== textoFinal) {
-                            contadorEl.textContent = textoFinal;
-                        }
-                    }
+            // --- Ocultar mensaje "Mejorando precisión" si aparece en el DOM ---
+            // Buscamos elementos que contengan el texto y los ocultamos
+            document.querySelectorAll('div, span, p').forEach(el => {
+                if (el.textContent && el.textContent.includes('Mejorando precisión') && el.style.display !== 'none') {
+                    el.style.display = 'none'; // Ocultar mensaje molesto
                 }
             });
 
-            // --- C. TEXTOS GENERALES ---
+            // ... (Resto de arreglos visuales mantenidos) ...
             document.querySelectorAll('*').forEach(el => {
                 if (el.children.length === 0 && el.textContent.trim()) {
                     const t = el.textContent.trim().toUpperCase();
-                    if (t === "HISTÓRICO" || t === "HISTORICO" || t === "ANUAL" || el.textContent.trim().toUpperCase() === "HISTÓRICO" || el.textContent.trim().toUpperCase() === "ANUAL") {
-                        el.textContent = "VENTAS";
-                        el.classList.add('texto-ventas');
+                    if (t.includes("ANUAL") || t.includes("HISTÓRICO") || t.includes("HISTORICO")) {
+                        if (!el.dataset.replaced) {
+                            el.textContent = el.textContent.replace(/ANUAL/gi, 'VENTAS').replace(/HISTÓRICO/gi, 'VENTAS').replace(/HISTORICO/gi, 'VENTAS');
+                            el.classList.add('texto-ventas');
+                            el.dataset.replaced = "true";
+                        }
                     }
-                    if (t === "MEDIA MENSUAL GLOBAL") {
-                        el.textContent = "MEDIA ANUAL";
-                    }
-                    if (t === "HISTÓRICO VENTAS" || el.textContent.trim().toUpperCase() === "HISTÓRICO VENTAS") {
-                        el.textContent = "Medias mensuales";
-                    }
+                    if (t === "MEDIA MENSUAL GLOBAL") el.textContent = "MEDIA ANUAL";
+                    if (t === "HISTÓRICO VENTAS") el.textContent = "Medias mensuales";
+                    if (t === "TOTALES" || t === "ULTIMA" || t === "ANUAL") el.style.color = '#ffffff';
                 }
             });
 
-            // --- D. TOP CLIENTES (CIFRAS MÁS GRANDES) ---
             document.querySelectorAll('*').forEach(el => {
                 if (el.children.length === 0 && el.textContent.includes(' €') && !el.classList.contains('euro-menu-fix')) {
-                    // Si el tamaño es pequeño (ej. 0.75rem o 12px), lo subimos un poco
                     const s = window.getComputedStyle(el);
-                    const size = parseFloat(s.fontSize);
-                    if (size < 13) {
+                    if (parseFloat(s.fontSize) < 13) {
                         el.style.fontSize = '13px';
                         el.style.fontWeight = '600';
                         el.style.opacity = '0.9';
@@ -270,7 +145,6 @@
                 }
             });
 
-            // --- E. FECHAS (FORMATO Y TAMAÑO) ---
             document.querySelectorAll('*').forEach(el => {
                 if (el.children.length === 0) {
                     const t = el.textContent.trim();
@@ -282,7 +156,234 @@
                 }
             });
 
+            document.querySelectorAll('div, span, h1, h2, h3, h4, h5, h6, a, p').forEach(el => {
+                if (el.children.length === 0 && el.textContent.trim().length > 0) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.top >= 0 && rect.bottom <= 65) {
+                        if (rect.width > 0 && rect.height > 0) {
+                            el.style.setProperty('color', '#ffffff', 'important');
+                        }
+                    }
+                }
+            });
+
         }, 500);
+
+        // ==========================================
+        // 3. SISTEMA DE MAPAS (LEAFLET + NOMINATIM) - CORREGIDO
+        // ==========================================
+        (function () {
+            console.log("Inicializando sistema de mapas avanzado (Optimizado)...");
+
+            const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org/search";
+            let mapInstance = null;
+            let markerCluster = null;
+            let lastDataSignature = ""; // Para evitar recargas innecesarias
+
+            // --- A. GEOCODIFICADOR AUTOMÁTICO (Más lento para no saturar) ---
+            async function autoGeocode() {
+                const clientsStr = localStorage.getItem('clients');
+                if (!clientsStr) return;
+                let clients = [];
+                try { clients = JSON.parse(clientsStr); } catch (e) { return; }
+
+                const pending = clients.find(c =>
+                    (c.address || c.direccion) &&
+                    (!c.lat || !c.lon || c.lat === 0 || c.lon === 0)
+                );
+
+                if (pending) {
+                    // Si encontramos uno pendiente, intentamos geocodificar
+                    const address = pending.address || pending.direccion || "";
+                    const city = pending.city || pending.poblacion || "";
+                    const province = pending.province || pending.provincia || "";
+                    
+                    // Si no hay dirección válida, marcar como 'fallido' temporalmente para no reintentar infinito
+                    if (!address || address.length < 3) return; 
+
+                    const query = `${address}, ${city}, ${province}, España`;
+                    // console.log(`[GEO] Buscando: ${query}`);
+
+                    try {
+                        const res = await fetch(`${NOMINATIM_BASE_URL}?q=${encodeURIComponent(query)}&format=json&limit=1`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data && data.length > 0) {
+                                pending.lat = parseFloat(data[0].lat);
+                                pending.lon = parseFloat(data[0].lon);
+                                
+                                // Guardar
+                                const index = clients.findIndex(c => c.id === pending.id);
+                                if (index !== -1) {
+                                    clients[index] = pending;
+                                    localStorage.setItem('clients', JSON.stringify(clients));
+                                    // NO recargamos el mapa inmediatamente para evitar "saltos"
+                                }
+                            }
+                        }
+                    } catch (err) { }
+                }
+            }
+            // Ejecutar geocodificación cada 3 segundos (más relajado)
+            setInterval(autoGeocode, 3000);
+
+            // --- B. INTERCEPTOR DE VISTA DE MAPA ---
+            function checkMapView() {
+                const myMap = document.getElementById('custom-leaflet-map');
+                
+                // Detectar si estamos en vista mapa
+                const isMapActive = Array.from(document.querySelectorAll('span, div, p')).some(el =>
+                    el.textContent.trim() === 'Mapa' &&
+                    (el.classList.contains('active') || el.closest('.active') || el.style.color === 'white' || location.href.includes('map'))
+                );
+
+                if (isMapActive) {
+                    if (!myMap) {
+                        // Crear contenedor
+                        const overlay = document.createElement('div');
+                        overlay.id = 'custom-leaflet-map';
+                        overlay.style.position = 'fixed';
+                        overlay.style.top = '60px';
+                        overlay.style.left = '0';
+                        overlay.style.width = '100%';
+                        overlay.style.height = 'calc(100% - 120px)';
+                        overlay.style.zIndex = '99999'; // Z-Index alto para tapar mensajes de carga
+                        overlay.style.backgroundColor = 'white';
+                        document.body.appendChild(overlay);
+
+                        // Inicializar Leaflet
+                        mapInstance = L.map('custom-leaflet-map').setView([40.4168, -3.7038], 6);
+
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; OpenStreetMap contributors'
+                        }).addTo(mapInstance);
+
+                        markerCluster = L.markerClusterGroup({
+                            maxClusterRadius: 40,
+                            spiderfyOnMaxZoom: true,
+                            showCoverageOnHover: false,
+                            zoomToBoundsOnClick: true
+                        });
+                        mapInstance.addLayer(markerCluster);
+
+                        // Cargar por primera vez
+                        reloadMarkers(true);
+                    } else {
+                        myMap.style.display = 'block';
+                        // SOLO recargar si hay cambios sustanciales, no cada 500ms
+                        reloadMarkers(false);
+                    }
+                } else {
+                    if (myMap) {
+                        myMap.style.display = 'none';
+                    }
+                }
+            }
+
+            function reloadMarkers(force = false) {
+                if (!mapInstance) return;
+
+                const clientsStr = localStorage.getItem('clients');
+                const ordersStr = localStorage.getItem('orders');
+                if (!clientsStr) return;
+
+                // Generar firma simple de los datos para saber si han cambiado
+                // Usamos la longitud del string + los primeros 100 caracteres como hash rápido
+                const currentDataSig = clientsStr.length + "-" + (ordersStr ? ordersStr.length : 0);
+
+                // Si no es forzado y los datos son iguales, NO HACER NADA (Evita parpadeo)
+                if (!force && currentDataSig === lastDataSignature) return;
+                
+                lastDataSignature = currentDataSig;
+
+                // Limpiar marcadores antiguos del cluster
+                if (window.markerCluster) {
+                    markerCluster.clearLayers();
+                } else {
+                    // Fallback limpieza manual
+                    mapInstance.eachLayer((layer) => {
+                        if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
+                    });
+                }
+
+                try {
+                    const clients = JSON.parse(clientsStr);
+                    const orders = ordersStr ? JSON.parse(ordersStr) : [];
+                    const now = new Date();
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+                    // Definir Icono de Chincheta (Google Style)
+                    // Usamos una URL CDN estándar para chinchetas de colores
+                    const createIcon = (colorUrl) => {
+                        return new L.Icon({
+                            iconUrl: colorUrl,
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        });
+                    };
+
+                    const greenIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png');
+                    const redIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png');
+
+                    const markersToAdd = [];
+
+                    clients.forEach(c => {
+                        if (c.lat && c.lon) {
+                            let lastOrderDate = null;
+                            const clientOrders = orders.filter(o =>
+                                o.cliente_id == c.id || o.client_code == c.code || (o.cliente && o.cliente.includes(c.name))
+                            );
+
+                            if (clientOrders.length > 0) {
+                                clientOrders.sort((a, b) => new Date(b.timestamp || b.fecha) - new Date(a.timestamp || a.fecha));
+                                const lastOrder = clientOrders[0];
+                                if (lastOrder.timestamp || lastOrder.fecha) {
+                                    lastOrderDate = new Date(lastOrder.timestamp || lastOrder.fecha);
+                                }
+                            }
+
+                            // Determinar Icono (Verde o Rojo)
+                            let iconToUse = redIcon;
+                            if (lastOrderDate && lastOrderDate >= thirtyDaysAgo) {
+                                iconToUse = greenIcon;
+                            }
+
+                            // USAR MARKER (CHINCHETA) EN LUGAR DE CIRCLEMARKER
+                            const marker = L.marker([c.lat, c.lon], { icon: iconToUse });
+
+                            const name = c.name || c.nombre || "Cliente";
+                            const address = c.address || c.direccion || "";
+                            const lastDateStr = lastOrderDate ? lastOrderDate.toLocaleDateString() : "Sin pedidos recientes";
+
+                            marker.bindPopup(`
+                                <div style="text-align:center; min-width: 150px;">
+                                    <b style="font-size:14px;">${name}</b><br>
+                                    <span style="font-size:11px; color:#555;">${address}</span><br>
+                                    <div style="margin-top:6px; padding:4px 8px; background:${lastOrderDate ? '#22c55e' : '#ef4444'}; color:white; border-radius:4px; font-size:11px; display:inline-block; font-weight:bold;">
+                                        ${lastOrderDate ? 'Último: ' + lastDateStr : 'Sin pedidos recientes'}
+                                    </div>
+                                </div>
+                            `);
+
+                            markersToAdd.push(marker);
+                        }
+                    });
+
+                    // Añadir todos de golpe al cluster
+                    if (markersToAdd.length > 0) {
+                        markerCluster.addLayers(markersToAdd);
+                    }
+
+                } catch (e) { console.error("Error pintando mapa:", e); }
+            }
+
+            setInterval(checkMapView, 500);
+
+        })();
     </script>
 </body>
 
