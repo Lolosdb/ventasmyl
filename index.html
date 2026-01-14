@@ -5,8 +5,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./logo_myl.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
     <title>Gestión de Ventas</title>
+
+    <script>
+        // Engañamos a la app diciendo que el GPS no funciona o devolviendo una posición fija falsa
+        // Esto elimina el mensaje "Mejorando precisión" inmediatamente.
+        try {
+            navigator.geolocation.watchPosition = function(success, error, options) {
+                console.log("🚫 GPS Bloqueado por usuario");
+                return 0; // No hacer nada
+            };
+            navigator.geolocation.getCurrentPosition = function(success, error, options) {
+                console.log("🚫 GPS Bloqueado por usuario");
+                // Opcional: Devolver una posición falsa para que la app no se queje
+                if(success) success({ coords: { latitude: 40.4168, longitude: -3.7038, accuracy: 1000 } });
+            };
+        } catch(e) {}
+    </script>
 
     <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
     <link rel="stylesheet" href="./index-cqvvk0bb.css?v=final">
@@ -16,60 +31,69 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 
     <style>
-        /* Asegurar que la página ocupa el 100% para que el mapa no tenga altura 0 */
-        html, body { height: 100%; margin: 0; padding: 0; overflow-x: hidden; }
-        
-        /* Contenedor del Mapa (Oculto por defecto) */
+        /* Ocultar mensaje de precisión si aparece en HTML */
+        div:contains("Mejorando precisión"), p:contains("Mejorando precisión"), span:contains("Mejorando precisión") {
+            display: none !important;
+        }
+
+        /* Ocultar el mapa original de la app para que no moleste */
+        .leaflet-container:not(#mapa-real) {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            height: 0 !important;
+        }
+
+        /* Botón Flotante para abrir NUESTRO mapa */
+        #btn-abrir-mapa {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 9999;
+            font-weight: bold;
+            font-family: sans-serif;
+            border: 2px solid white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Contenedor de NUESTRO Mapa */
         #capa-mapa-seguro {
-            display: none; /* Se activa con JS */
+            display: none;
             position: fixed;
             top: 0; 
             left: 0;
             width: 100%;
             height: 100%;
             background-color: white;
-            z-index: 99999; /* Por encima de todo */
+            z-index: 2147483647; /* Máximo Z-Index posible */
         }
 
-        #mapa-real {
-            width: 100%;
-            height: 100%;
-        }
+        #mapa-real { width: 100%; height: 100%; }
 
-        /* Panel de Controles Flotante */
         .map-controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 10000;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            width: 200px;
-            text-align: center;
-            font-family: sans-serif;
+            position: absolute; top: 10px; right: 10px; z-index: 10000;
+            background: rgba(255, 255, 255, 0.95); padding: 10px;
+            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            width: 200px; text-align: center; font-family: sans-serif;
         }
 
-        /* Botón Cerrar (Grande para dedos) */
         .btn-close {
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            width: 36px;
-            height: 36px;
-            background: white;
-            border: 2px solid #ccc;
-            border-radius: 50%;
-            font-weight: bold;
-            font-size: 18px;
-            line-height: 32px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            color: #333;
+            position: absolute; top: -10px; left: -10px;
+            width: 36px; height: 36px; background: white;
+            border: 2px solid #ccc; border-radius: 50%;
+            font-weight: bold; font-size: 18px; line-height: 32px;
+            cursor: pointer; color: #333;
         }
 
-        /* Estilos Quirúrgicos de la App */
+        /* Estilos visuales app */
         .euro-menu-fix { font-size: 24px !important; display: inline-block; line-height: 1; transform: translateY(1px); }
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
         .fecha-espanol { font-size: 11px !important; font-weight: 700 !important; color: #94a3b8 !important; margin-bottom: 2px !important; display: block !important; }
@@ -79,6 +103,10 @@
 <body>
     <div id="root"></div>
 
+    <div id="btn-abrir-mapa" onclick="abrirMapaSeguro()">
+        🗺️ VER MAPA
+    </div>
+
     <div id="capa-mapa-seguro">
         <div class="map-controls">
             <button class="btn-close" onclick="cerrarMapa()">✕</button>
@@ -86,97 +114,69 @@
                 Cargando mapa...
             </div>
             <button onclick="resetearDatos()" style="background:#ef4444; color:white; border:none; padding:8px; width:100%; border-radius:4px; font-weight:bold; cursor:pointer;">
-                ⚠️ Resetear Fallos
+                🗑️ Resetear Fallos
             </button>
         </div>
         <div id="mapa-real"></div>
     </div>
 
     <script>
-        // --- 1. DETECTOR DE ERRORES GLOBAL (CHIVATO) ---
-        window.onerror = function(msg, url, line) {
-            // Si hay un error crítico, avisar al usuario
-            if (msg.toLowerCase().includes('leaflet') || msg.toLowerCase().includes('map') || msg.toLowerCase().includes('json')) {
-                alert("ERROR DETECTADO: " + msg + "\n\nPulsa 'Resetear Fallos' si esto persiste.");
-            }
+        // --- FUNCIONES GLOBALES ---
+        window.abrirMapaSeguro = function() {
+            document.getElementById('capa-mapa-seguro').style.display = 'block';
+            setTimeout(iniciarMapa, 100);
         };
 
-        // Funciones Globales para los botones HTML
         window.cerrarMapa = function() {
             document.getElementById('capa-mapa-seguro').style.display = 'none';
         };
 
         window.resetearDatos = function() {
-            if(confirm("¿Seguro? Esto borrará la caché de ubicaciones de la app para intentar arreglar el error.")) {
+            if(confirm("¿Borrar ubicaciones guardadas y re-calcular?")) {
                 try {
-                    // Borramos solo lat/lon corruptos
                     const clients = JSON.parse(localStorage.getItem('clients') || '[]');
                     clients.forEach(c => { c.lat = 0; c.lon = 0; });
                     localStorage.setItem('clients', JSON.stringify(clients));
-                    alert("Datos limpiados. La página se recargará.");
+                    alert("Datos limpios. Se buscarán las direcciones de nuevo.");
                     location.reload();
-                } catch(e) {
-                    alert("Error al limpiar: " + e);
-                    localStorage.clear(); // Opción nuclear si falla todo
-                    location.reload();
-                }
+                } catch(e) { alert("Error: " + e); }
             }
         };
 
-        // --- 2. LÓGICA DEL MAPA ---
+        // --- LÓGICA DEL MAPA ---
         let mapInstance = null;
-        let isMapVisible = false;
 
         function iniciarMapa() {
-            if (mapInstance) return; // Ya existe
+            if (mapInstance) {
+                mapInstance.invalidateSize(); // Corregir gris
+                return; 
+            }
 
             try {
-                if (typeof L === 'undefined') {
-                    throw new Error("La librería Leaflet no ha cargado. Revisa tu conexión.");
-                }
-
-                // Crear mapa en el div 'mapa-real'
                 mapInstance = L.map('mapa-real').setView([40.4168, -3.7038], 6);
-                
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
+                    attribution: '© OpenStreetMap'
                 }).addTo(mapInstance);
 
-                console.log("Mapa iniciado correctamente");
                 cargarPuntos();
-
-            } catch (error) {
-                console.error(error);
-                document.getElementById('status-text').innerText = "Error: " + error.message;
-                document.getElementById('status-text').style.color = "red";
+            } catch (e) {
+                console.error(e);
+                document.getElementById('status-text').innerText = "Error: " + e.message;
             }
         }
 
         function cargarPuntos() {
             if (!mapInstance) return;
-
-            // Limpiar pines anteriores
-            mapInstance.eachLayer(layer => {
-                if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
-            });
+            
+            // Limpiar
+            mapInstance.eachLayer(layer => { if (layer instanceof L.Marker) mapInstance.removeLayer(layer); });
 
             try {
-                const clientsStr = localStorage.getItem('clients');
-                const ordersStr = localStorage.getItem('orders');
-                
-                if (!clientsStr) {
-                    document.getElementById('status-text').innerText = "No hay clientes cargados.";
-                    return;
-                }
-
-                const clients = JSON.parse(clientsStr);
-                const orders = ordersStr ? JSON.parse(ordersStr) : [];
+                const clients = JSON.parse(localStorage.getItem('clients') || '[]');
+                const orders = JSON.parse(localStorage.getItem('orders') || '[]');
                 const now = new Date();
-                const thirtyDaysAgo = new Date();
+                const thirtyDaysAgo = new Date(); 
                 thirtyDaysAgo.setDate(now.getDate() - 30);
-
-                let contados = 0;
-                let pendientes = 0;
 
                 // Iconos
                 const LeafIcon = L.Icon.extend({
@@ -185,51 +185,50 @@
                 const greenIcon = new LeafIcon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png' });
                 const redIcon = new LeafIcon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png' });
 
+                let pendientes = 0;
+                let ubicados = 0;
+
                 clients.forEach(c => {
-                    // Validar Coordenadas
-                    if (c.lat && c.lon && !isNaN(c.lat) && c.lat !== 0) {
-                        contados++;
-                        
-                        // Lógica Último Pedido
+                    if (c.lat && c.lon && c.lat !== 0) {
+                        ubicados++;
                         let lastOrderDate = null;
                         const misPedidos = orders.filter(o => o.cliente_id == c.id || (o.cliente && o.cliente.includes(c.name)));
                         if (misPedidos.length > 0) {
                             misPedidos.sort((a,b) => new Date(b.fecha||b.timestamp) - new Date(a.fecha||a.timestamp));
                             lastOrderDate = new Date(misPedidos[0].fecha||misPedidos[0].timestamp);
                         }
-
-                        const colorIcon = (lastOrderDate && lastOrderDate >= thirtyDaysAgo) ? greenIcon : redIcon;
+                        const icon = (lastOrderDate && lastOrderDate >= thirtyDaysAgo) ? greenIcon : redIcon;
                         
-                        L.marker([c.lat, c.lon], { icon: colorIcon })
+                        L.marker([c.lat, c.lon], { icon: icon })
                             .bindPopup(`<b>${c.name}</b><br>${c.address || ''}`)
                             .addTo(mapInstance);
-                    } else if (c.address) {
+                    } else {
                         pendientes++;
                     }
                 });
 
-                document.getElementById('status-text').innerText = `Mapa: ${contados} clientes.\nFaltan ubicar: ${pendientes}`;
+                document.getElementById('status-text').innerHTML = `Clientes: ${ubicados}<br>Faltan: ${pendientes}`;
                 
-                // Si hay muchos pendientes, iniciar geocodificación lenta en background
-                if (pendientes > 0) setTimeout(autoGeocodeOne, 1000);
+                if (pendientes > 0) setTimeout(autoGeocodeOne, 1000); // Iniciar buscador
 
-            } catch (e) {
-                console.error(e);
-                alert("Error leyendo datos: " + e.message);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // --- 3. GEOCODIFICADOR LENTO (1 CADA 3 SEG) ---
+        // --- GEOCODIFICADOR LENTO (Background) ---
         async function autoGeocodeOne() {
-            if (!isMapVisible) return; // Solo buscar si el mapa está abierto
-            
+            // Solo buscar si el mapa está abierto para no gastar batería
+            if (document.getElementById('capa-mapa-seguro').style.display === 'none') {
+                setTimeout(autoGeocodeOne, 3000); 
+                return;
+            }
+
             try {
                 const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-                const target = clients.find(c => (c.address && c.address.length > 3) && (!c.lat || c.lat === 0));
+                const target = clients.find(c => (c.address && c.address.length > 4) && (!c.lat || c.lat === 0));
 
                 if (target) {
                     const query = `${target.address}, ${target.city||''}, ${target.province||''}, España`;
-                    document.getElementById('status-text').innerHTML = `Buscando:<br><span style="color:blue">${target.name.substring(0,15)}...</span>`;
+                    document.getElementById('status-text').innerHTML = `Buscando:<br>${target.name.substring(0,10)}...`;
                     
                     const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
                     if (res.ok) {
@@ -238,59 +237,29 @@
                             target.lat = parseFloat(data[0].lat);
                             target.lon = parseFloat(data[0].lon);
                             
-                            // Guardar y repintar
+                            // Guardar en array original
                             const idx = clients.findIndex(x => x.id === target.id);
-                            if (idx !== -1) {
-                                clients[idx] = target;
-                                localStorage.setItem('clients', JSON.stringify(clients));
-                                cargarPuntos(); // Recargar mapa
-                            }
+                            if(idx !== -1) clients[idx] = target;
+                            
+                            localStorage.setItem('clients', JSON.stringify(clients));
+                            cargarPuntos(); // Refrescar mapa
                         } else {
-                            // Marcar como no encontrado temporalmente para no atascarse
-                            // (Opcional: podriamos poner lat=0.0001 para saltarlo)
+                            // No encontrado: Marcar para saltar (lat=0.0001)
+                            target.lat = 0.0001; 
+                            const idx = clients.findIndex(x => x.id === target.id);
+                            if(idx !== -1) clients[idx] = target;
+                            localStorage.setItem('clients', JSON.stringify(clients));
                         }
                     }
                 } else {
-                    document.getElementById('status-text').innerText = "Todos los clientes ubicados.";
-                    document.getElementById('status-text').style.color = "green";
+                    document.getElementById('status-text').innerText = "Todo ubicado.";
                 }
             } catch(e) {}
-            
-            // Repetir
-            if (isMapVisible) setTimeout(autoGeocodeOne, 3000);
+            setTimeout(autoGeocodeOne, 2500);
         }
 
-        // --- 4. BUCLE PRINCIPAL (Monitoriza la UI) ---
+        // --- ARREGLOS VISUALES (Mantenidos) ---
         setInterval(() => {
-            // A. Detectar si el usuario quiere ver el mapa
-            const botonMapaActivo = Array.from(document.querySelectorAll('span, div, p, a')).some(el =>
-                el.textContent.trim() === 'Mapa' &&
-                (el.classList.contains('active') || el.closest('.active') || window.location.href.includes('map'))
-            );
-
-            const capaMapa = document.getElementById('capa-mapa-seguro');
-
-            if (botonMapaActivo) {
-                if (!isMapVisible) {
-                    // ABRIR MAPA
-                    isMapVisible = true;
-                    capaMapa.style.display = 'block';
-                    
-                    // Asegurar renderizado Leaflet
-                    setTimeout(() => {
-                        iniciarMapa();
-                        if (mapInstance) mapInstance.invalidateSize(); 
-                    }, 100);
-                }
-            } else {
-                // Si el usuario sale de la sección mapa, ocultamos la capa
-                // PERO permitimos que la capa se mantenga si la abrimos nosotros (override)
-                // Para simplificar: si la URL o el menú no dice mapa, ocultamos.
-                // EXCEPCION: Si la capa está visible y el usuario NO ha navegado fuera (la app es SPA)
-                // A veces es mejor dejar el botón de cerrar manual 'X' para controlar esto.
-            }
-
-            // B. ARREGLOS VISUALES (Mantenidos del original)
             const dashSpans = Array.from(document.querySelectorAll('span, p, div')).filter(e => e.textContent.trim() === 'Dash');
             let barraMenu = null;
             for (const span of dashSpans) {
@@ -308,16 +277,17 @@
                     boton.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
                 });
             }
-
-            // Textos Blancos en Header
             document.querySelectorAll('div, span, h1, h2').forEach(el => {
                 if(el.children.length===0 && el.textContent.trim().length>0 && el.getBoundingClientRect().bottom < 65) {
                     el.style.setProperty('color', '#ffffff', 'important');
                 }
             });
+            // Matar mensajes de precisión si aparecen
+            document.querySelectorAll('*').forEach(el => {
+                if (el.textContent && el.textContent.includes('Mejorando precisión')) el.style.display = 'none';
+            });
 
         }, 500);
-
     </script>
 </body>
 </html>
