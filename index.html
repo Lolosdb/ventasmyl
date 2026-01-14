@@ -17,6 +17,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
     <style>
         /* --- ESTILOS QUIRÚRGICOS --- */
 
@@ -44,7 +48,7 @@
             display: block !important;
         }
         
-        /* 5. Asegurar Mapa visible */
+        /* 5. Asegurar Mapa visible y por encima de todo */
         #custom-leaflet-map {
             z-index: 99999 !important;
         }
@@ -229,9 +233,6 @@
                                     // Recargar marcadores para ver aparecer la chincheta
                                     reloadMarkers(true);
                                 }
-                            } else {
-                                // No encontrado - Marcar como "no encontrado" para no buclear infinitamente?
-                                // De momento lo dejamos para que reintente en el futuro o si se corrige la dirección
                             }
                         }
                     } catch (err) { }
@@ -314,17 +315,26 @@
                             attribution: '&copy; OpenStreetMap contributors'
                         }).addTo(mapInstance);
 
-                        markerCluster = L.markerClusterGroup({
-                            maxClusterRadius: 40,
-                            spiderfyOnMaxZoom: true,
-                            showCoverageOnHover: false,
-                            zoomToBoundsOnClick: true
-                        });
-                        mapInstance.addLayer(markerCluster);
+                        // Inicializar Cluster con seguridad
+                        try {
+                            if (L.markerClusterGroup) {
+                                markerCluster = L.markerClusterGroup({
+                                    maxClusterRadius: 40,
+                                    spiderfyOnMaxZoom: true,
+                                    showCoverageOnHover: false,
+                                    zoomToBoundsOnClick: true
+                                });
+                                mapInstance.addLayer(markerCluster);
+                            }
+                        } catch(e) { console.error("Cluster error", e); }
 
                         reloadMarkers(true);
                     } else {
                         myMap.style.display = 'block';
+                        // Fix visual: recalcular tamaño al mostrar
+                        if (mapInstance) {
+                            setTimeout(() => { mapInstance.invalidateSize(); }, 100);
+                        }
                         reloadMarkers(false);
                     }
                 } else {
@@ -345,8 +355,13 @@
                 if (!force && currentDataSig === lastDataSignature) return;
                 lastDataSignature = currentDataSig;
 
-                if (window.markerCluster) {
+                // Limpiar
+                if (window.markerCluster && markerCluster) {
                     markerCluster.clearLayers();
+                } else {
+                    mapInstance.eachLayer((layer) => {
+                        if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
+                    });
                 }
 
                 try {
@@ -411,8 +426,10 @@
                         }
                     });
 
-                    if (markersToAdd.length > 0) {
+                    if (markersToAdd.length > 0 && markerCluster) {
                         markerCluster.addLayers(markersToAdd);
+                    } else if (markersToAdd.length > 0) {
+                        markersToAdd.forEach(m => m.addTo(mapInstance));
                     }
 
                 } catch (e) { console.error("Error pintando mapa:", e); }
