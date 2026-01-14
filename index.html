@@ -17,14 +17,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-
     <style>
         /* --- ESTILOS QUIRÚRGICOS --- */
 
-        /* 2. Arreglo Símbolo Euro en Menú */
+        /* Arreglo Símbolo Euro en Menú */
         .euro-menu-fix {
             font-size: 24px !important;
             display: inline-block;
@@ -32,14 +28,14 @@
             transform: translateY(1px);
         }
 
-        /* 3. Textos Ventas */
+        /* Textos Ventas */
         .texto-ventas {
             text-transform: uppercase !important;
             font-weight: 700 !important;
             color: #ffffff !important;
         }
 
-        /* 4. Fechas */
+        /* Fechas */
         .fecha-espanol {
             font-size: 11px !important;
             font-weight: 700 !important;
@@ -48,7 +44,7 @@
             display: block !important;
         }
         
-        /* 5. Asegurar Mapa visible y por encima de todo */
+        /* Asegurar Mapa visible */
         #custom-leaflet-map {
             z-index: 99999 !important;
         }
@@ -170,51 +166,45 @@
         }, 500);
 
         // ==========================================
-        // 3. SISTEMA DE MAPAS (LEAFLET + REPARACIÓN)
+        // 3. SISTEMA DE MAPAS (MODO SEGURO)
         // ==========================================
         (function () {
-            console.log("Inicializando sistema de mapas (Modo Reparación)...");
+            console.log("Inicializando sistema de mapas (Safe Mode)...");
 
             const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org/search";
             let mapInstance = null;
-            let markerCluster = null;
             let lastDataSignature = "";
 
-            // --- A. GEOCODIFICADOR AUTOMÁTICO (Con Reporte Visual) ---
+            // --- A. GEOCODIFICADOR AUTOMÁTICO ---
             async function autoGeocode() {
                 const clientsStr = localStorage.getItem('clients');
                 if (!clientsStr) return;
                 let clients = [];
                 try { clients = JSON.parse(clientsStr); } catch (e) { return; }
 
-                // Filtrar pendientes que tengan dirección válida
                 const allPending = clients.filter(c =>
                     (c.address || c.direccion) &&
                     (!c.lat || !c.lon || c.lat === 0 || c.lon === 0)
                 );
 
-                // Actualizar contador visual si existe
+                // Actualizar status visual
                 const statusEl = document.getElementById('geo-status-text');
                 if (statusEl) {
                     if (allPending.length > 0) {
-                        statusEl.innerHTML = `Buscando direcciones...<br>Pendientes: <b>${allPending.length}</b>`;
-                        statusEl.style.color = '#eab308'; // Amarillo
+                        statusEl.innerHTML = `Localizando... Falta: <b>${allPending.length}</b>`;
+                        statusEl.style.color = '#eab308';
                     } else {
-                        statusEl.innerHTML = `¡Todo localizado!<br>Clientes en mapa.`;
-                        statusEl.style.color = '#22c55e'; // Verde
+                        statusEl.innerHTML = `Todo localizado.`;
+                        statusEl.style.color = '#22c55e';
                     }
                 }
 
-                // Tomar el primero para procesar
                 const pending = allPending[0];
-
                 if (pending) {
                     const address = pending.address || pending.direccion || "";
                     const city = pending.city || pending.poblacion || "";
                     const province = pending.province || pending.provincia || "";
-                    
                     if (!address || address.length < 3) return; 
-
                     const query = `${address}, ${city}, ${province}, España`;
 
                     try {
@@ -224,13 +214,10 @@
                             if (data && data.length > 0) {
                                 pending.lat = parseFloat(data[0].lat);
                                 pending.lon = parseFloat(data[0].lon);
-                                
-                                // Guardar
                                 const index = clients.findIndex(c => c.id === pending.id);
                                 if (index !== -1) {
                                     clients[index] = pending;
                                     localStorage.setItem('clients', JSON.stringify(clients));
-                                    // Recargar marcadores para ver aparecer la chincheta
                                     reloadMarkers(true);
                                 }
                             }
@@ -238,13 +225,11 @@
                     } catch (err) { }
                 }
             }
-            // Ejecutar cada 2 segundos
             setInterval(autoGeocode, 2000);
 
-            // --- B. VISTA DE MAPA Y CONTROLES ---
+            // --- B. VISTA DE MAPA ---
             function checkMapView() {
                 const myMap = document.getElementById('custom-leaflet-map');
-                
                 const isMapActive = Array.from(document.querySelectorAll('span, div, p')).some(el =>
                     el.textContent.trim() === 'Mapa' &&
                     (el.classList.contains('active') || el.closest('.active') || el.style.color === 'white' || location.href.includes('map'))
@@ -252,7 +237,7 @@
 
                 if (isMapActive) {
                     if (!myMap) {
-                        // Crear contenedor
+                        // Crear Overlay con Botón de Cierre de Seguridad
                         const overlay = document.createElement('div');
                         overlay.id = 'custom-leaflet-map';
                         overlay.style.position = 'fixed';
@@ -264,83 +249,60 @@
                         overlay.style.backgroundColor = 'white';
                         document.body.appendChild(overlay);
 
-                        // --- PANEL DE CONTROL (NUEVO) ---
+                        // Controles
                         const controls = document.createElement('div');
-                        controls.style.position = 'absolute';
-                        controls.style.top = '10px';
-                        controls.style.right = '10px';
-                        controls.style.zIndex = '10000';
-                        controls.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-                        controls.style.padding = '10px';
-                        controls.style.borderRadius = '8px';
-                        controls.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                        controls.style.maxWidth = '200px';
-                        controls.style.fontSize = '12px';
-                        controls.style.textAlign = 'center';
+                        controls.style.cssText = "position:absolute; top:10px; right:10px; z-index:10000; background:rgba(255,255,255,0.95); padding:8px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1); width:180px; text-align:center; font-size:12px;";
                         
                         controls.innerHTML = `
-                            <div id="geo-status-text" style="margin-bottom:8px; font-weight:600; color:#444;">Estado: Listo</div>
-                            <button id="btn-reset-geo" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer; width:100%;">
-                                🗑️ Resetear Ubicaciones
+                            <button id="btn-close-map" style="position:absolute; top:-10px; left:-10px; width:30px; height:30px; background:white; border:2px solid #ccc; border-radius:50%; font-weight:bold; cursor:pointer; font-size:16px;">✕</button>
+                            <div id="geo-status-text" style="margin-bottom:8px; font-weight:600; color:#444;">Iniciando...</div>
+                            <button id="btn-reset-geo" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer; width:100%;">
+                                🗑️ Resetear
                             </button>
-                            <div style="font-size:10px; color:#888; margin-top:5px;">Pulsa si las ubicaciones son incorrectas.</div>
                         `;
                         overlay.appendChild(controls);
 
-                        // Lógica del botón Reset
+                        // Eventos Controles
+                        document.getElementById('btn-close-map').onclick = function() {
+                            overlay.style.display = 'none';
+                        };
+
                         document.getElementById('btn-reset-geo').onclick = function() {
-                            if(confirm("¿Estás seguro?\n\nEsto borrará TODAS las posiciones actuales del mapa y obligará al sistema a buscarlas de nuevo por dirección.\n\nPuede tardar varios minutos en volver a colocar a todos los clientes.")) {
+                            if(confirm("¿Resetear ubicaciones incorrectas?")) {
                                 try {
                                     const c = JSON.parse(localStorage.getItem('clients')||'[]');
-                                    let count = 0;
-                                    c.forEach(x => {
-                                        if (x.lat && x.lon) {
-                                            x.lat = 0;
-                                            x.lon = 0;
-                                            count++;
-                                        }
-                                    });
+                                    c.forEach(x => { if(x.lat && x.lon) { x.lat = 0; x.lon = 0; } });
                                     localStorage.setItem('clients', JSON.stringify(c));
-                                    alert(`Se han reseteado ${count} clientes. El mapa se recargará y empezará la búsqueda automática.`);
                                     location.reload();
-                                } catch(e) { alert("Error al resetear: " + e); }
+                                } catch(e) { alert("Error: " + e); }
                             }
                         };
 
-
-                        // Inicializar Leaflet
-                        mapInstance = L.map('custom-leaflet-map').setView([40.4168, -3.7038], 6);
-
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '&copy; OpenStreetMap contributors'
-                        }).addTo(mapInstance);
-
-                        // Inicializar Cluster con seguridad
-                        try {
-                            if (L.markerClusterGroup) {
-                                markerCluster = L.markerClusterGroup({
-                                    maxClusterRadius: 40,
-                                    spiderfyOnMaxZoom: true,
-                                    showCoverageOnHover: false,
-                                    zoomToBoundsOnClick: true
-                                });
-                                mapInstance.addLayer(markerCluster);
+                        // RETARDO DE SEGURIDAD PARA INICIAR EL MAPA
+                        setTimeout(() => {
+                            try {
+                                mapInstance = L.map('custom-leaflet-map').setView([40.4168, -3.7038], 6);
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    attribution: '© OpenStreetMap'
+                                }).addTo(mapInstance);
+                                
+                                // Cargar chinchetas
+                                reloadMarkers(true);
+                            } catch(e) {
+                                console.error("Error crítico iniciando mapa:", e);
+                                overlay.innerHTML += '<div style="position:absolute;top:50%;width:100%;text-align:center;color:red;">Error al cargar el mapa. Pulsa X para cerrar.</div>';
                             }
-                        } catch(e) { console.error("Cluster error", e); }
+                        }, 200);
 
-                        reloadMarkers(true);
                     } else {
                         myMap.style.display = 'block';
-                        // Fix visual: recalcular tamaño al mostrar
                         if (mapInstance) {
-                            setTimeout(() => { mapInstance.invalidateSize(); }, 100);
+                             setTimeout(() => { mapInstance.invalidateSize(); }, 100);
                         }
                         reloadMarkers(false);
                     }
                 } else {
-                    if (myMap) {
-                        myMap.style.display = 'none';
-                    }
+                    if (myMap) myMap.style.display = 'none';
                 }
             }
 
@@ -355,14 +317,10 @@
                 if (!force && currentDataSig === lastDataSignature) return;
                 lastDataSignature = currentDataSig;
 
-                // Limpiar
-                if (window.markerCluster && markerCluster) {
-                    markerCluster.clearLayers();
-                } else {
-                    mapInstance.eachLayer((layer) => {
-                        if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
-                    });
-                }
+                // Limpieza Manual de Chinchetas (Sin usar Cluster)
+                mapInstance.eachLayer((layer) => {
+                    if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
+                });
 
                 try {
                     const clients = JSON.parse(clientsStr);
@@ -375,68 +333,35 @@
                         return new L.Icon({
                             iconUrl: colorUrl,
                             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                            iconSize: [25, 41],
-                            iconAnchor: [12, 41],
-                            popupAnchor: [1, -34],
-                            shadowSize: [41, 41]
+                            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
                         });
                     };
-
                     const greenIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png');
                     const redIcon = createIcon('https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png');
 
-                    const markersToAdd = [];
-
                     clients.forEach(c => {
-                        // Solo pintar si tiene coords válidas y NO son 0,0
                         if (c.lat && c.lon && (c.lat !== 0 || c.lon !== 0)) {
                             let lastOrderDate = null;
                             const clientOrders = orders.filter(o =>
                                 o.cliente_id == c.id || o.client_code == c.code || (o.cliente && o.cliente.includes(c.name))
                             );
-
                             if (clientOrders.length > 0) {
                                 clientOrders.sort((a, b) => new Date(b.timestamp || b.fecha) - new Date(a.timestamp || a.fecha));
-                                const lastOrder = clientOrders[0];
-                                if (lastOrder.timestamp || lastOrder.fecha) {
-                                    lastOrderDate = new Date(lastOrder.timestamp || lastOrder.fecha);
-                                }
+                                if (clientOrders[0].timestamp || clientOrders[0].fecha) lastOrderDate = new Date(clientOrders[0].timestamp || clientOrders[0].fecha);
                             }
 
-                            let iconToUse = redIcon;
-                            if (lastOrderDate && lastOrderDate >= thirtyDaysAgo) {
-                                iconToUse = greenIcon;
-                            }
+                            const marker = L.marker([c.lat, c.lon], { 
+                                icon: (lastOrderDate && lastOrderDate >= thirtyDaysAgo) ? greenIcon : redIcon 
+                            });
 
-                            const marker = L.marker([c.lat, c.lon], { icon: iconToUse });
-                            const name = c.name || c.nombre || "Cliente";
-                            const address = c.address || c.direccion || "";
-                            const lastDateStr = lastOrderDate ? lastOrderDate.toLocaleDateString() : "Sin pedidos recientes";
-
-                            marker.bindPopup(`
-                                <div style="text-align:center; min-width: 150px;">
-                                    <b style="font-size:14px;">${name}</b><br>
-                                    <span style="font-size:11px; color:#555;">${address}</span><br>
-                                    <div style="margin-top:6px; padding:4px 8px; background:${lastOrderDate ? '#22c55e' : '#ef4444'}; color:white; border-radius:4px; font-size:11px; display:inline-block; font-weight:bold;">
-                                        ${lastOrderDate ? 'Último: ' + lastDateStr : 'Sin pedidos recientes'}
-                                    </div>
-                                </div>
-                            `);
-                            markersToAdd.push(marker);
+                            marker.bindPopup(`<b>${c.name||'Cliente'}</b><br>${c.address||''}`);
+                            marker.addTo(mapInstance);
                         }
                     });
-
-                    if (markersToAdd.length > 0 && markerCluster) {
-                        markerCluster.addLayers(markersToAdd);
-                    } else if (markersToAdd.length > 0) {
-                        markersToAdd.forEach(m => m.addTo(mapInstance));
-                    }
-
-                } catch (e) { console.error("Error pintando mapa:", e); }
+                } catch (e) { console.error("Error pintando chinchetas:", e); }
             }
 
             setInterval(checkMapView, 500);
-
         })();
     </script>
 </body>
