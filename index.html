@@ -5,15 +5,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./logo_myl.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
     <title>Gestión de Ventas</title>
 
     <script>
-        // Simulamos señal GPS fija para que la app no se queje
         const fakePos = { coords: { latitude: 40.4168, longitude: -3.7038, accuracy: 20 }, timestamp: Date.now() };
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition = function(s, e, o) { if(s) s(fakePos); };
-            navigator.geolocation.watchPosition = function(s, e, o) { if(s) s(fakePos); return 999; };
+            navigator.geolocation.getCurrentPosition = (s, e, o) => { if(s) s(fakePos); };
+            navigator.geolocation.watchPosition = (s, e, o) => { if(s) s(fakePos); return 999; };
         }
     </script>
 
@@ -25,60 +23,68 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 
     <style>
-        /* --- ARREGLO CLAVE: NO ROMPER EL LAYOUT --- */
-        /* En lugar de ocultar el mapa original con display:none (que rompe la página),
-           simplemente lo hacemos transparente. Así ocupa su espacio y los botones no se mueven. */
-        .leaflet-container:not(#mi-mapa-real) {
-            opacity: 0 !important;           /* Invisible */
-            pointer-events: none !important; /* No se puede tocar */
-            z-index: 0 !important;           /* Al fondo */
-        }
+        /* Ajustes App */
+        body { margin: 0; background-color: #1e293b; }
+        .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
         
-        /* Ocultar mensaje de precisión visualmente si aparece */
-        div, span, p { 
-            /* Si tiene la clase de aviso, se ocultará por JS abajo, esto es backup */
-        }
-
-        /* ESTILOS DE LA APP ORIGINAL (Para que se vea bien) */
-        .euro-menu-fix { font-size: 24px !important; display: inline-block; line-height: 1; transform: translateY(1px); }
+        /* Estilos Quirúrgicos */
+        .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
-        .fecha-espanol { font-size: 11px !important; font-weight: 700 !important; color: #94a3b8 !important; margin-bottom: 2px !important; display: block !important; }
-
-        /* --- NUESTRO BOTÓN Y MAPA --- */
+        
+        /* --- BOTÓN FLOTANTE --- */
         #btn-lanzar-mapa {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            background: #2563eb;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 50px;
+            position: fixed; bottom: 90px; right: 20px;
+            background: #2563eb; color: white;
+            padding: 12px 20px; border-radius: 50px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            font-weight: bold;
-            font-family: sans-serif;
-            z-index: 9999;
-            cursor: pointer;
+            font-weight: bold; font-family: sans-serif;
+            z-index: 9999; cursor: pointer;
             border: 2px solid rgba(255,255,255,0.3);
             display: flex; align-items: center; gap: 8px;
         }
 
+        /* --- VISOR MAPA --- */
         #visor-mapa {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 100000;
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: white; z-index: 100000;
         }
         #mi-mapa-real { width: 100%; height: 100%; }
-        
+
+        /* --- PANEL CONTROL MEJORADO --- */
         #panel-control {
-            position: absolute; top: 15px; right: 15px;
-            background: rgba(255,255,255,0.95); padding: 15px;
-            border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-            z-index: 100001; width: 220px; text-align: center; font-family: sans-serif;
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.95); padding: 10px 20px;
+            border-radius: 50px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 100001; width: 85%; max-width: 400px;
+            display: flex; flex-direction: column; align-items: center;
+            font-family: sans-serif;
         }
+
+        .fila-stats {
+            display: flex; justify-content: space-between; width: 100%;
+            font-size: 13px; color: #333; margin-bottom: 5px;
+        }
+        
+        /* Barra de progreso */
+        .barra-container {
+            width: 100%; height: 6px; background: #e5e7eb;
+            border-radius: 10px; overflow: hidden; margin-top: 5px;
+        }
+        .barra-relleno {
+            height: 100%; background: #2563eb; width: 0%;
+            transition: width 0.3s ease;
+        }
+
         .btn-cerrar {
-            position: absolute; top: -10px; left: -10px; width: 35px; height: 35px;
-            background: white; border: 2px solid #ccc; border-radius: 50%;
-            font-weight: bold; cursor: pointer; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: absolute; top: 10px; right: 10px; width: 30px; height: 30px;
+            background: white; border: none; border-radius: 50%;
+            font-weight: bold; cursor: pointer; font-size: 16px; color: #555;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 100002;
+        }
+        
+        #btn-reset {
+            background: none; border: none; color: #ef4444; font-size: 11px;
+            text-decoration: underline; cursor: pointer; margin-top: 4px;
         }
     </style>
 </head>
@@ -91,37 +97,36 @@
     </div>
 
     <div id="visor-mapa">
+        <button class="btn-cerrar" onclick="cerrarMapa()">✕</button>
+        
         <div id="panel-control">
-            <button class="btn-cerrar" onclick="cerrarMapa()">✕</button>
-            <h3 style="margin:0 0 10px 0; font-size:15px;">Clientes</h3>
-            <div id="info-estado" style="font-size:12px; margin-bottom:10px; color:#555;">Cargando...</div>
-            <button onclick="repararUbicaciones()" style="background:#ef4444; color:white; border:none; padding:8px; width:100%; border-radius:6px; cursor:pointer; font-size:12px;">
-                ⚠️ Reparar (Borrar todo)
-            </button>
+            <div class="fila-stats">
+                <span id="txt-estado">Cargando...</span>
+                <span id="txt-contador">0/0</span>
+            </div>
+            <div class="barra-container">
+                <div id="barra-progreso" class="barra-relleno"></div>
+            </div>
+            <button id="btn-reset" onclick="repararUbicaciones()">Reiniciar búsqueda</button>
         </div>
+
         <div id="mi-mapa-real"></div>
     </div>
 
     <script>
         // --- 1. MANTENIMIENTO VISUAL ---
         setInterval(() => {
-            // Ocultar mensaje "Mejorando precisión" por JS (Más seguro)
+            // Limpieza de textos molestos
             document.querySelectorAll('div, p, span').forEach(el => {
-                if(el.textContent && el.textContent.includes('Mejorando precisión')) {
-                    el.style.display = 'none';
-                }
+                if(el.textContent && el.textContent.includes('Mejorando precisión')) el.style.display = 'none';
             });
-
-            // Arreglos originales de la app (Texto blanco, Euro, etc)
-            // Menú
+            // Estilos App
             const dashSpans = Array.from(document.querySelectorAll('span, p, div')).filter(e => e.textContent.trim() === 'Dash');
             let barraMenu = null;
             for (const span of dashSpans) {
                 if (span.getBoundingClientRect().top > window.innerHeight - 100) {
                     let cand = span.parentElement;
-                    if (cand && cand.parentElement && cand.parentElement.children.length > 4) {
-                        barraMenu = cand.parentElement; break;
-                    }
+                    if (cand && cand.parentElement && cand.parentElement.children.length > 4) { barraMenu = cand.parentElement; break; }
                 }
             }
             if (barraMenu) {
@@ -129,13 +134,9 @@
                     boton.style.background = 'transparent'; boton.style.boxShadow = 'none'; boton.style.border = 'none';
                     boton.querySelectorAll('*').forEach(h => { if(h.tagName!='SVG'&&h.tagName!='IMG') h.style.color='white'; });
                     boton.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
-                    if(boton.textContent.includes('€') || boton.innerHTML.includes('€')) {
-                         boton.querySelectorAll('*').forEach(x => { if(x.textContent.includes('€')) x.classList.add('euro-menu-fix'); });
-                    }
+                    if(boton.textContent.includes('€') || boton.innerHTML.includes('€')) boton.querySelectorAll('*').forEach(x => { if(x.textContent.includes('€')) x.classList.add('euro-menu-fix'); });
                 });
             }
-            
-            // Header Blanco
             document.querySelectorAll('h1, h2, h3, div, span').forEach(el => {
                 if(el.children.length === 0 && el.textContent.trim().length > 0) {
                     const rect = el.getBoundingClientRect();
@@ -145,22 +146,18 @@
                     }
                 }
             });
-            
-            // Textos Ventas
-            document.querySelectorAll('*').forEach(el => {
+             document.querySelectorAll('*').forEach(el => {
                 if (el.children.length === 0 && el.textContent.trim()) {
                     const t = el.textContent.trim().toUpperCase();
                     if ((t.includes("ANUAL") || t.includes("HISTÓRICO")) && !el.dataset.replaced) {
                         el.textContent = el.textContent.replace(/ANUAL/gi, 'VENTAS').replace(/HISTÓRICO/gi, 'VENTAS');
-                        el.classList.add('texto-ventas');
-                        el.dataset.replaced = "true";
+                        el.classList.add('texto-ventas'); el.dataset.replaced = "true";
                     }
                 }
             });
-
         }, 800);
 
-        // --- 2. LÓGICA DE NUESTRO MAPA ---
+        // --- 2. MAPA PROPIO ---
         let map = null;
 
         function abrirMapa() {
@@ -178,11 +175,10 @@
         function cerrarMapa() { document.getElementById('visor-mapa').style.display = 'none'; }
 
         function repararUbicaciones() {
-            if(confirm("¿Resetear todas las ubicaciones y volver a buscar?")) {
+            if(confirm("¿Borrar todo y volver a buscar direcciones desde cero?")) {
                 const clients = JSON.parse(localStorage.getItem('clients') || '[]');
                 clients.forEach(c => { c.lat = 0; c.lon = 0; });
                 localStorage.setItem('clients', JSON.stringify(clients));
-                alert("Hecho. Buscando direcciones...");
                 location.reload();
             }
         }
@@ -200,53 +196,95 @@
 
                 let ubicados = 0;
                 let pendientes = 0;
+                let total = 0;
 
                 clients.forEach(c => {
-                    if (c.lat && c.lon && c.lat !== 0) {
-                        ubicados++;
-                        let lastOrder = null;
-                        const misPedidos = orders.filter(o => o.cliente_id == c.id || (o.cliente && o.cliente.includes(c.name)));
-                        if (misPedidos.length > 0) {
-                            misPedidos.sort((a,b) => new Date(b.fecha||b.timestamp) - new Date(a.fecha||a.timestamp));
-                            lastOrder = new Date(misPedidos[0].fecha||misPedidos[0].timestamp);
+                    // Validamos si es un cliente real (tiene nombre o dirección)
+                    if (c.name || c.address) {
+                        total++;
+                        if (c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001) {
+                            ubicados++;
+                            let lastOrder = null;
+                            const misPedidos = orders.filter(o => o.cliente_id == c.id || (o.cliente && o.cliente.includes(c.name)));
+                            if (misPedidos.length > 0) {
+                                misPedidos.sort((a,b) => new Date(b.fecha||b.timestamp) - new Date(a.fecha||a.timestamp));
+                                lastOrder = new Date(misPedidos[0].fecha||misPedidos[0].timestamp);
+                            }
+                            const icono = (lastOrder && lastOrder >= mesAtras) ? greenIcon : redIcon;
+                            L.marker([c.lat, c.lon], { icon: icono })
+                                .bindPopup(`<b>${c.name}</b><br>${c.address||''}<br><small>${lastOrder ? lastOrder.toLocaleDateString() : 'Sin ventas'}</small>`)
+                                .addTo(map);
+                        } else if(c.address && c.address.length > 3) {
+                            pendientes++;
                         }
-                        const icono = (lastOrder && lastOrder >= mesAtras) ? greenIcon : redIcon;
-                        L.marker([c.lat, c.lon], { icon: icono })
-                            .bindPopup(`<b>${c.name}</b><br>${c.address||''}<br><small>${lastOrder ? lastOrder.toLocaleDateString() : 'Sin ventas'}</small>`)
-                            .addTo(map);
-                    } else if(c.address && c.address.length > 3) {
-                        pendientes++;
                     }
                 });
 
-                document.getElementById('info-estado').innerHTML = `Ubicados: <b>${ubicados}</b><br>Buscando: <b style="color:${pendientes>0?'orange':'green'}">${pendientes}</b>`;
+                // Actualizar UI
+                const porc = total > 0 ? Math.round(((total - pendientes) / total) * 100) : 0;
+                document.getElementById('txt-estado').innerHTML = pendientes > 0 ? `Buscando...` : `✅ Completado`;
+                document.getElementById('txt-contador').innerHTML = `${total - pendientes} / ${total}`;
+                document.getElementById('barra-progreso').style.width = `${porc}%`;
+
                 if(pendientes > 0) buscarSiguiente();
 
             } catch(e) {}
         }
 
+        // --- 3. BUSCADOR ROBUSTO (NO SE ATASCA) ---
         async function buscarSiguiente() {
+            // Si el mapa está cerrado, pausar
             if (document.getElementById('visor-mapa').style.display === 'none') { setTimeout(buscarSiguiente, 3000); return; }
             
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
+            // Buscar primero sin coordenadas
             const target = clients.find(c => (c.address && c.address.length > 4) && (!c.lat || c.lat === 0));
 
             if (target) {
-                document.getElementById('info-estado').innerHTML += `<br><small style="color:blue">Geocod: ${target.name.substring(0,10)}...</small>`;
+                // Actualizar texto UI
+                document.getElementById('txt-estado').innerHTML = `Geocodificando: <b>${target.name.substring(0,10)}...</b>`;
+                
                 try {
                     const query = `${target.address}, ${target.city||''}, España`;
                     const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+                    
                     if (res.ok) {
                         const data = await res.json();
-                        if (data.length > 0) { target.lat = parseFloat(data[0].lat); target.lon = parseFloat(data[0].lon); }
-                        else { target.lat = 0.0001; }
-                        const idx = clients.findIndex(x => x.id === target.id);
-                        if(idx !== -1) clients[idx] = target;
-                        localStorage.setItem('clients', JSON.stringify(clients));
-                        pintarChinchetas();
+                        if (data.length > 0) {
+                            target.lat = parseFloat(data[0].lat);
+                            target.lon = parseFloat(data[0].lon);
+                        } else {
+                            // NO ENCONTRADO: Marcar con 0.0001 para saltarlo y NO volver a buscarlo
+                            target.lat = 0.0001; 
+                        }
+                    } else {
+                        // ERROR DE API: Marcar también para saltar (evitar bucle infinito)
+                        console.log("Error API, saltando cliente");
+                        target.lat = 0.0001;
                     }
-                } catch(e) {}
-                setTimeout(buscarSiguiente, 1500);
+
+                    // GUARDAR INMEDIATAMENTE
+                    const idx = clients.findIndex(x => x.id === target.id);
+                    if(idx !== -1) clients[idx] = target;
+                    localStorage.setItem('clients', JSON.stringify(clients));
+                    
+                    // Refrescar mapa
+                    pintarChinchetas();
+                    
+                    // Siguiente (Esperar 1.2s para ser amables con la API)
+                    setTimeout(buscarSiguiente, 1200);
+
+                } catch(e) {
+                    // ERROR DE RED: Marcar para saltar
+                    console.log("Error Red, saltando cliente");
+                    target.lat = 0.0001;
+                    const idx = clients.findIndex(x => x.id === target.id);
+                    if(idx !== -1) clients[idx] = target;
+                    localStorage.setItem('clients', JSON.stringify(clients));
+                    setTimeout(buscarSiguiente, 1200);
+                }
+            } else {
+                document.getElementById('txt-estado').innerText = "✅ Todo finalizado";
             }
         }
     </script>
