@@ -1,10 +1,12 @@
 <!doctype html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./logo_myl.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Gestión de Ventas</title>
+
     <script>
         const fakePos = { coords: { latitude: 40.4168, longitude: -3.7038, accuracy: 50 }, timestamp: Date.now() };
         if (navigator.geolocation) {
@@ -12,103 +14,189 @@
             navigator.geolocation.watchPosition = (s) => { s(fakePos); return 999; };
         }
     </script>
+
     <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
     <link rel="stylesheet" href="./index-cqvvk0bb.css?v=final">
+    <link rel="manifest" href="./manifest.webmanifest">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        body { margin: 0; background: #1e293b; font-family: sans-serif; }
+        /* Base */
+        body { margin: 0; background-color: #1e293b; font-family: sans-serif; overflow: hidden; }
+        
+        /* Ocultar mapas originales rotos */
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
-        .texto-ventas { color: white !important; font-weight: bold !important; }
+        
+        /* Arreglos Visuales */
         .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
+        .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
 
-        /* Botón Flotante */
-        #btn-lanzar-mapa {
-            position: fixed; bottom: 90px; right: 20px;
-            background: #2563eb; color: white;
-            padding: 12px 20px; border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            font-weight: bold; cursor: pointer; z-index: 9999;
-            border: 2px solid rgba(255,255,255,0.3); display: flex; align-items: center; gap: 8px;
+        /* --- VISOR MAPA INTEGRADO --- */
+        #visor-mapa {
+            display: none; /* Se activa por JS */
+            position: fixed; top: 0; left: 0;
+            width: 100%; 
+            height: 100%; /* Ocupa todo, el menú inferior flotará encima */
+            background: #1e293b; 
+            z-index: 900; /* Alto, pero MENOR que el menú inferior (que suele ser 1000+) */
         }
-
-        /* Visor */
-        #visor-mapa { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100000; }
+        
         #mi-mapa-real { width: 100%; height: 100%; }
 
-        /* Panel Superior */
-        .top-bar { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; z-index: 100001; }
-        .btn-top { pointer-events: auto; background: white; border-radius: 30px; padding: 8px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-weight: bold; color: #333; cursor: pointer; font-size: 14px; border: 1px solid #ddd; }
-        .btn-azul { background: #2563eb; color: white; border: none; }
+        /* Botón de Opciones (Solo visible en el mapa) */
+        .btn-opciones-flotante {
+            position: absolute; top: 15px; right: 15px;
+            background: white; border-radius: 30px; padding: 8px 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-weight: bold; color: #2563eb;
+            cursor: pointer; font-size: 13px; z-index: 1001; border: 1px solid #bfdbfe;
+            display: flex; align-items: center; gap: 6px;
+        }
 
-        /* Panel Importar */
+        /* Panel Importar Lateral */
         #panel-importar {
             position: absolute; top: 60px; right: 15px; width: 260px;
-            background: rgba(255,255,255,0.95); border-radius: 12px; padding: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 100002;
-            display: none;
+            background: rgba(255,255,255,0.98); border-radius: 12px; padding: 15px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.4); z-index: 1002;
+            transform: translateX(120%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .btn-accion { width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+        #panel-importar.activo { transform: translateX(0); }
+
+        .btn-accion { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
         .btn-verde { background: #16a34a; color: white; }
-        .btn-rojo { background: #fee2e2; color: #ef4444; }
+        .btn-rojo { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
         #input-excel { display: none; }
+        
+        /* FORZAR VISIBILIDAD DEL MENÚ INFERIOR */
+        /* Buscamos el contenedor del menú por sus características probables y lo elevamos */
+        nav, div[style*="bottom: 0"], div[class*="bottom"] {
+            z-index: 9999 !important; /* Por encima de nuestro mapa */
+            position: fixed !important;
+        }
     </style>
 </head>
 
 <body>
     <div id="root"></div>
-    <div id="btn-lanzar-mapa" onclick="abrirMapa()">🌍 VER MAPA</div>
 
     <div id="visor-mapa">
-        <div class="top-bar">
-            <div class="btn-top" onclick="cerrarMapa()">⬅️ Volver</div>
-            <div class="btn-top btn-azul" onclick="toggleImportar()">📂 Importar</div>
+        <div class="btn-opciones-flotante" onclick="toggleImportar()">
+            📂 Importar / Borrar
         </div>
 
         <div id="panel-importar">
-            <h4 style="margin:0 0 10px 0;">Cargar Clientes</h4>
+            <h4 style="margin:0 0 10px 0; color:#333; border-bottom:1px solid #eee; padding-bottom:5px;">
+                Gestión de Clientes
+            </h4>
             <div style="font-size:11px; color:#555; margin-bottom:10px;">
-                Selecciona el archivo <b>Clientes_CON_COORDENADAS.xlsx</b> generado por tu ordenador.
+                Sube el archivo <b>Clientes_CON_COORDENADAS.xlsx</b>
             </div>
+            
             <input type="file" id="input-excel" accept=".xlsx,.xls" onchange="cargarExcel(this)">
-            <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">Seleccionar Archivo</button>
-            <button class="btn-accion btn-rojo" onclick="borrarDatos()">Borrar Todo</button>
+            <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">
+                Subir Excel
+            </button>
+            <button class="btn-accion btn-rojo" onclick="borrarDatos()">
+                Borrar Mapa
+            </button>
+            <div style="margin-top:10px; text-align:center; font-size:10px; color:#999; cursor:pointer; text-decoration:underline;" onclick="toggleImportar()">Cerrar menú</div>
         </div>
 
         <div id="mi-mapa-real"></div>
     </div>
 
     <script>
-        // Mantenimiento Visual
+        // --- 1. LÓGICA DE NAVEGACIÓN (EL CEREBRO) ---
+        // Este bucle vigila en qué pantalla estás
         setInterval(() => {
-            document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
-            document.querySelectorAll('div[style*="bottom: 0px"] svg').forEach(i => i.style.filter='brightness(0) invert(1)');
-            document.querySelectorAll('h1,h2,div,span').forEach(e => {
-                if(e.textContent.trim() && e.getBoundingClientRect().top<65 && !e.closest('#visor-mapa')) e.style.color='white';
-            });
-        }, 1000);
-
-        let map = null;
-        function abrirMapa() {
-            document.getElementById('visor-mapa').style.display = 'block';
-            setTimeout(() => {
-                if(!map) {
-                    map = L.map('mi-mapa-real', {zoomControl: false}).setView([40.4168, -3.7038], 6);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            // A. Detectar si estamos en la pestaña "MAPA"
+            let mapaActivo = false;
+            
+            // Buscamos el botón de menú "Mapa"
+            const botonesMenu = document.querySelectorAll('a, div[role="button"], span, p');
+            botonesMenu.forEach(btn => {
+                const texto = btn.textContent ? btn.textContent.trim().toLowerCase() : '';
+                if (texto === 'mapa' || texto === 'map') {
+                    // Verificamos si parece activo (clase 'active', color distinto, o URL)
+                    const estilo = window.getComputedStyle(btn);
+                    // Criterios de "Activo": Clase CSS, color de texto blanco/azul, o URL contiene 'map'
+                    if (btn.className.includes('active') || 
+                        estilo.color === 'rgb(255, 255, 255)' || 
+                        estilo.color === 'rgb(37, 99, 235)' || // Azul active
+                        window.location.href.includes('map')) {
+                        mapaActivo = true;
+                    }
+                    
+                    // Forzar que el icono del menú "Mapa" se quede iluminado si estamos en él
+                    // Esto ayuda visualmente
+                    if(mapaActivo && btn.parentElement) {
+                         // Opcional: forzar estilos si la app no lo hace bien
+                    }
                 }
-                map.invalidateSize();
-                pintarPuntos();
-            }, 200);
+            });
+
+            // Confirmación por URL (Más fiable)
+            if (window.location.href.includes('/map')) mapaActivo = true;
+
+            // B. Mostrar u Ocultar NUESTRO mapa
+            const visor = document.getElementById('visor-mapa');
+            if (mapaActivo) {
+                if (visor.style.display !== 'block') {
+                    visor.style.display = 'block';
+                    // Inicializar mapa si es la primera vez
+                    if (!map) iniciarMapa(); 
+                    else setTimeout(() => map.invalidateSize(), 100);
+                }
+            } else {
+                if (visor.style.display !== 'none') {
+                    visor.style.display = 'none';
+                    // Cerrar panel importar si estaba abierto
+                    document.getElementById('panel-importar').classList.remove('activo');
+                }
+            }
+
+            // C. Limpieza Visual Continua
+            document.querySelectorAll('div,p,span').forEach(e => { 
+                if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; 
+            });
+            
+            // Forzar iconos blancos en menú inferior
+            const menus = document.querySelectorAll('div');
+            menus.forEach(d => {
+                const rect = d.getBoundingClientRect();
+                // Detectar barra inferior (pegada abajo)
+                if(d.style.position === 'fixed' && rect.bottom >= window.innerHeight) {
+                     d.style.zIndex = "9999"; // Asegurar que esté encima del mapa
+                     d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
+                }
+            });
+
+        }, 500); // Revisar cada medio segundo
+
+        // --- 2. MAPA ---
+        let map = null;
+
+        function iniciarMapa() {
+            map = L.map('mi-mapa-real', { zoomControl: false }).setView([40.4168, -3.7038], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
+            pintarPuntos();
         }
-        function cerrarMapa() { document.getElementById('visor-mapa').style.display = 'none'; document.getElementById('panel-importar').style.display='none'; }
-        function toggleImportar() { const p = document.getElementById('panel-importar'); p.style.display = p.style.display==='block'?'none':'block'; }
+
+        function toggleImportar() {
+            const p = document.getElementById('panel-importar');
+            p.classList.toggle('activo');
+        }
         
         function borrarDatos() {
-            if(confirm("¿Borrar mapa?")) { localStorage.setItem('clients', '[]'); location.reload(); }
+            if(confirm("¿Borrar todos los clientes del mapa?")) {
+                localStorage.setItem('clients', '[]');
+                location.reload();
+            }
         }
 
+        // --- 3. CARGA EXCEL ---
         function cargarExcel(input) {
             const file = input.files[0];
             if(!file) return;
@@ -121,25 +209,26 @@
 
                 if(!json.length) { alert("Archivo vacío"); return; }
                 
-                // Mapear columnas (flexible)
                 const nuevos = json.map((row, i) => {
                     const get = (k) => row[k] || row[k.toUpperCase()] || "";
-                    const lat = parseFloat(get('LATITUD') || 0);
-                    const lon = parseFloat(get('LONGITUD') || 0);
                     return {
                         id: get('CODIGO') || i,
                         name: get('TIENDA') || get('NOMBRE') || "Cliente",
                         address: get('DIRECCION'),
                         city: get('POBLACION'),
-                        lat: lat, lon: lon
+                        lat: parseFloat(get('LATITUD') || 0),
+                        lon: parseFloat(get('LONGITUD') || 0)
                     };
                 });
 
                 const validos = nuevos.filter(c => c.lat !== 0);
-                if(validos.length === 0) { alert("⚠️ El archivo no tiene coordenadas.\n¿Ejecutaste el script 'EJECUTAR_GPS.bat' primero?"); return; }
+                if(validos.length === 0) { 
+                    alert("⚠️ No se han encontrado coordenadas válidas.\nRecuerda usar el archivo procesado por Python."); 
+                    return; 
+                }
 
                 localStorage.setItem('clients', JSON.stringify(nuevos));
-                alert(`✅ Cargados ${validos.length} clientes correctamente.`);
+                alert(`✅ Mapa actualizado con ${validos.length} clientes.`);
                 toggleImportar();
                 pintarPuntos();
             };
@@ -161,7 +250,7 @@
                     bounds.push([c.lat, c.lon]);
                 }
             });
-            if(bounds.length) map.fitBounds(bounds);
+            if(bounds.length > 0) map.fitBounds(bounds);
         }
     </script>
 </body>
