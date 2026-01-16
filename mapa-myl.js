@@ -279,6 +279,9 @@
         requestAnimationFrame(procesarLote);
     }
 
+    // Contador de reintentos por cliente para evitar loops infinitos
+    const reintentosPorCliente = new Map();
+
     async function buscarSiguienteDireccion() {
         if (document.getElementById('visor-mapa-myl').style.display === 'none') return;
 
@@ -292,79 +295,128 @@
 
         if (!target) {
             // No hay más clientes pendientes
+            document.getElementById('st-texto').innerHTML = `<span style="color: #10b981;">✅ Mapa Actualizado</span>`;
             return;
         }
 
         const nombre = target.name || target.nombre || 'Cliente';
+        const clienteId = target.id;
+        const reintentos = reintentosPorCliente.get(clienteId) || 0;
+        
+        // Si ha fallado 3 veces, marcarlo como no encontrado y seguir
+        if (reintentos >= 3) {
+            target.lat = 0.0001;
+            const idx = clients.findIndex(x => x.id === clienteId);
+            if (idx !== -1) clients[idx] = target;
+            localStorage.setItem('clients', JSON.stringify(clients));
+            reintentosPorCliente.delete(clienteId);
+            setTimeout(buscarSiguienteDireccion, 500);
+            return;
+        }
+
         document.getElementById('st-texto').innerHTML = `Buscando: <small>${nombre.substring(0, 15)}...</small>`;
 
         try {
-            // Construimos una query potente combinando Dirección, Ciudad y Provincia
-            // Soporta ambos formatos: inglés (address, city, province) y español (direccion, localidad, provincia)
+            // Construimos queries progresivamente más simples si falla
             const direccion = target.address || target.direccion || '';
             const ciudad = target.city || target.localidad || '';
             const provincia = target.province || target.provincia || '';
             
-            let queryPartes = [direccion];
-            if (ciudad) queryPartes.push(ciudad);
-            if (provincia) queryPartes.push(provincia);
-            queryPartes.push("España");
+            // Intentar diferentes niveles de búsqueda
+            const queries = [];
+            
+            // 1. Búsqueda completa: dirección + ciudad + provincia
+            if (direccion && ciudad && provincia) {
+                queries.push(`${direccion}, ${ciudad}, ${provincia}, España`);
+            }
+            
+            // 2. Búsqueda sin dirección específica: ciudad + provincia
+            if (ciudad && provincia) {
+                queries.push(`${ciudad}, ${provincia}, España`);
+            }
+            
+            // 3. Solo provincia
+            if (provincia) {
+                queries.push(`${provincia}, España`);
+            }
+            
+            // 4. Solo ciudad si existe
+            if (ciudad) {
+                queries.push(`${ciudad}, España`);
+            }
 
-            const query = queryPartes.join(', ');
+            let encontrado = false;
             
-            // Agregar timeout y mejor manejo de errores
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
-            
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`, {
-                    signal: controller.signal,
-                    headers: {
-                        'User-Agent': 'VentasMYL/1.0'
+            for (const query of queries) {
+                if (encontrado) break;
+                
+                try {
+                    // Timeout más largo (15 segundos) y mejor manejo
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+                    
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`, {
+                        signal: controller.signal,
+                        headers: {
+                            'User-Agent': 'VentasMYL/1.0'
+                        }
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.length > 0) {
+                            target.lat = parseFloat(data[0].lat);
+                            target.lon = parseFloat(data[0].lon);
+                            console.log(`✅ Coordenadas encontradas para ${nombre}: ${target.lat}, ${target.lon}`);
+                            encontrado = true;
+                            reintentosPorCliente.delete(clienteId);
+                        }
+                    } else if (res.status === 429) {
+                        // Rate limit - esperar más tiempo
+                        console.warn(`⏸️ Límite de velocidad alcanzado, esperando 10 segundos...`);
+                        setTimeout(buscarSiguienteDireccion, 10000);
+                        return;
                     }
-                });
-                clearTimeout(timeoutId);
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.length > 0) {
-                        target.lat = parseFloat(data[0].lat);
-                        target.lon = parseFloat(data[0].lon);
-                        console.log(`✅ Coordenadas encontradas para ${nombre}: ${target.lat}, ${target.lon}`);
+                } catch (fetchError) {
+                    if (fetchError.name === 'AbortError') {
+                        console.warn(`⏱️ Timeout con query: ${query.substring(0, 50)}...`);
                     } else {
-                        // Si no lo encuentra, marcamos con un valor mínimo para no reintentar infinitamente
-                        target.lat = 0.0001;
-                        console.warn(`⚠️ No se encontraron coordenadas para: ${query}`);
+                        console.warn(`❌ Error de red: ${fetchError.message}`);
                     }
-                } else {
-                    // Si la API falla (por ejemplo, por límites de velocidad), esperamos
-                    console.warn(`⚠️ Error de API (${res.status}), reintentando en 3 segundos...`);
+                    // Continuar con la siguiente query
+                }
+            }
+
+            if (!encontrado) {
+                // Incrementar contador de reintentos
+                reintentosPorCliente.set(clienteId, reintentos + 1);
+                
+                if (reintentos < 2) {
+                    // Reintentar este mismo cliente
+                    console.warn(`⚠️ No encontrado, reintentando (${reintentos + 1}/3)...`);
                     setTimeout(buscarSiguienteDireccion, 3000);
                     return;
-                }
-            } catch (fetchError) {
-                clearTimeout(timeoutId);
-                if (fetchError.name === 'AbortError') {
-                    console.warn(`⏱️ Timeout buscando: ${query}`);
                 } else {
-                    console.warn(`❌ Error de red: ${fetchError.message}`);
+                    // Marcar como no encontrado después de 3 intentos
+                    target.lat = 0.0001;
+                    console.warn(`⚠️ No se encontraron coordenadas para: ${nombre}`);
+                    reintentosPorCliente.delete(clienteId);
                 }
-                // Esperar más tiempo antes de reintentar
-                setTimeout(buscarSiguienteDireccion, 5000);
-                return;
             }
 
             // Guardar progreso
-            const idx = clients.findIndex(x => x.id === target.id);
+            const idx = clients.findIndex(x => x.id === clienteId);
             if (idx !== -1) clients[idx] = target;
             localStorage.setItem('clients', JSON.stringify(clients));
 
             // Recargar para mostrar chincheta y seguir con el siguiente
             cargarClientes();
-            setTimeout(buscarSiguienteDireccion, 1200); // Pausa de cortesía para la API
+            setTimeout(buscarSiguienteDireccion, 2000); // Pausa de cortesía para la API (2 segundos)
 
         } catch (e) {
             console.error("Error en geolocalización:", e);
+            reintentosPorCliente.set(clienteId, (reintentosPorCliente.get(clienteId) || 0) + 1);
             setTimeout(buscarSiguienteDireccion, 5000);
         }
     }

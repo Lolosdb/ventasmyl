@@ -113,7 +113,7 @@
         }, 800);
     </script>
 
-    <!-- NUEVO MÓDULO DE MAPA (Forzamos recarga con v=6) -->
+    <!-- NUEVO MÓDULO DE MAPA (Forzamos recarga con v=7) -->
     <script>
         // Esperar a que todas las bibliotecas estén cargadas
         function cargarMapa() {
@@ -125,7 +125,7 @@
             
             // Verificar MarkerCluster (puede no estar disponible, pero el código lo maneja)
             const script = document.createElement('script');
-            script.src = './mapa-myl.js?v=6';
+            script.src = './mapa-myl.js?v=7';
             script.onerror = function() {
                 console.error('Error cargando mapa-myl.js');
             };
