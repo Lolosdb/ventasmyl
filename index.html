@@ -24,36 +24,31 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* --- CORRECCIONES CRÍTICAS DE SCROLL Y VISUALIZACIÓN --- */
-        
-        /* 1. Permitir scroll siempre, pero evitar rebote lateral */
+        /* --- ARREGLOS DE SCROLL --- */
         body { 
             margin: 0; 
             background-color: #1e293b; 
             font-family: sans-serif; 
             overflow-x: hidden !important; 
-            overflow-y: auto !important; /* Habilita el scroll vertical */
-            padding-bottom: 100px !important; /* COLCHÓN PARA QUE LA BOTONERA NO TAPE NADA */
+            overflow-y: auto !important; /* Permitir scroll vertical siempre */
+            padding-bottom: 100px !important; /* Espacio extra abajo para que la botonera no tape */
         }
 
-        /* 2. Ocultar mapas rotos de la app original */
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
-        
-        /* 3. Estilos visuales */
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
         .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
 
-        /* --- VISOR MAPA (CAPA SUPERIOR) --- */
+        /* --- VISOR MAPA --- */
         #visor-mapa { 
             display: none; 
             position: fixed; top: 0; left: 0; 
             width: 100%; height: 100%; 
             background: #1e293b; 
-            z-index: 10000; /* Muy alto para tapar todo cuando se abra */
+            z-index: 10000; 
         }
         #mi-mapa-real { width: 100%; height: 100%; }
 
-        /* BOTONES FLOTANTES DEL MAPA */
+        /* BOTONES DEL MAPA */
         .btn-mapa {
             position: absolute; top: 20px; background: white; color: #333;
             padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
@@ -76,8 +71,6 @@
         .btn-rojo { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
         
         #input-excel { display: none; }
-
-        /* ASEGURAR QUE EL MENÚ INFERIOR SE VEA SIEMPRE (A menos que el mapa lo tape) */
         nav, div[style*="bottom: 0"], div[class*="bottom"] { z-index: 9999 !important; position: fixed !important; }
     </style>
 </head>
@@ -104,10 +97,9 @@
     </div>
 
     <script>
-        // 1. CONTROL DE NAVEGACIÓN Y VISUALIZACIÓN
+        // 1. CONTROL DE PANTALLAS
         setInterval(() => {
             let mapaActivo = false;
-            // Detección de pestaña activa
             document.querySelectorAll('a, div, span, p').forEach(el => {
                 const txt = el.textContent ? el.textContent.trim().toLowerCase() : '';
                 if (txt === 'mapa' || txt === 'map') {
@@ -120,26 +112,24 @@
             const visor = document.getElementById('visor-mapa');
             
             if (mapaActivo) {
-                // MODO MAPA ACTIVO
+                // ENTRANDO AL MAPA
                 if (visor.style.display !== 'block') {
                     visor.style.display = 'block';
-                    document.body.style.overflow = 'hidden'; // Bloquea scroll SOLO cuando ves el mapa
+                    document.body.style.overflow = 'hidden'; // Bloquea scroll solo mientras ves el mapa
                     if (!map) iniciarMapa();
                     else { map.invalidateSize(); pintarPuntos(); }
                 }
             } else {
-                // MODO APP NORMAL
+                // SALIENDO DEL MAPA
                 if (visor.style.display !== 'none') {
                     visor.style.display = 'none';
-                    document.body.style.overflow = 'auto'; // Reactiva scroll al salir del mapa
+                    document.body.style.overflow = 'auto'; // Devuelve el scroll al salir
                     document.getElementById('panel-importar').classList.remove('activo');
                 }
             }
 
-            // Limpieza visual continua
+            // Limpieza visual
             document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
-            
-            // Iconos del menú inferior en blanco
             document.querySelectorAll('div').forEach(d => {
                 const r = d.getBoundingClientRect();
                 if(d.style.position === 'fixed' && r.bottom >= window.innerHeight) {
@@ -147,7 +137,6 @@
                      d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
                 }
             });
-
         }, 500);
 
         // 2. MAPA
@@ -158,14 +147,22 @@
             pintarPuntos();
         }
 
-        // --- ARREGLO BOTÓN VOLVER ---
+        // --- ARREGLO FINAL DEL BOTÓN VOLVER ---
         function cerrarMapa() {
-            // Simplemente ocultamos el mapa y forzamos el clic en "Dash" para asegurar estabilidad
+            // 1. Ocultar el mapa manualmente
             document.getElementById('visor-mapa').style.display = 'none';
-            document.body.style.overflow = 'auto'; // Devolver scroll
+            // 2. Devolver el scroll
+            document.body.style.overflow = 'auto';
             
-            const btn = Array.from(document.querySelectorAll('span, p, div')).find(e => e.textContent.trim() === 'Dash'); 
-            if(btn) btn.click();
+            // 3. Buscar y pulsar el botón "Dash" de la app original
+            // Esto le dice a la app interna "Vete al inicio", sin usar el navegador
+            const botones = document.querySelectorAll('span, p, div, a');
+            for (let btn of botones) {
+                if (btn.textContent && btn.textContent.trim() === 'Dash') {
+                    btn.click();
+                    break;
+                }
+            }
         }
 
         function toggleImportar() { document.getElementById('panel-importar').classList.toggle('activo'); }
@@ -178,7 +175,6 @@
             reader.onload = function(e) {
                 const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                
                 const nuevos = json.map((row, i) => {
                     const get = (k) => row[k] || row[k.toUpperCase()] || "";
                     return {
@@ -188,17 +184,15 @@
                         lat: parseFloat(get('LATITUD') || 0), lon: parseFloat(get('LONGITUD') || 0)
                     };
                 });
-                
                 const validos = nuevos.filter(c => c.lat !== 0);
                 localStorage.setItem('clients', JSON.stringify(nuevos));
                 alert(`✅ Cargados ${nuevos.length} clientes (${validos.length} con mapa).`);
-                toggleImportar(); 
-                pintarPuntos();
+                toggleImportar(); pintarPuntos();
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // 4. PINTAR MAPA (Chinchetas Pequeñas + Colores Correctos)
+        // 4. PINTAR (Iconos Pequeños + Color Correcto)
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
@@ -206,7 +200,7 @@
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
 
-            // --- ICONOS PEQUEÑOS ---
+            // ICONOS MINI
             const smallIconSize = [15, 24];
             const smallIconAnchor = [7, 24]; 
             const smallPopupAnchor = [1, -24];
