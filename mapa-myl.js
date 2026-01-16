@@ -281,6 +281,50 @@
 
     // Contador de reintentos por cliente para evitar loops infinitos
     const reintentosPorCliente = new Map();
+    
+    // Función para agregar un solo marcador sin recargar todos
+    function agregarMarcadorCliente(cliente, orders, limite30Dias) {
+        const idMarcador = `m-${cliente.id}`;
+        
+        // Verificar si el marcador ya existe
+        const existente = markers.find(m => m._id === idMarcador);
+        if (existente) {
+            return; // Ya existe, no hacer nada
+        }
+        
+        // Buscar pedidos del cliente
+        let misPedidos = orders.filter(o => o.cliente_id == cliente.id || (o.cliente && o.cliente.includes(cliente.name || cliente.nombre || '')));
+        let tieneVentaReciente = false;
+        let ultimaFecha = "Sin ventas";
+
+        if (misPedidos.length > 0) {
+            misPedidos.sort((a, b) => new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp));
+            const fechaVenta = new Date(misPedidos[0].fecha || misPedidos[0].timestamp);
+            ultimaFecha = fechaVenta.toLocaleDateString();
+            if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
+        }
+
+        const nombre = cliente.name || cliente.nombre || 'Cliente';
+        const direccion = cliente.address || cliente.direccion || '';
+        
+        const marker = L.marker([cliente.lat, cliente.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
+            .bindPopup(`
+                <div style="font-family: sans-serif; padding: 5px;">
+                    <strong style="color: #2563eb; font-size: 14px;">${nombre}</strong><br>
+                    <span style="color: #64748b; font-size: 12px;">${direccion}</span><br>
+                    <span style="font-size: 11px; font-weight: bold;">Venta: ${ultimaFecha}</span>
+                </div>
+            `);
+        
+        marker._id = idMarcador;
+        markers.push(marker);
+        
+        if (markerCluster) {
+            markerCluster.addLayer(marker);
+        } else {
+            marker.addTo(map);
+        }
+    }
 
     async function buscarSiguienteDireccion() {
         if (document.getElementById('visor-mapa-myl').style.display === 'none') return;
@@ -410,8 +454,24 @@
             if (idx !== -1) clients[idx] = target;
             localStorage.setItem('clients', JSON.stringify(clients));
 
-            // Recargar para mostrar chincheta y seguir con el siguiente
-            cargarClientes();
+            // Si se encontraron coordenadas, agregar el marcador sin recargar todos
+            if (encontrado && target.lat && target.lon && target.lat !== 0 && target.lat !== 0.0001) {
+                const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+                const now = new Date();
+                const limite30Dias = new Date();
+                limite30Dias.setDate(now.getDate() - 30);
+                
+                agregarMarcadorCliente(target, orders, limite30Dias);
+                
+                // Actualizar contador sin recargar todo
+                const totalClientes = clients.length;
+                const clientesConCoords = clients.filter(c => c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001).length;
+                document.getElementById('st-contador').textContent = `${clientesConCoords} / ${totalClientes}`;
+                const porcentaje = totalClientes > 0 ? (clientesConCoords / totalClientes * 100) : 0;
+                document.getElementById('p-fill').style.width = `${porcentaje}%`;
+            }
+            
+            // Continuar con el siguiente cliente
             setTimeout(buscarSiguienteDireccion, 2000); // Pausa de cortesía para la API (2 segundos)
 
         } catch (e) {
