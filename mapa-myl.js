@@ -3,7 +3,7 @@
  * Este archivo maneja de forma aislada toda la lógica del mapa para evitar cuelgues y mejorar la precisión.
  */
 
-(function() {
+(function () {
     // 1. ESTILOS INYECTADOS (Para mantener index.html limpio)
     const style = document.createElement('style');
     style.textContent = `
@@ -70,16 +70,13 @@
     `;
     document.head.appendChild(style);
 
-    // 2. ESTRUCTURA HTML
+    // 2. ESTRUCTURA HTML (Solo visor, sin botón flotante propio)
     const html = `
-        <div id="btn-lanzar-mapa">
-            <span>🌍</span> MAPA CLIENTES
-        </div>
         <div id="visor-mapa-myl">
             <button class="btn-cerrar-mapa">✕</button>
             <div id="panel-mapa">
                 <div class="header-mapa">
-                    <span id="st-texto" class="estado-busqueda">Iniciando...</span>
+                    <span id="st-texto" class="estado-busqueda">Geolocalizando...</span>
                     <span id="st-contador" class="contador-num">0/0</span>
                 </div>
                 <div class="progress-bar"><div id="p-fill"></div></div>
@@ -101,8 +98,8 @@
     function initMap() {
         if (!map) {
             map = L.map('mi-mapa-real').setView([40.4168, -3.7038], 6);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' 
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
         }
         map.invalidateSize();
@@ -110,10 +107,6 @@
     }
 
     function cargarClientes() {
-        // Limpiar marcadores previos
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
-
         try {
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
@@ -126,56 +119,55 @@
             let pendientes = 0;
 
             clients.forEach(c => {
-                if (!c.name && !c.address) return; // Saltar registros vacíos
+                if (!c.name && !c.address) return;
                 total++;
 
-                // Si ya tiene coordenadas válidas
+                // Si tiene coordenadas, lo pintamos si no existe ya
                 if (c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001) {
                     ubicados++;
-                    // Determinar color por venta reciente (30 días)
-                    const misPedidos = orders.filter(o => o.cliente_id == c.id || (o.cliente && o.cliente.includes(c.name)));
-                    let tieneVentaReciente = false;
-                    let ultimaFecha = "Sin ventas";
 
-                    if (misPedidos.length > 0) {
-                        misPedidos.sort((a,b) => new Date(b.fecha||b.timestamp) - new Date(a.fecha||a.timestamp));
-                        const fechaVenta = new Date(misPedidos[0].fecha||misPedidos[0].timestamp);
-                        ultimaFecha = fechaVenta.toLocaleDateString();
-                        if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
+                    // Comprobar si ya existe este marcador para no recrearlo (evita parpadeo)
+                    const idMarcador = `m-${c.id}`;
+                    const existente = markers.find(m => m._id === idMarcador);
+
+                    if (!existente) {
+                        const misPedidos = orders.filter(o => o.cliente_id == c.id || (o.cliente && o.cliente.includes(c.name)));
+                        let tieneVentaReciente = false;
+                        let ultimaFecha = "Sin ventas";
+
+                        if (misPedidos.length > 0) {
+                            misPedidos.sort((a, b) => new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp));
+                            const fechaVenta = new Date(misPedidos[0].fecha || misPedidos[0].timestamp);
+                            ultimaFecha = fechaVenta.toLocaleDateString();
+                            if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
+                        }
+
+                        const marker = L.marker([c.lat, c.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
+                            .bindPopup(`
+                                <div style="font-family: sans-serif; padding: 5px;">
+                                    <strong style="color: #2563eb; font-size: 14px;">${c.name}</strong><br>
+                                    <span style="color: #64748b; font-size: 12px;">${c.address || ''}</span><br>
+                                    <span style="font-size: 11px; font-weight: bold;">Venta: ${ultimaFecha}</span>
+                                </div>
+                            `)
+                            .addTo(map);
+                        marker._id = idMarcador; // ID personalizado
+                        markers.push(marker);
                     }
-
-                    const marker = L.marker([c.lat, c.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
-                        .bindPopup(`
-                            <div style="font-family: sans-serif; padding: 5px;">
-                                <strong style="color: #2563eb; font-size: 14px;">${c.name}</strong><br>
-                                <span style="color: #64748b; font-size: 12px;">${c.address || 'Sin dirección'}</span><br>
-                                <span style="color: #64748b; font-size: 12px;">${c.city || ''} ${c.province || ''}</span><br>
-                                <hr style="margin: 8px 0; border: 0; border-top: 1px solid #e2e8f0;">
-                                <span style="font-size: 11px; font-weight: bold;">Última venta: ${ultimaFecha}</span>
-                            </div>
-                        `)
-                        .addTo(map);
-                    markers.push(marker);
                 } else if (c.address && c.address.length > 3) {
                     pendientes++;
                 }
             });
 
-            // Actualizar UI del panel
-            const porc = total > 0 ? Math.round(((total - pendientes) / total) * 100) : 0;
             document.getElementById('st-contador').textContent = `${total - pendientes} / ${total}`;
-            document.getElementById('p-fill').style.width = `${porc}%`;
-            
+            document.getElementById('p-fill').style.width = `${total > 0 ? (total - pendientes) / total * 100 : 0}%`;
+
             if (pendientes > 0) {
-                document.getElementById('st-texto').innerHTML = `<span style="color: #f59e0b;">Buscando ubicaciones...</span>`;
                 buscarSiguienteDireccion();
             } else {
-                document.getElementById('st-texto').innerHTML = `<span style="color: #10b981;">✅ Todo ubicado</span>`;
+                document.getElementById('st-texto').innerHTML = `<span style="color: #10b981;">✅ Mapa Actualizado</span>`;
             }
-
-        } catch (e) {
-            console.error("Error cargando clientes en mapa:", e);
-        }
+        } catch (e) { }
     }
 
     async function buscarSiguienteDireccion() {
@@ -197,7 +189,7 @@
 
             const query = queryPartes.join(', ');
             const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-            
+
             if (res.ok) {
                 const data = await res.json();
                 if (data.length > 0) {
@@ -205,7 +197,7 @@
                     target.lon = parseFloat(data[0].lon);
                 } else {
                     // Si no lo encuentra, marcamos con un valor mínimo para no reintentar infinitamente
-                    target.lat = 0.0001; 
+                    target.lat = 0.0001;
                 }
             } else {
                 // Si la API falla (por ejemplo, por límites de velocidad), esperamos
@@ -217,7 +209,7 @@
             const idx = clients.findIndex(x => x.id === target.id);
             if (idx !== -1) clients[idx] = target;
             localStorage.setItem('clients', JSON.stringify(clients));
-            
+
             // Recargar para mostrar chincheta y seguir con el siguiente
             cargarClientes();
             setTimeout(buscarSiguienteDireccion, 1200); // Pausa de cortesía para la API
@@ -228,11 +220,25 @@
         }
     }
 
-    // EVENTOS
-    document.getElementById('btn-lanzar-mapa').onclick = () => {
-        document.getElementById('visor-mapa-myl').style.display = 'block';
-        initMap();
-    };
+    // EVENTOS INTEGRADOS CON BARRA INFERIOR
+    setInterval(() => {
+        // Buscamos el botón "Mapa" de la barra azul inferior
+        const botonesMenu = document.querySelectorAll('span, p');
+        botonesMenu.forEach(btn => {
+            if (btn.textContent.trim().toLowerCase() === 'mapa' && !btn.dataset.hooked) {
+                const contenedorBoton = btn.closest('button, div');
+                if (contenedorBoton) {
+                    contenedorBoton.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        document.getElementById('visor-mapa-myl').style.display = 'block';
+                        initMap();
+                    };
+                    btn.dataset.hooked = "true";
+                }
+            }
+        });
+    }, 1000);
 
     document.querySelector('.btn-cerrar-mapa').onclick = () => {
         document.getElementById('visor-mapa-myl').style.display = 'none';
