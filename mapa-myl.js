@@ -103,16 +103,20 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
             
-            // Inicializar cluster de marcadores
-            markerCluster = L.markerClusterGroup({
-                maxClusterRadius: 50, // Radio máximo para agrupar marcadores (en píxeles)
-                spiderfyOnMaxZoom: true, // Separar marcadores al hacer zoom máximo
-                showCoverageOnHover: false,
-                zoomToBoundsOnClick: true,
-                chunkedLoading: true, // Cargar en chunks para mejor rendimiento
-                chunkDelay: 50 // Delay entre chunks
-            });
-            markerCluster.addTo(map);
+            // Inicializar cluster de marcadores (si está disponible)
+            if (typeof L.markerClusterGroup !== 'undefined') {
+                markerCluster = L.markerClusterGroup({
+                    maxClusterRadius: 50, // Radio máximo para agrupar marcadores (en píxeles)
+                    spiderfyOnMaxZoom: true, // Separar marcadores al hacer zoom máximo
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: true,
+                    chunkedLoading: true, // Cargar en chunks para mejor rendimiento
+                    chunkDelay: 50 // Delay entre chunks
+                });
+                markerCluster.addTo(map);
+            } else {
+                console.warn('Leaflet.markercluster no está disponible. Los marcadores se mostrarán sin clustering.');
+            }
         }
         map.invalidateSize();
         cargarClientes();
@@ -120,8 +124,15 @@
 
     function cargarClientes() {
         try {
+            if (!map) {
+                console.error('El mapa no está inicializado');
+                return;
+            }
+            
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+            
+            console.log(`Cargando ${clients.length} clientes...`);
             const now = new Date();
             const limite30Dias = new Date();
             limite30Dias.setDate(now.getDate() - 30);
@@ -164,14 +175,20 @@
             // Limpiar marcadores existentes
             if (markerCluster) {
                 markerCluster.clearLayers();
+            } else {
+                // Si no hay clustering, eliminar marcadores del mapa directamente
+                markers.forEach(m => map.removeLayer(m));
             }
             markers = [];
+            
+            console.log(`Clientes con coordenadas: ${clientesConCoordenadas.length}`);
 
             // Procesar marcadores en lotes para no bloquear la UI
             procesarMarcadoresEnLotes(clientesConCoordenadas, pedidosPorCliente, limite30Dias, total, pendientes);
 
         } catch (e) {
             console.error("Error cargando clientes:", e);
+            document.getElementById('st-texto').innerHTML = `<span style="color: #ef4444;">❌ Error: ${e.message}</span>`;
         }
     }
 
@@ -223,6 +240,9 @@
                 markers.push(marker);
                 if (markerCluster) {
                     markerCluster.addLayer(marker);
+                } else {
+                    // Si no hay clustering, agregar directamente al mapa
+                    marker.addTo(map);
                 }
                 procesados++;
             }
@@ -322,17 +342,26 @@
         });
     }, 1000);
 
-    document.querySelector('.btn-cerrar-mapa').onclick = () => {
-        document.getElementById('visor-mapa-myl').style.display = 'none';
-    };
-
-    document.getElementById('btn-reparar').onclick = () => {
-        if (confirm("Se borrarán las coordenadas actuales y se volverán a buscar todas las direcciones. ¿Continuar?")) {
-            const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-            clients.forEach(c => { c.lat = 0; c.lon = 0; });
-            localStorage.setItem('clients', JSON.stringify(clients));
-            location.reload();
+    // Esperar a que el DOM esté listo para los event listeners
+    setTimeout(() => {
+        const btnCerrar = document.querySelector('.btn-cerrar-mapa');
+        if (btnCerrar) {
+            btnCerrar.onclick = () => {
+                document.getElementById('visor-mapa-myl').style.display = 'none';
+            };
         }
-    };
+        
+        const btnReparar = document.getElementById('btn-reparar');
+        if (btnReparar) {
+            btnReparar.onclick = () => {
+                if (confirm("Se borrarán las coordenadas actuales y se volverán a buscar todas las direcciones. ¿Continuar?")) {
+                    const clients = JSON.parse(localStorage.getItem('clients') || '[]');
+                    clients.forEach(c => { c.lat = 0; c.lon = 0; });
+                    localStorage.setItem('clients', JSON.stringify(clients));
+                    location.reload();
+                }
+            };
+        }
+    }, 100);
 
 })();
