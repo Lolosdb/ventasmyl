@@ -113,8 +113,33 @@
         }, 800);
     </script>
 
-    <!-- NUEVO MÓDULO DE MAPA (Forzamos recarga con v=4) -->
-    <script src="./mapa-myl.js?v=4"></script>
+    <!-- NUEVO MÓDULO DE MAPA (Forzamos recarga con v=5) -->
+    <script>
+        // Esperar a que todas las bibliotecas estén cargadas
+        function cargarMapa() {
+            if (typeof L === 'undefined') {
+                console.warn('Esperando a que Leaflet se cargue...');
+                setTimeout(cargarMapa, 100);
+                return;
+            }
+            
+            // Verificar MarkerCluster (puede no estar disponible, pero el código lo maneja)
+            const script = document.createElement('script');
+            script.src = './mapa-myl.js?v=5';
+            script.onerror = function() {
+                console.error('Error cargando mapa-myl.js');
+            };
+            document.body.appendChild(script);
+        }
+        
+        // Intentar cargar cuando la página esté lista
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', cargarMapa);
+        } else {
+            // Si ya está cargado, esperar un poco más para las bibliotecas externas
+            setTimeout(cargarMapa, 500);
+        }
+    </script>
 </body>
 
 </html>

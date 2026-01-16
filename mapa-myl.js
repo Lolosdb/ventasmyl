@@ -104,7 +104,7 @@
             }).addTo(map);
             
             // Inicializar cluster de marcadores (si está disponible)
-            if (typeof L.markerClusterGroup !== 'undefined') {
+            if (typeof L !== 'undefined' && L.markerClusterGroup && typeof L.markerClusterGroup === 'function') {
                 markerCluster = L.markerClusterGroup({
                     maxClusterRadius: 50, // Radio máximo para agrupar marcadores (en píxeles)
                     spiderfyOnMaxZoom: true, // Separar marcadores al hacer zoom máximo
