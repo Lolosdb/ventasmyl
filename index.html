@@ -24,19 +24,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        body { margin: 0; background-color: #1e293b; font-family: sans-serif; overflow: hidden; }
-        .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
-        .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
+        /* --- CORRECCIONES CRÍTICAS DE SCROLL Y VISUALIZACIÓN --- */
         
-        /* VISOR MAPA */
-        #visor-mapa { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1e293b; z-index: 900; }
+        /* 1. Permitir scroll siempre, pero evitar rebote lateral */
+        body { 
+            margin: 0; 
+            background-color: #1e293b; 
+            font-family: sans-serif; 
+            overflow-x: hidden !important; 
+            overflow-y: auto !important; /* Habilita el scroll vertical */
+            padding-bottom: 100px !important; /* COLCHÓN PARA QUE LA BOTONERA NO TAPE NADA */
+        }
+
+        /* 2. Ocultar mapas rotos de la app original */
+        .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
+        
+        /* 3. Estilos visuales */
+        .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
+        .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
+
+        /* --- VISOR MAPA (CAPA SUPERIOR) --- */
+        #visor-mapa { 
+            display: none; 
+            position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: #1e293b; 
+            z-index: 10000; /* Muy alto para tapar todo cuando se abra */
+        }
         #mi-mapa-real { width: 100%; height: 100%; }
 
-        /* BOTONES */
+        /* BOTONES FLOTANTES DEL MAPA */
         .btn-mapa {
             position: absolute; top: 20px; background: white; color: #333;
             padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            font-weight: bold; font-size: 13px; cursor: pointer; z-index: 1001; display: flex; align-items: center; gap: 6px; border: 1px solid #ccc;
+            font-weight: bold; font-size: 13px; cursor: pointer; z-index: 10001; display: flex; align-items: center; gap: 6px; border: 1px solid #ccc;
         }
         #btn-salir { left: 15px; }
         #btn-opciones { right: 15px; background: #2563eb; color: white; border: none; }
@@ -45,7 +66,7 @@
         #panel-importar {
             position: absolute; top: 65px; right: 15px; width: 260px;
             background: rgba(255,255,255,0.98); border-radius: 12px; padding: 15px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.4); z-index: 1002;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.4); z-index: 10002;
             transform: translateX(130%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #panel-importar.activo { transform: translateX(0); }
@@ -55,6 +76,8 @@
         .btn-rojo { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
         
         #input-excel { display: none; }
+
+        /* ASEGURAR QUE EL MENÚ INFERIOR SE VEA SIEMPRE (A menos que el mapa lo tape) */
         nav, div[style*="bottom: 0"], div[class*="bottom"] { z-index: 9999 !important; position: fixed !important; }
     </style>
 </head>
@@ -69,7 +92,7 @@
         <div id="panel-importar">
             <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">Configuración</h4>
             <div style="font-size:11px; color:#555; margin-bottom:10px;">
-                Carga el archivo <b>Clientes_CON_COORDENADAS.xlsx</b>
+                Carga <b>Clientes.xlsx</b> o <b>Clientes_CON_COORDENADAS.xlsx</b>
             </div>
             <input type="file" id="input-excel" accept=".xlsx,.xls" onchange="cargarExcel(this)">
             <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">Subir Excel</button>
@@ -81,9 +104,10 @@
     </div>
 
     <script>
-        // 1. CONTROL DE NAVEGACIÓN
+        // 1. CONTROL DE NAVEGACIÓN Y VISUALIZACIÓN
         setInterval(() => {
             let mapaActivo = false;
+            // Detección de pestaña activa
             document.querySelectorAll('a, div, span, p').forEach(el => {
                 const txt = el.textContent ? el.textContent.trim().toLowerCase() : '';
                 if (txt === 'mapa' || txt === 'map') {
@@ -94,49 +118,67 @@
             if (window.location.href.includes('/map')) mapaActivo = true;
 
             const visor = document.getElementById('visor-mapa');
+            
             if (mapaActivo) {
+                // MODO MAPA ACTIVO
                 if (visor.style.display !== 'block') {
                     visor.style.display = 'block';
+                    document.body.style.overflow = 'hidden'; // Bloquea scroll SOLO cuando ves el mapa
                     if (!map) iniciarMapa();
                     else { map.invalidateSize(); pintarPuntos(); }
                 }
             } else {
+                // MODO APP NORMAL
                 if (visor.style.display !== 'none') {
                     visor.style.display = 'none';
+                    document.body.style.overflow = 'auto'; // Reactiva scroll al salir del mapa
                     document.getElementById('panel-importar').classList.remove('activo');
                 }
             }
-            // Limpieza visual
+
+            // Limpieza visual continua
             document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
+            
+            // Iconos del menú inferior en blanco
             document.querySelectorAll('div').forEach(d => {
                 const r = d.getBoundingClientRect();
                 if(d.style.position === 'fixed' && r.bottom >= window.innerHeight) {
-                     d.style.zIndex = "9999"; d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
+                     d.style.zIndex = "9999"; 
+                     d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
                 }
             });
+
         }, 500);
 
         // 2. MAPA
         let map = null;
         function iniciarMapa() {
-            map = L.map('mi-mapa-real', { zoomControl: false }).setView([43.36, -5.85], 8); // Centrado en Asturias/Norte por defecto
+            map = L.map('mi-mapa-real', { zoomControl: false }).setView([43.36, -5.85], 8);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             pintarPuntos();
         }
+
+        // --- ARREGLO BOTÓN VOLVER ---
         function cerrarMapa() {
-            if(window.history.length > 1) window.history.back();
-            else { const btn = Array.from(document.querySelectorAll('span, p, div')).find(e => e.textContent.trim() === 'Dash'); if(btn) btn.click(); }
+            // Simplemente ocultamos el mapa y forzamos el clic en "Dash" para asegurar estabilidad
             document.getElementById('visor-mapa').style.display = 'none';
+            document.body.style.overflow = 'auto'; // Devolver scroll
+            
+            const btn = Array.from(document.querySelectorAll('span, p, div')).find(e => e.textContent.trim() === 'Dash'); 
+            if(btn) btn.click();
         }
+
         function toggleImportar() { document.getElementById('panel-importar').classList.toggle('activo'); }
         function borrarDatos() { if(confirm("¿Borrar?")) { localStorage.setItem('clients', '[]'); location.reload(); } }
 
+        // 3. CARGAR EXCEL
         function cargarExcel(input) {
             const file = input.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                
                 const nuevos = json.map((row, i) => {
                     const get = (k) => row[k] || row[k.toUpperCase()] || "";
                     return {
@@ -146,16 +188,17 @@
                         lat: parseFloat(get('LATITUD') || 0), lon: parseFloat(get('LONGITUD') || 0)
                     };
                 });
+                
                 const validos = nuevos.filter(c => c.lat !== 0);
-                if (validos.length === 0) { alert("⚠️ Archivo sin coordenadas. Usa Python primero."); return; }
                 localStorage.setItem('clients', JSON.stringify(nuevos));
-                alert(`✅ ${validos.length} clientes cargados.`);
-                toggleImportar(); pintarPuntos();
+                alert(`✅ Cargados ${nuevos.length} clientes (${validos.length} con mapa).`);
+                toggleImportar(); 
+                pintarPuntos();
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // 3. PINTAR MAPA (ICONOS PEQUEÑOS + LÓGICA DE COLOR)
+        // 4. PINTAR MAPA (Chinchetas Pequeñas + Colores Correctos)
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
@@ -163,22 +206,18 @@
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
 
-            // --- ICONOS PEQUEÑOS (15x24 px) ---
+            // --- ICONOS PEQUEÑOS ---
             const smallIconSize = [15, 24];
-            const smallIconAnchor = [7, 24]; // La punta abajo al centro
-            const smallPopupAnchor = [1, -24]; // El popup sale arriba
+            const smallIconAnchor = [7, 24]; 
+            const smallPopupAnchor = [1, -24];
 
             const greenIcon = L.icon({ 
                 iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', 
-                iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor,
-                // Sin sombra para limpiar el mapa
-                shadowUrl: null 
+                iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor, shadowUrl: null 
             });
-            
             const redIcon = L.icon({ 
                 iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', 
-                iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor,
-                shadowUrl: null 
+                iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor, shadowUrl: null 
             });
 
             const now = new Date();
