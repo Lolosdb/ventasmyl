@@ -1,12 +1,10 @@
 <!doctype html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./logo_myl.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Gestión de Ventas</title>
-
     <script>
         const fakePos = { coords: { latitude: 40.4168, longitude: -3.7038, accuracy: 50 }, timestamp: Date.now() };
         if (navigator.geolocation) {
@@ -14,350 +12,156 @@
             navigator.geolocation.watchPosition = (s) => { s(fakePos); return 999; };
         }
     </script>
-
     <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
     <link rel="stylesheet" href="./index-cqvvk0bb.css?v=final">
-    <link rel="manifest" href="./manifest.webmanifest">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* ESTILOS BASE */
-        body { margin: 0; background-color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { margin: 0; background: #1e293b; font-family: sans-serif; }
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
-        
-        /* Arreglos Visuales App */
+        .texto-ventas { color: white !important; font-weight: bold !important; }
         .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
-        .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
 
-        /* --- BOTÓN FLOTANTE PRINCIPAL (Para entrar al mapa) --- */
+        /* Botón Flotante */
         #btn-lanzar-mapa {
             position: fixed; bottom: 90px; right: 20px;
             background: #2563eb; color: white;
             padding: 12px 20px; border-radius: 50px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
             font-weight: bold; cursor: pointer; z-index: 9999;
-            border: 2px solid rgba(255,255,255,0.3);
-            display: flex; align-items: center; gap: 8px;
+            border: 2px solid rgba(255,255,255,0.3); display: flex; align-items: center; gap: 8px;
         }
 
-        /* --- VISOR DE MAPA (Pantalla Completa) --- */
-        #visor-mapa {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%; background: white; z-index: 100000;
-        }
+        /* Visor */
+        #visor-mapa { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100000; }
         #mi-mapa-real { width: 100%; height: 100%; }
 
-        /* --- CONTROLES DE NAVEGACIÓN (SUPERIORES) --- */
-        .top-bar-btn {
-            position: absolute; top: 15px;
-            background: white; border-radius: 30px;
-            padding: 8px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            font-weight: bold; color: #333; cursor: pointer;
-            z-index: 100001; display: flex; align-items: center; gap: 6px;
-            font-size: 14px; border: 1px solid #eee;
-        }
-        
-        /* Botón Volver (Izquierda) */
-        #btn-volver { left: 15px; color: #444; }
-        
-        /* Botón Menú/Opciones (Derecha) */
-        #btn-menu { right: 15px; background: #2563eb; color: white; border: none; }
+        /* Panel Superior */
+        .top-bar { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; z-index: 100001; }
+        .btn-top { pointer-events: auto; background: white; border-radius: 30px; padding: 8px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-weight: bold; color: #333; cursor: pointer; font-size: 14px; border: 1px solid #ddd; }
+        .btn-azul { background: #2563eb; color: white; border: none; }
 
-        /* --- PANEL LATERAL DESPLEGABLE (IMPORTADOR) --- */
-        #panel-lateral {
-            position: absolute; top: 60px; right: 15px;
-            width: 260px; background: rgba(255,255,255,0.98);
-            border-radius: 12px; padding: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            z-index: 100002;
-            transform: translateX(120%); /* Oculto por defecto */
-            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-            backdrop-filter: blur(10px);
+        /* Panel Importar */
+        #panel-importar {
+            position: absolute; top: 60px; right: 15px; width: 260px;
+            background: rgba(255,255,255,0.95); border-radius: 12px; padding: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 100002;
+            display: none;
         }
-        #panel-lateral.activo { transform: translateX(0); } /* Visible */
-
-        /* Estilos del Panel */
-        h4 { margin: 0 0 10px 0; font-size: 14px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .btn-accion {
-            width: 100%; padding: 10px; margin-bottom: 8px;
-            border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-        }
-        .btn-azul { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-        .btn-rojo { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; margin-top: 10px; }
+        .btn-accion { width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-verde { background: #16a34a; color: white; }
+        .btn-rojo { background: #fee2e2; color: #ef4444; }
         #input-excel { display: none; }
-
-        /* --- BARRA DE ESTADO INFERIOR (DISCRETA) --- */
-        #barra-estado-container {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 400px;
-            background: rgba(255,255,255,0.9); padding: 8px 15px;
-            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            z-index: 100001; display: flex; align-items: center; gap: 10px;
-            font-size: 12px; backdrop-filter: blur(4px);
-            display: none; /* Oculto si no hace nada */
-        }
-        .progress-pill { flex-grow: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; background: #2563eb; width: 0%; transition: width 0.3s; }
-        #status-text { font-weight: 600; color: #333; white-space: nowrap; }
-
     </style>
 </head>
 
 <body>
     <div id="root"></div>
-
-    <div id="btn-lanzar-mapa" onclick="abrirMapa()">
-        🌍 VER MAPA
-    </div>
+    <div id="btn-lanzar-mapa" onclick="abrirMapa()">🌍 VER MAPA</div>
 
     <div id="visor-mapa">
-        
-        <div id="btn-volver" class="top-bar-btn" onclick="cerrarMapa()">
-            ⬅️ Volver
-        </div>
-        
-        <div id="btn-menu" class="top-bar-btn" onclick="toggleMenu()">
-            📂 Opciones
+        <div class="top-bar">
+            <div class="btn-top" onclick="cerrarMapa()">⬅️ Volver</div>
+            <div class="btn-top btn-azul" onclick="toggleImportar()">📂 Importar</div>
         </div>
 
-        <div id="panel-lateral">
-            <h4>Importar Clientes</h4>
-            <div style="font-size:11px; color:#666; margin-bottom:10px;">
-                Columnas: Tienda(B), Dirección(E), Pob(G), Prov(H)
+        <div id="panel-importar">
+            <h4 style="margin:0 0 10px 0;">Cargar Clientes</h4>
+            <div style="font-size:11px; color:#555; margin-bottom:10px;">
+                Selecciona el archivo <b>Clientes_CON_COORDENADAS.xlsx</b> generado por tu ordenador.
             </div>
-            
-            <input type="file" id="input-excel" accept=".xlsx, .xls, .csv" onchange="procesarExcel(this)" />
-            
-            <button class="btn-accion btn-azul" onclick="document.getElementById('input-excel').click()">
-                📄 Seleccionar Excel
-            </button>
-
-            <button class="btn-accion btn-rojo" onclick="borrarDatos()">
-                🗑️ Borrar Todo
-            </button>
-            
-            <div id="status-lib" style="font-size:10px; color:#aaa; margin-top:5px; text-align:center;">
-                Sistema listo
-            </div>
-        </div>
-
-        <div id="barra-estado-container">
-            <span id="status-text">Cargando...</span>
-            <div class="progress-pill">
-                <div id="progress-bar" class="progress-fill"></div>
-            </div>
-            <span id="count-text" style="font-size:10px; color:#666;">0/0</span>
+            <input type="file" id="input-excel" accept=".xlsx,.xls" onchange="cargarExcel(this)">
+            <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">Seleccionar Archivo</button>
+            <button class="btn-accion btn-rojo" onclick="borrarDatos()">Borrar Todo</button>
         </div>
 
         <div id="mi-mapa-real"></div>
     </div>
 
     <script>
-        // --- 1. MANTENIMIENTO VISUAL (Euro, Textos, etc) ---
+        // Mantenimiento Visual
         setInterval(() => {
-            document.querySelectorAll('div, p, span').forEach(el => {
-                if(el.textContent && el.textContent.includes('Mejorando precisión')) el.style.display = 'none';
-            });
-            const menus = document.querySelectorAll('div');
-            menus.forEach(d => {
-                if(d.style.position === 'fixed' && d.style.bottom === '0px') {
-                     d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
-                }
-            });
-            document.querySelectorAll('h1, h2, h3, div, span').forEach(el => {
-                if(el.textContent.trim().length > 0 && el.getBoundingClientRect().top < 65 && !el.closest('#visor-mapa')) {
-                     const s = window.getComputedStyle(el);
-                     if(s.color !== 'rgb(255, 255, 255)') el.style.setProperty('color', '#ffffff', 'important');
-                }
+            document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
+            document.querySelectorAll('div[style*="bottom: 0px"] svg').forEach(i => i.style.filter='brightness(0) invert(1)');
+            document.querySelectorAll('h1,h2,div,span').forEach(e => {
+                if(e.textContent.trim() && e.getBoundingClientRect().top<65 && !e.closest('#visor-mapa')) e.style.color='white';
             });
         }, 1000);
 
-        // --- 2. GESTIÓN UI DEL MAPA ---
         let map = null;
-
         function abrirMapa() {
             document.getElementById('visor-mapa').style.display = 'block';
-            
-            // Comprobar librería Excel
-            const statusLib = document.getElementById('status-lib');
-            if (typeof XLSX !== 'undefined') statusLib.innerHTML = "✅ Motor Excel Activo";
-            else statusLib.innerHTML = "❌ Error Motor Excel";
-
             setTimeout(() => {
-                if (!map) {
-                    map = L.map('mi-mapa-real', { zoomControl: false }).setView([40.4168, -3.7038], 6);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
-                    // Mover controles de zoom abajo a la derecha si se quiere, o quitarlos para limpiar
-                    // L.control.zoom({ position: 'bottomright' }).addTo(map);
+                if(!map) {
+                    map = L.map('mi-mapa-real', {zoomControl: false}).setView([40.4168, -3.7038], 6);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                 }
                 map.invalidateSize();
-                pintarMapa();
+                pintarPuntos();
             }, 200);
         }
-
-        function cerrarMapa() { 
-            document.getElementById('visor-mapa').style.display = 'none'; 
-            document.getElementById('panel-lateral').classList.remove('activo'); // Cerrar menú al salir
-        }
-
-        function toggleMenu() {
-            document.getElementById('panel-lateral').classList.toggle('activo');
-        }
-
-        function mostrarEstado(mensaje, actual, total) {
-            const bar = document.getElementById('barra-estado-container');
-            const txt = document.getElementById('status-text');
-            const count = document.getElementById('count-text');
-            const fill = document.getElementById('progress-bar');
-            
-            bar.style.display = 'flex';
-            txt.innerText = mensaje;
-            
-            if (total > 0) {
-                const pct = Math.round((actual / total) * 100);
-                fill.style.width = pct + "%";
-                count.innerText = `${actual}/${total}`;
-            } else {
-                fill.style.width = "0%";
-                count.innerText = "";
-            }
-        }
-
-        function ocultarEstado() {
-            document.getElementById('barra-estado-container').style.display = 'none';
-        }
-
+        function cerrarMapa() { document.getElementById('visor-mapa').style.display = 'none'; document.getElementById('panel-importar').style.display='none'; }
+        function toggleImportar() { const p = document.getElementById('panel-importar'); p.style.display = p.style.display==='block'?'none':'block'; }
+        
         function borrarDatos() {
-            if(confirm("¿Borrar todos los clientes?")) {
-                localStorage.setItem('clients', '[]');
-                location.reload();
-            }
+            if(confirm("¿Borrar mapa?")) { localStorage.setItem('clients', '[]'); location.reload(); }
         }
 
-        // --- 3. PROCESAMIENTO EXCEL (COLUMNAS FIJAS B, E, G, H) ---
-        function procesarExcel(input) {
+        function cargarExcel(input) {
             const file = input.files[0];
-            if (!file) return;
-
-            toggleMenu(); // Cerrar menú para ver mapa
-            mostrarEstado("Leyendo archivo...", 0, 0);
-
+            if(!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
 
-                    if (!rows || rows.length < 2) { alert("Archivo vacío"); ocultarEstado(); return; }
+                if(!json.length) { alert("Archivo vacío"); return; }
+                
+                // Mapear columnas (flexible)
+                const nuevos = json.map((row, i) => {
+                    const get = (k) => row[k] || row[k.toUpperCase()] || "";
+                    const lat = parseFloat(get('LATITUD') || 0);
+                    const lon = parseFloat(get('LONGITUD') || 0);
+                    return {
+                        id: get('CODIGO') || i,
+                        name: get('TIENDA') || get('NOMBRE') || "Cliente",
+                        address: get('DIRECCION'),
+                        city: get('POBLACION'),
+                        lat: lat, lon: lon
+                    };
+                });
 
-                    let nuevos = [];
-                    // B=1, E=4, G=6, H=7
-                    for (let i = 1; i < rows.length; i++) {
-                        const r = rows[i];
-                        if (!r || r.length < 5) continue;
+                const validos = nuevos.filter(c => c.lat !== 0);
+                if(validos.length === 0) { alert("⚠️ El archivo no tiene coordenadas.\n¿Ejecutaste el script 'EJECUTAR_GPS.bat' primero?"); return; }
 
-                        const nombre = r[1] ? String(r[1]).trim() : "";
-                        const direccion = r[4] ? String(r[4]).trim() : "";
-                        
-                        if (nombre && direccion) {
-                            nuevos.push({
-                                id: r[0] ? String(r[0]) : "ID-"+i,
-                                name: nombre,
-                                address: direccion.replace(/['"]/g, ""),
-                                city: r[6] ? String(r[6]).trim() : "",
-                                province: r[7] ? String(r[7]).trim() : "",
-                                lat: 0, lon: 0
-                            });
-                        }
-                    }
-
-                    if (nuevos.length === 0) { alert("No encontré datos en las columnas esperadas."); ocultarEstado(); return; }
-
-                    localStorage.setItem('clients', JSON.stringify(nuevos));
-                    mostrarEstado(`Importados ${nuevos.length}. Buscando GPS...`, 0, nuevos.length);
-                    
-                    pintarMapa();
-                    procesarColaGPS();
-
-                } catch (err) { alert("Error Excel: " + err.message); ocultarEstado(); }
+                localStorage.setItem('clients', JSON.stringify(nuevos));
+                alert(`✅ Cargados ${validos.length} clientes correctamente.`);
+                toggleImportar();
+                pintarPuntos();
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // --- 4. MOTOR GPS (NO REPETITIVO) ---
-        async function procesarColaGPS() {
-            const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-            const pendientes = clients.filter(c => (!c.lat || c.lat === 0));
-            const total = clients.length;
-            const hechos = total - pendientes.length;
-
-            mostrarEstado(pendientes.length > 0 ? "Buscando..." : "✅ Completado", hechos, total);
-
-            if (pendientes.length === 0) {
-                setTimeout(ocultarEstado, 3000); // Ocultar barra al terminar
-                return;
-            }
-
-            const target = pendientes[0];
-            
-            // Lógica de búsqueda
-            let lat = 0.0001;
-            let lon = 0.0001;
-
-            try {
-                // Dirección simple (antes de la coma)
-                const dirSimple = target.address.split(',')[0];
-                const q = `${dirSimple}, ${target.city}, ${target.province}, España`;
-                
-                let res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
-                if (res.ok) {
-                    let d = await res.json();
-                    if (d.length > 0) { lat = parseFloat(d[0].lat); lon = parseFloat(d[0].lon); }
-                    else {
-                        // Fallback Ciudad
-                        let res2 = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(target.city + ", " + target.province + ", España")}&format=json&limit=1`);
-                        if(res2.ok) {
-                            let d2 = await res2.json();
-                            if(d2.length > 0) { lat = parseFloat(d2[0].lat); lon = parseFloat(d2[0].lon); }
-                        }
-                    }
-                }
-            } catch(e) {}
-
-            // Guardar
-            const idx = clients.findIndex(c => c.id === target.id);
-            if(idx !== -1) {
-                clients[idx].lat = lat; clients[idx].lon = lon;
-                localStorage.setItem('clients', JSON.stringify(clients));
-            }
-
-            if (lat > 1) pintarMapa();
-
-            // Siguiente (delay 1s)
-            setTimeout(procesarColaGPS, 1000);
-        }
-
-        function pintarMapa() {
+        function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
-
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-            // Iconos
             const redIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', shadowSize:[41,41] });
-            
+
+            let bounds = [];
             clients.forEach(c => {
-                if (c.lat && c.lon && c.lat > 1) {
-                    L.marker([c.lat, c.lon], { icon: redIcon })
-                        .bindPopup(`<b>${c.name}</b><br>${c.address}<br><small>${c.city}</small>`)
-                        .addTo(map);
+                if(c.lat && c.lon && c.lat !== 0) {
+                    L.marker([c.lat, c.lon], {icon: redIcon})
+                    .bindPopup(`<b>${c.name}</b><br>${c.address}<br><small>${c.city}</small>`)
+                    .addTo(map);
+                    bounds.push([c.lat, c.lon]);
                 }
             });
+            if(bounds.length) map.fitBounds(bounds);
         }
     </script>
 </body>
