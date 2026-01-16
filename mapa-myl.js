@@ -7,21 +7,6 @@
     // 1. ESTILOS INYECTADOS (Para mantener index.html limpio)
     const style = document.createElement('style');
     style.textContent = `
-        /* --- BOTÓN FLOTANTE ESTILO PREMIUM --- */
-        #btn-lanzar-mapa {
-            position: fixed; bottom: 95px; right: 20px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white; padding: 14px 24px; border-radius: 50px;
-            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
-            font-weight: 800; font-family: 'Inter', sans-serif;
-            z-index: 9999; cursor: pointer; border: none;
-            display: flex; align-items: center; gap: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.2);
-        }
-        #btn-lanzar-mapa:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 30px rgba(37, 99, 235, 0.5); }
-        #btn-lanzar-mapa:active { transform: scale(0.95); }
-
         /* --- VISOR MAPA FULLSCREEN --- */
         #visor-mapa-myl {
             display: none; position: fixed; top: 0; left: 0;
