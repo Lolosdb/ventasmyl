@@ -161,13 +161,17 @@
             // Filtrar clientes con coordenadas válidas
             const clientesConCoordenadas = [];
             clients.forEach(c => {
-                if (!c.name && !c.address) return;
+                // Obtener dirección (soporta ambos formatos: inglés y español)
+                const direccion = c.address || c.direccion || '';
+                const nombre = c.name || c.nombre || '';
+                
+                if (!nombre && !direccion) return;
                 total++;
 
                 if (c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001) {
                     ubicados++;
                     clientesConCoordenadas.push(c);
-                } else if (c.address && c.address.length > 3) {
+                } else if (direccion && direccion.length > 3) {
                     pendientes++;
                 }
             });
@@ -227,11 +231,14 @@
                     if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
                 }
 
+                const nombre = c.name || c.nombre || 'Cliente';
+                const direccion = c.address || c.direccion || '';
+                
                 const marker = L.marker([c.lat, c.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
                     .bindPopup(`
                         <div style="font-family: sans-serif; padding: 5px;">
-                            <strong style="color: #2563eb; font-size: 14px;">${c.name}</strong><br>
-                            <span style="color: #64748b; font-size: 12px;">${c.address || ''}</span><br>
+                            <strong style="color: #2563eb; font-size: 14px;">${nombre}</strong><br>
+                            <span style="color: #64748b; font-size: 12px;">${direccion}</span><br>
                             <span style="font-size: 11px; font-weight: bold;">Venta: ${ultimaFecha}</span>
                         </div>
                     `);
@@ -276,34 +283,74 @@
         if (document.getElementById('visor-mapa-myl').style.display === 'none') return;
 
         const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-        const target = clients.find(c => (c.address && c.address.length > 4) && (!c.lat || c.lat === 0));
+        
+        // Buscar cliente sin coordenadas (soporta ambos formatos)
+        const target = clients.find(c => {
+            const direccion = c.address || c.direccion || '';
+            return direccion.length > 4 && (!c.lat || c.lat === 0);
+        });
 
-        if (!target) return;
+        if (!target) {
+            // No hay más clientes pendientes
+            return;
+        }
 
-        document.getElementById('st-texto').innerHTML = `Buscando: <small>${target.name.substring(0, 15)}...</small>`;
+        const nombre = target.name || target.nombre || 'Cliente';
+        document.getElementById('st-texto').innerHTML = `Buscando: <small>${nombre.substring(0, 15)}...</small>`;
 
         try {
             // Construimos una query potente combinando Dirección, Ciudad y Provincia
-            let queryPartes = [target.address];
-            if (target.city) queryPartes.push(target.city);
-            if (target.province) queryPartes.push(target.province);
+            // Soporta ambos formatos: inglés (address, city, province) y español (direccion, localidad, provincia)
+            const direccion = target.address || target.direccion || '';
+            const ciudad = target.city || target.localidad || '';
+            const provincia = target.province || target.provincia || '';
+            
+            let queryPartes = [direccion];
+            if (ciudad) queryPartes.push(ciudad);
+            if (provincia) queryPartes.push(provincia);
             queryPartes.push("España");
 
             const query = queryPartes.join(', ');
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+            
+            // Agregar timeout y mejor manejo de errores
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+            
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`, {
+                    signal: controller.signal,
+                    headers: {
+                        'User-Agent': 'VentasMYL/1.0'
+                    }
+                });
+                clearTimeout(timeoutId);
 
-            if (res.ok) {
-                const data = await res.json();
-                if (data.length > 0) {
-                    target.lat = parseFloat(data[0].lat);
-                    target.lon = parseFloat(data[0].lon);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.length > 0) {
+                        target.lat = parseFloat(data[0].lat);
+                        target.lon = parseFloat(data[0].lon);
+                        console.log(`✅ Coordenadas encontradas para ${nombre}: ${target.lat}, ${target.lon}`);
+                    } else {
+                        // Si no lo encuentra, marcamos con un valor mínimo para no reintentar infinitamente
+                        target.lat = 0.0001;
+                        console.warn(`⚠️ No se encontraron coordenadas para: ${query}`);
+                    }
                 } else {
-                    // Si no lo encuentra, marcamos con un valor mínimo para no reintentar infinitamente
-                    target.lat = 0.0001;
+                    // Si la API falla (por ejemplo, por límites de velocidad), esperamos
+                    console.warn(`⚠️ Error de API (${res.status}), reintentando en 3 segundos...`);
+                    setTimeout(buscarSiguienteDireccion, 3000);
+                    return;
                 }
-            } else {
-                // Si la API falla (por ejemplo, por límites de velocidad), esperamos
-                setTimeout(buscarSiguienteDireccion, 3000);
+            } catch (fetchError) {
+                clearTimeout(timeoutId);
+                if (fetchError.name === 'AbortError') {
+                    console.warn(`⏱️ Timeout buscando: ${query}`);
+                } else {
+                    console.warn(`❌ Error de red: ${fetchError.message}`);
+                }
+                // Esperar más tiempo antes de reintentar
+                setTimeout(buscarSiguienteDireccion, 5000);
                 return;
             }
 
