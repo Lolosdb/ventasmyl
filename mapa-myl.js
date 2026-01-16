@@ -77,8 +77,24 @@
     // 3. LÓGICA DEL MAPA
     let map = null;
     let markers = [];
-    const greenIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', shadowSize: [41, 41] });
-    const redIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', shadowSize: [41, 41] });
+    let markerCluster = null;
+    // Iconos más pequeños para mejor rendimiento (15x25px en lugar de 25x41px)
+    const greenIcon = L.icon({ 
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', 
+        iconSize: [15, 25], 
+        iconAnchor: [7, 25], 
+        popupAnchor: [1, -20], 
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', 
+        shadowSize: [25, 25] 
+    });
+    const redIcon = L.icon({ 
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', 
+        iconSize: [15, 25], 
+        iconAnchor: [7, 25], 
+        popupAnchor: [1, -20], 
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', 
+        shadowSize: [25, 25] 
+    });
 
     function initMap() {
         if (!map) {
@@ -86,6 +102,17 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
+            
+            // Inicializar cluster de marcadores
+            markerCluster = L.markerClusterGroup({
+                maxClusterRadius: 50, // Radio máximo para agrupar marcadores (en píxeles)
+                spiderfyOnMaxZoom: true, // Separar marcadores al hacer zoom máximo
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true,
+                chunkedLoading: true, // Cargar en chunks para mejor rendimiento
+                chunkDelay: 50 // Delay entre chunks
+            });
+            markerCluster.addTo(map);
         }
         map.invalidateSize();
         cargarClientes();
@@ -103,56 +130,126 @@
             let ubicados = 0;
             let pendientes = 0;
 
+            // Pre-calcular información de pedidos por cliente para optimizar
+            const pedidosPorCliente = new Map();
+            orders.forEach(o => {
+                const clienteId = o.cliente_id || (o.cliente ? o.cliente : null);
+                if (clienteId) {
+                    if (!pedidosPorCliente.has(clienteId)) {
+                        pedidosPorCliente.set(clienteId, []);
+                    }
+                    pedidosPorCliente.get(clienteId).push(o);
+                }
+            });
+
+            // Ordenar pedidos de cada cliente una sola vez
+            pedidosPorCliente.forEach((pedidos, clienteId) => {
+                pedidos.sort((a, b) => new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp));
+            });
+
+            // Filtrar clientes con coordenadas válidas
+            const clientesConCoordenadas = [];
             clients.forEach(c => {
                 if (!c.name && !c.address) return;
                 total++;
 
-                // Si tiene coordenadas, lo pintamos si no existe ya
                 if (c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001) {
                     ubicados++;
-
-                    // Comprobar si ya existe este marcador para no recrearlo (evita parpadeo)
-                    const idMarcador = `m-${c.id}`;
-                    const existente = markers.find(m => m._id === idMarcador);
-
-                    if (!existente) {
-                        const misPedidos = orders.filter(o => o.cliente_id == c.id || (o.cliente && o.cliente.includes(c.name)));
-                        let tieneVentaReciente = false;
-                        let ultimaFecha = "Sin ventas";
-
-                        if (misPedidos.length > 0) {
-                            misPedidos.sort((a, b) => new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp));
-                            const fechaVenta = new Date(misPedidos[0].fecha || misPedidos[0].timestamp);
-                            ultimaFecha = fechaVenta.toLocaleDateString();
-                            if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
-                        }
-
-                        const marker = L.marker([c.lat, c.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
-                            .bindPopup(`
-                                <div style="font-family: sans-serif; padding: 5px;">
-                                    <strong style="color: #2563eb; font-size: 14px;">${c.name}</strong><br>
-                                    <span style="color: #64748b; font-size: 12px;">${c.address || ''}</span><br>
-                                    <span style="font-size: 11px; font-weight: bold;">Venta: ${ultimaFecha}</span>
-                                </div>
-                            `)
-                            .addTo(map);
-                        marker._id = idMarcador; // ID personalizado
-                        markers.push(marker);
-                    }
+                    clientesConCoordenadas.push(c);
                 } else if (c.address && c.address.length > 3) {
                     pendientes++;
                 }
             });
 
-            document.getElementById('st-contador').textContent = `${total - pendientes} / ${total}`;
-            document.getElementById('p-fill').style.width = `${total > 0 ? (total - pendientes) / total * 100 : 0}%`;
-
-            if (pendientes > 0) {
-                buscarSiguienteDireccion();
-            } else {
-                document.getElementById('st-texto').innerHTML = `<span style="color: #10b981;">✅ Mapa Actualizado</span>`;
+            // Limpiar marcadores existentes
+            if (markerCluster) {
+                markerCluster.clearLayers();
             }
-        } catch (e) { }
+            markers = [];
+
+            // Procesar marcadores en lotes para no bloquear la UI
+            procesarMarcadoresEnLotes(clientesConCoordenadas, pedidosPorCliente, limite30Dias, total, pendientes);
+
+        } catch (e) {
+            console.error("Error cargando clientes:", e);
+        }
+    }
+
+    function procesarMarcadoresEnLotes(clientes, pedidosPorCliente, limite30Dias, total, pendientes) {
+        const BATCH_SIZE = 50; // Procesar 50 marcadores por lote
+        let index = 0;
+        let procesados = 0;
+
+        function procesarLote() {
+            const fin = Math.min(index + BATCH_SIZE, clientes.length);
+            
+            for (let i = index; i < fin; i++) {
+                const c = clientes[i];
+                const idMarcador = `m-${c.id}`;
+                
+                // Buscar pedidos del cliente (por ID o por nombre)
+                let misPedidos = pedidosPorCliente.get(c.id) || [];
+                if (misPedidos.length === 0 && c.name) {
+                    // Buscar por nombre si no hay por ID
+                    const pedidosPorNombre = Array.from(pedidosPorCliente.values())
+                        .flat()
+                        .filter(o => o.cliente && o.cliente.includes(c.name));
+                    if (pedidosPorNombre.length > 0) {
+                        misPedidos = pedidosPorNombre.sort((a, b) => 
+                            new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp)
+                        );
+                    }
+                }
+
+                let tieneVentaReciente = false;
+                let ultimaFecha = "Sin ventas";
+
+                if (misPedidos.length > 0) {
+                    const fechaVenta = new Date(misPedidos[0].fecha || misPedidos[0].timestamp);
+                    ultimaFecha = fechaVenta.toLocaleDateString();
+                    if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
+                }
+
+                const marker = L.marker([c.lat, c.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
+                    .bindPopup(`
+                        <div style="font-family: sans-serif; padding: 5px;">
+                            <strong style="color: #2563eb; font-size: 14px;">${c.name}</strong><br>
+                            <span style="color: #64748b; font-size: 12px;">${c.address || ''}</span><br>
+                            <span style="font-size: 11px; font-weight: bold;">Venta: ${ultimaFecha}</span>
+                        </div>
+                    `);
+                
+                marker._id = idMarcador;
+                markers.push(marker);
+                if (markerCluster) {
+                    markerCluster.addLayer(marker);
+                }
+                procesados++;
+            }
+
+            index = fin;
+            
+            // Actualizar progreso
+            const porcentaje = total > 0 ? ((total - pendientes) / total * 100) : 0;
+            document.getElementById('st-contador').textContent = `${procesados} / ${total - pendientes}`;
+            document.getElementById('p-fill').style.width = `${porcentaje}%`;
+
+            if (index < clientes.length) {
+                // Continuar con el siguiente lote
+                requestAnimationFrame(procesarLote);
+            } else {
+                // Procesamiento completo
+                document.getElementById('st-contador').textContent = `${total - pendientes} / ${total}`;
+                if (pendientes > 0) {
+                    buscarSiguienteDireccion();
+                } else {
+                    document.getElementById('st-texto').innerHTML = `<span style="color: #10b981;">✅ Mapa Actualizado</span>`;
+                }
+            }
+        }
+
+        // Iniciar procesamiento
+        requestAnimationFrame(procesarLote);
     }
 
     async function buscarSiguienteDireccion() {
