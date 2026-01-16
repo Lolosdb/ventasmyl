@@ -8,10 +8,10 @@
     <title>Gestión de Ventas</title>
 
     <script>
-        const fakePos = { coords: { latitude: 40.4168, longitude: -3.7038, accuracy: 20 }, timestamp: Date.now() };
+        const fakePos = { coords: { latitude: 40.4168, longitude: -3.7038, accuracy: 50 }, timestamp: Date.now() };
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition = (s, e, o) => { if(s) s(fakePos); };
-            navigator.geolocation.watchPosition = (s, e, o) => { if(s) s(fakePos); return 999; };
+            navigator.geolocation.getCurrentPosition = (s) => s(fakePos);
+            navigator.geolocation.watchPosition = (s) => { s(fakePos); return 999; };
         }
     </script>
 
@@ -24,133 +24,125 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* ESTILOS DE LA APP */
-        body { margin: 0; background-color: #1e293b; font-family: system-ui, -apple-system, sans-serif; }
+        /* ESTILOS GENERALES */
+        body { margin: 0; background-color: #1e293b; font-family: sans-serif; }
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
         
-        /* Ocultar elementos molestos */
+        /* Arreglos Visuales App Original */
         .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
-        
-        /* BOTÓN FLOTANTE AZUL (Menú Principal) */
-        #btn-menu-flotante {
+
+        /* --- BOTÓN FLOTANTE --- */
+        #btn-lanzar-mapa {
             position: fixed; bottom: 90px; right: 20px;
             background: #2563eb; color: white;
             padding: 12px 20px; border-radius: 50px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            font-weight: bold; cursor: pointer; z-index: 9999;
+            font-weight: bold; font-family: sans-serif;
+            z-index: 9999; cursor: pointer;
             border: 2px solid rgba(255,255,255,0.3);
-            display: flex; align-items: center; gap: 10px;
+            display: flex; align-items: center; gap: 8px;
         }
 
-        /* VISOR DE MAPA Y HERRAMIENTAS */
-        #visor-general {
+        /* --- VISOR MAPA --- */
+        #visor-mapa {
             display: none; position: fixed; top: 0; left: 0;
             width: 100%; height: 100%; background: white; z-index: 100000;
         }
-
-        /* PANEL DE CONTROL SUPERIOR */
-        #panel-control {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            background: rgba(255,255,255,0.98); padding: 15px;
-            border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            z-index: 100001; width: 90%; max-width: 450px;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-
-        /* Botones del Panel */
-        .btn-accion {
-            padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 13px;
-            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
-        }
-        .btn-importar { background: #15803d; color: white; } /* Verde */
-        .btn-reset { background: #ef4444; color: white; } /* Rojo */
-        
-        /* Input File Oculto */
-        #input-excel { display: none; }
-
-        /* Barra de Progreso */
-        .progress-box { background: #f3f4f6; padding: 10px; border-radius: 8px; margin-top: 5px; }
-        .progress-text { font-size: 12px; color: #333; display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .progress-bar-bg { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; background: #2563eb; width: 0%; transition: width 0.3s; }
-
-        /* Botón Cerrar */
-        .btn-cerrar {
-            position: absolute; top: 10px; right: 10px; width: 32px; height: 32px;
-            background: white; border: 1px solid #ccc; border-radius: 50%;
-            font-size: 18px; cursor: pointer; z-index: 100002; display: flex; align-items: center; justify-content: center;
-        }
-
         #mi-mapa-real { width: 100%; height: 100%; }
+
+        /* --- PANEL CONTROL --- */
+        #panel-control {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.98); padding: 15px;
+            border-radius: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+            z-index: 100001; width: 90%; max-width: 400px;
+        }
+
+        .fila-stats { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-top: 8px; }
+        .barra-bg { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+        .barra-fill { height: 100%; background: #2563eb; width: 0%; transition: width 0.3s; }
+        
+        /* Botones */
+        .btn-grande {
+            width: 100%; padding: 12px; border: none; border-radius: 8px;
+            font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-bottom: 5px; font-size: 14px;
+        }
+        .btn-azul { background: #2563eb; color: white; }
+        .btn-rojo { background: transparent; color: #ef4444; border: 1px solid #ef4444; margin-top: 10px; font-size: 12px; padding: 8px; }
+        
+        .btn-cerrar {
+            position: absolute; top: 10px; right: 10px; width: 30px; height: 30px;
+            background: white; border: 1px solid #ccc; border-radius: 50%; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center;
+        }
+        
+        #input-excel { display: none; }
     </style>
 </head>
 
 <body>
     <div id="root"></div>
 
-    <div id="btn-menu-flotante" onclick="abrirVisor()">
+    <div id="btn-lanzar-mapa" onclick="abrirMapa()">
         🌍 MAPA & IMPORTAR
     </div>
 
-    <div id="visor-general">
-        <button class="btn-cerrar" onclick="cerrarVisor()">✕</button>
+    <div id="visor-mapa">
+        <button class="btn-cerrar" onclick="cerrarMapa()">✕</button>
         
         <div id="panel-control">
-            <div style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:5px;">
-                <h3 style="margin:0 0 5px 0; font-size:14px; color:#333;">Gestión de Clientes</h3>
-                <input type="file" id="input-excel" accept=".xlsx, .xls, .csv" onchange="procesarExcel(this)" />
-                <button class="btn-accion btn-importar" onclick="document.getElementById('input-excel').click()">
-                    📂 Importar Excel (Auto-Coords)
-                </button>
-                <div style="font-size:10px; color:#666; margin-top:4px;">* Usa columnas: DIRECCION, POBLACION, PROVINCIA</div>
+            <h3 style="margin:0 0 10px 0; font-size:16px; color:#111;">Importador Directo (Col E, G, H)</h3>
+            
+            <input type="file" id="input-excel" accept=".xlsx, .xls, .csv" onchange="leerExcelPorColumnas(this)" />
+            
+            <button class="btn-grande btn-azul" onclick="document.getElementById('input-excel').click()">
+                📂 Cargar Excel Clientes
+            </button>
+            <div style="font-size:11px; color:#666; text-align:center; margin-bottom:10px;">
+                Usará columnas fijas: Tienda (B), Dirección (E), Pob (G), Prov (H)
             </div>
 
-            <div class="progress-box">
-                <div class="progress-text">
-                    <span id="estado-txt">Esperando archivo...</span>
-                    <span id="contador-txt">0/0</span>
+            <div id="area-progreso" style="display:none; background:#f9fafb; padding:10px; border-radius:8px;">
+                <div class="fila-stats">
+                    <span id="txt-estado" style="font-weight:bold; color:#2563eb;">Preparado</span>
+                    <span id="txt-contador">0/0</span>
                 </div>
-                <div class="progress-bar-bg">
-                    <div id="barra-progreso" class="progress-bar-fill"></div>
-                </div>
+                <div class="barra-bg"><div id="barra-progreso" class="barra-fill"></div></div>
+                <div id="txt-debug" style="font-size:10px; color:#999; margin-top:5px; white-space:nowrap; overflow:hidden;"></div>
             </div>
 
-            <button class="btn-accion btn-reset" onclick="borrarTodo()" style="margin-top:5px; font-size:11px; padding:6px;">
-                🗑️ Borrar datos y empezar de cero
+            <button class="btn-grande btn-rojo" onclick="borrarDatos()">
+                🗑️ Borrar todo
             </button>
         </div>
-
         <div id="mi-mapa-real"></div>
     </div>
 
     <script>
-        // --- 1. CONFIGURACIÓN Y MANTENIMIENTO ---
+        // --- 1. MANTENIMIENTO VISUAL ---
         setInterval(() => {
-            // Ocultar textos molestos
             document.querySelectorAll('div, p, span').forEach(el => {
                 if(el.textContent && el.textContent.includes('Mejorando precisión')) el.style.display = 'none';
             });
-            // Arreglos Visuales App Original
-            document.querySelectorAll('h1, h2, div, span').forEach(el => {
-                if(el.textContent.trim().length > 0 && el.getBoundingClientRect().top < 65 && !el.closest('#visor-general')) {
+            const menus = document.querySelectorAll('div');
+            menus.forEach(d => {
+                if(d.style.position === 'fixed' && d.style.bottom === '0px') {
+                     d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
+                }
+            });
+            document.querySelectorAll('h1, h2, h3, div, span').forEach(el => {
+                if(el.textContent.trim().length > 0 && el.getBoundingClientRect().top < 65 && !el.closest('#visor-mapa')) {
                      const s = window.getComputedStyle(el);
                      if(s.color !== 'rgb(255, 255, 255)') el.style.setProperty('color', '#ffffff', 'important');
                 }
             });
-            const menus = document.querySelectorAll('div'); // Buscar menú inferior para iconos blancos
-            menus.forEach(d => {
-                if(d.style.position === 'fixed' && d.style.bottom === '0px') {
-                     d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
-                     d.querySelectorAll('span').forEach(s => s.style.color='white');
-                }
-            });
         }, 1000);
 
-        // --- 2. LÓGICA DE MAPA ---
+        // --- 2. MAPA ---
         let map = null;
-        function abrirVisor() {
-            document.getElementById('visor-general').style.display = 'block';
+        function abrirMapa() {
+            document.getElementById('visor-mapa').style.display = 'block';
             setTimeout(() => {
                 if (!map) {
                     map = L.map('mi-mapa-real').setView([40.4168, -3.7038], 6);
@@ -160,132 +152,174 @@
                 pintarMapa();
             }, 200);
         }
-        function cerrarVisor() { document.getElementById('visor-general').style.display = 'none'; }
-        function borrarTodo() {
-            if(confirm("¿Seguro que quieres borrar TODOS los clientes de la memoria?")) {
+        function cerrarMapa() { document.getElementById('visor-mapa').style.display = 'none'; }
+        
+        function borrarDatos() {
+            if(confirm("¿Borrar todos los clientes?")) {
                 localStorage.setItem('clients', '[]');
-                alert("Datos borrados.");
                 location.reload();
             }
         }
 
-        // --- 3. IMPORTADOR INTELIGENTE DE EXCEL ---
-        async function procesarExcel(input) {
+        // --- 3. LECTOR EXCEL "TIRO FIJO" (Por índices de columna) ---
+        async function leerExcelPorColumnas(input) {
             const file = input.files[0];
             if (!file) return;
 
-            document.getElementById('estado-txt').innerText = "Leyendo archivo...";
-            document.getElementById('barra-progreso').style.width = "5%";
-
+            document.getElementById('area-progreso').style.display = 'block';
+            document.getElementById('txt-estado').innerText = "Leyendo columnas...";
+            
             const reader = new FileReader();
-            reader.onload = async function(e) {
+            reader.readAsArrayBuffer(file);
+            
+            reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-                    if (jsonData.length === 0) { alert("El Excel parece vacío."); return; }
-
-                    // Convertir formato Excel al formato App
-                    let nuevosClientes = jsonData.map((row, index) => {
-                        return {
-                            id: row.CODIGO || row.ID || index,
-                            code: row.CODIGO || '',
-                            name: row.TIENDA || row.NOMBRE || 'Sin Nombre',
-                            address: row.DIRECCION || '',
-                            city: row.POBLACION || '',
-                            province: row.PROVINCIA || '',
-                            lat: 0, // Pendiente de calcular
-                            lon: 0  // Pendiente de calcular
-                        };
-                    });
-
-                    // Guardar inicial
-                    localStorage.setItem('clients', JSON.stringify(nuevosClientes));
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     
-                    alert(`✅ Archivo leído: ${nuevosClientes.length} clientes.\n🚀 Iniciando búsqueda de coordenadas...`);
+                    // header:1 nos da un Array de Arrays (Matriz), ideal para acceder por posición
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                     
-                    pintarMapa(); // Mostrar pines (aunque estén en 0,0)
-                    iniciarGeocodificacionMasiva(); // Arrancar el motor
+                    if (!rows || rows.length === 0) { alert("Archivo vacío"); return; }
+
+                    // Índices según tu archivo (Empezando en 0):
+                    // B -> 1 (Nombre Tienda)
+                    // E -> 4 (Dirección)
+                    // G -> 6 (Población)
+                    // H -> 7 (Provincia)
+                    // A -> 0 (Código/ID)
+
+                    let clientesExtraidos = [];
+                    // Empezamos en 1 para saltar la cabecera
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length < 5) continue; // Ignorar filas vacías
+
+                        // Limpiar datos
+                        const clean = (val) => val ? val.toString().trim().replace(/['"]/g, '') : "";
+
+                        const nombre = clean(row[1]); // Columna B
+                        const direccion = clean(row[4]); // Columna E
+                        const poblacion = clean(row[6]); // Columna G
+                        const provincia = clean(row[7]); // Columna H
+                        const id = clean(row[0]) || ('GEN-' + i); // Columna A
+
+                        if (nombre && direccion) {
+                            clientesExtraidos.push({
+                                id: id,
+                                name: nombre,
+                                address: direccion,
+                                city: poblacion,
+                                province: provincia,
+                                lat: 0, lon: 0 // Pendiente de buscar
+                            });
+                        }
+                    }
+
+                    if (clientesExtraidos.length === 0) {
+                        alert("No he podido extraer datos. Revisa que las columnas sean B, E, G, H.");
+                        return;
+                    }
+
+                    // GUARDAR Y ARRANCAR
+                    localStorage.setItem('clients', JSON.stringify(clientesExtraidos));
+                    alert(`✅ Leídos ${clientesExtraidos.length} clientes.\nIniciando búsqueda GPS (1 seg/cliente)...`);
+                    
+                    pintarMapa();
+                    procesarColaGPS(); // Iniciar motor robusto
 
                 } catch (err) {
-                    alert("Error leyendo el Excel: " + err.message);
-                    console.error(err);
+                    alert("Error leyendo Excel: " + err.message);
                 }
             };
-            reader.readAsArrayBuffer(file);
         }
 
-        // --- 4. MOTOR DE GEOCODIFICACIÓN (Con Cola de Espera) ---
-        async function iniciarGeocodificacionMasiva() {
+        // --- 4. MOTOR GPS (NO REPETITIVO) ---
+        async function procesarColaGPS() {
+            // Recargar siempre del disco para tener la versión más fresca
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-            let pendientes = clients.filter(c => (c.address && c.address.length > 3) && (!c.lat || c.lat === 0));
-            let total = clients.length;
-            let procesados = total - pendientes.length;
-
-            actualizarBarra(procesados, total, "Buscando coordenadas...");
-
-            // Procesar uno a uno
-            for (let i = 0; i < clients.length; i++) {
-                let c = clients[i];
-                
-                // Si falta ubicación y tiene dirección -> BUSCAR
-                if ((!c.lat || c.lat === 0) && c.address && c.address.length > 3) {
-                    
-                    actualizarBarra(procesados, total, `Buscando: ${c.name.substring(0,15)}...`);
-                    
-                    // Intentar geocodificar
-                    let coords = await buscarCoordenadas(c.address, c.city, c.province);
-                    
-                    if (coords) {
-                        clients[i].lat = coords.lat;
-                        clients[i].lon = coords.lon;
-                    } else {
-                        clients[i].lat = 0.0001; // Marca de "No encontrado" para no reintentar
-                    }
-                    
-                    // Guardar progreso cada vez (por si se cierra)
-                    localStorage.setItem('clients', JSON.stringify(clients));
-                    procesados++;
-                    
-                    // Refrescar mapa visualmente
-                    if (coords) pintarMapa();
-
-                    // ESPERA OBLIGATORIA (1.2 segundos para no ser bloqueados)
-                    await new Promise(r => setTimeout(r, 1200));
-                }
-            }
             
-            actualizarBarra(total, total, "✅ Importación Completada");
-            alert("¡Proceso finalizado! Todos los clientes han sido procesados.");
+            // Buscar pendientes: aquellos que no tienen latitud O tienen latitud 0
+            // ¡OJO! Los que tienen lat=0.0001 YA ESTÁN PROCESADOS (como no encontrados), así que los ignoramos
+            const pendientes = clients.filter(c => (!c.lat || c.lat === 0));
+            
+            const total = clients.length;
+            const hechos = total - pendientes.length;
+            
+            // Actualizar UI
+            const porc = Math.round((hechos / total) * 100);
+            document.getElementById('barra-progreso').style.width = porc + "%";
+            document.getElementById('txt-contador').innerText = `${hecos}/${total}`;
+            
+            if (pendientes.length === 0) {
+                document.getElementById('txt-estado').innerText = "✅ Todo Completado";
+                document.getElementById('txt-debug').innerText = "";
+                return; // Fin del trabajo
+            }
+
+            const target = pendientes[0]; // Tomamos el primero de la cola
+
+            // UI Feedback
+            document.getElementById('txt-estado').innerText = "Buscando coordenadas...";
+            document.getElementById('txt-debug').innerText = `>> ${target.name}`;
+
+            let latEncontrada = 0.0001; // Valor por defecto (No encontrado)
+            let lonEncontrada = 0.0001;
+
+            try {
+                // INTENTO 1: Dirección completa
+                // Limpiamos la dirección de cosas raras antes de la coma si es muy larga
+                let direccionSimple = target.address.split(',')[0]; 
+                const query = `${direccionSimple}, ${target.city}, ${target.province}, España`;
+                
+                let data = await fetchNominatim(query);
+
+                if (data) {
+                    latEncontrada = data.lat;
+                    lonEncontrada = data.lon;
+                } else {
+                    // INTENTO 2: Solo Ciudad (Fallback)
+                    console.log("Dirección exacta falló, probando solo ciudad...");
+                    data = await fetchNominatim(`${target.city}, ${target.province}, España`);
+                    if (data) {
+                        latEncontrada = data.lat;
+                        lonEncontrada = data.lon;
+                    }
+                }
+
+            } catch (err) {
+                console.log("Error de red, saltando...");
+            }
+
+            // --- GUARDADO CRÍTICO ---
+            // Buscamos el índice original para actualizarlo
+            const idxReal = clients.findIndex(c => c.id === target.id);
+            if (idxReal !== -1) {
+                clients[idxReal].lat = latEncontrada;
+                clients[idxReal].lon = lonEncontrada;
+                
+                // Guardamos en memoria inmediatamente
+                localStorage.setItem('clients', JSON.stringify(clients));
+            }
+
+            // Pintamos el mapa con el nuevo punto (si se encontró)
+            if (latEncontrada > 1) pintarMapa();
+
+            // PASAMOS AL SIGUIENTE
+            // Esperamos 1.2 segundos para respetar límites de la API y evitar bloqueos
+            setTimeout(procesarColaGPS, 1200);
         }
 
-        async function buscarCoordenadas(direccion, ciudad, provincia) {
+        async function fetchNominatim(q) {
             try {
-                const query = `${direccion}, ${ciudad || ''}, ${provincia || ''}, España`;
-                //console.log("Consultando API:", query);
-                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
-                
-                const res = await fetch(url);
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.length > 0) {
-                        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-                    }
+                    if (data.length > 0) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
                 }
-            } catch (e) {
-                console.warn("Error red:", e);
-            }
-            return null; // Fallo
-        }
-
-        function actualizarBarra(actual, total, texto) {
-            const porc = total > 0 ? Math.round((actual / total) * 100) : 0;
-            document.getElementById('barra-progreso').style.width = `${porc}%`;
-            document.getElementById('contador-txt').innerText = `${actual}/${total}`;
-            document.getElementById('estado-txt').innerText = texto;
+            } catch(e) { }
+            return null;
         }
 
         function pintarMapa() {
@@ -293,15 +327,14 @@
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
 
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-            const orders = JSON.parse(localStorage.getItem('orders') || '[]'); // Por si acaso hay pedidos
-            
-            const greenIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', shadowSize: [41, 41] });
-            const redIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', shadowSize: [41, 41] });
+            const greenIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', shadowSize:[41,41] });
+            const redIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', shadowSize:[41,41] });
 
             clients.forEach(c => {
-                if (c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001) {
+                // Solo pintamos si tiene lat > 1 (ignoramos los 0 y los 0.0001)
+                if (c.lat && c.lon && c.lat > 1) {
                     L.marker([c.lat, c.lon], { icon: redIcon })
-                        .bindPopup(`<b>${c.name}</b><br>${c.address}<br>${c.city}`)
+                        .bindPopup(`<div style="text-align:center"><b>${c.name}</b><br>${c.address}<br>${c.city}</div>`)
                         .addTo(map);
                 }
             });
