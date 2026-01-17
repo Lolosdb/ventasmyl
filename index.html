@@ -43,17 +43,17 @@
         #btn-salir { left: 15px; }
         #btn-opciones { right: 15px; background: #2563eb; color: white; border: none; }
 
-        /* PANEL MAPA */
+        /* PANEL IMPORTAR */
         #panel-importar { position: absolute; top: 65px; right: 15px; width: 280px; background: rgba(255,255,255,0.98); border-radius: 12px; padding: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.4); z-index: 10002; transform: translateX(130%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-height:80vh; overflow-y:auto; }
         #panel-importar.activo { transform: translateX(0); }
         
-        /* CLASES PARA BOTONES */
+        /* BOTONES ESTILOS */
         .btn-accion { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
         .btn-verde { background: #16a34a; color: white; }
         .btn-rojo { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
         .btn-naranja { background: #f97316; color: white; border:1px solid #ea580c; }
         
-        /* ESTILO PARA EL BOTÓN INYECTADO EN CLIENTES */
+        /* BOTÓN REPARAR (INYECTADO) */
         #btn-reparar-inyectado {
             width: 100%; padding: 12px; margin-top: 15px; 
             border-radius: 8px; border: none; cursor: pointer; 
@@ -62,7 +62,34 @@
             text-transform: uppercase; font-size: 12px;
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        #btn-reparar-inyectado:active { transform: scale(0.98); }
+
+        /* BOTÓN FLOTANTE EDITAR (NUEVO) */
+        #btn-editar-flotante {
+            position: fixed; bottom: 80px; right: 20px;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: #2563eb; color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            display: none; align-items: center; justify-content: center;
+            font-size: 24px; cursor: pointer; z-index: 99999;
+            border: 2px solid white;
+        }
+        #btn-editar-flotante:active { transform: scale(0.9); }
+
+        /* MODAL EDITOR (NUEVO) */
+        #modal-editor {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 100000;
+            overflow-y: auto;
+        }
+        .editor-content {
+            background: white; width: 90%; max-width: 400px; margin: 40px auto;
+            border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; font-size: 11px; color: #666; margin-bottom: 5px; font-weight: bold; }
+        .form-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .coord-row { display: flex; gap: 10px; }
 
         #input-excel { display: none; }
         nav, div[style*="bottom: 0"], div[class*="bottom"] { z-index: 9999 !important; position: fixed !important; }
@@ -72,15 +99,64 @@
 <body>
     <div id="root"></div>
 
+    <div id="btn-editar-flotante" onclick="abrirEditor()">✏️</div>
+
+    <div id="modal-editor">
+        <div class="editor-content">
+            <h3 style="margin:0 0 15px 0; color:#1e293b;">Editar Cliente</h3>
+            
+            <input type="hidden" id="edit-id">
+            
+            <div class="form-group">
+                <label class="form-label">NOMBRE</label>
+                <input type="text" id="edit-name" class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">DIRECCIÓN</label>
+                <input type="text" id="edit-address" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">TELÉFONO</label>
+                <input type="text" id="edit-phone" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">EMAIL</label>
+                <input type="text" id="edit-email" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">NOTAS</label>
+                <textarea id="edit-notes" class="form-input" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">COORDENADAS (Lat / Lon)</label>
+                <div class="coord-row">
+                    <input type="number" id="edit-lat" class="form-input" placeholder="Lat">
+                    <input type="number" id="edit-lon" class="form-input" placeholder="Lon">
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn-accion btn-rojo" onclick="cerrarEditor()">Cancelar</button>
+                <button class="btn-accion btn-verde" onclick="guardarEdicion()">💾 GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
     <div id="visor-mapa">
         <div id="btn-salir" class="btn-mapa" onclick="cerrarMapa()">⬅️ Volver</div>
         <div id="btn-opciones" class="btn-mapa" onclick="toggleImportar()">📂 Opciones</div>
 
         <div id="panel-importar">
-            <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">Configuración Mapa</h4>
+            <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">Herramientas</h4>
             <div style="font-size:11px; color:#555; margin-bottom:5px;">Carga <i>Clientes_CON_COORDENADAS.xlsx</i></div>
             <input type="file" id="input-excel" accept=".xlsx,.xls" onchange="cargarExcel(this)">
             <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">Subir Excel Mapa</button>
+            <button class="btn-accion btn-naranja" onclick="repararBaseDatos()">🛠️ REPARAR DATOS</button>
             <button class="btn-accion btn-rojo" onclick="borrarDatos()" style="margin-top:20px;">Borrar Mapa</button>
             <div style="margin-top:10px; text-align:center; font-size:10px; color:#999; cursor:pointer;" onclick="toggleImportar()">Cerrar</div>
         </div>
@@ -89,7 +165,10 @@
     </div>
 
     <script>
-        // 1. INTERVALO MAESTRO (Controla Pantalla, Scroll e Inyecciones)
+        // VARIABLES GLOBALES PARA EL EDITOR
+        let clienteEnEdicion = null;
+
+        // 1. INTERVALO MAESTRO
         setInterval(() => {
             
             // A. DETECTOR DE PESTAÑA MAPA
@@ -118,64 +197,133 @@
                 }
             }
 
-            // B. LIMPIEZA VISUAL
+            // B. ARREGLOS DE PANTALLA
             document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
             document.querySelectorAll('div').forEach(d => {
                 const r = d.getBoundingClientRect();
                 if(d.style.position === 'fixed' && r.bottom >= window.innerHeight) { d.style.zIndex = "9999"; d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)'); }
             });
-
-            // C. ARREGLO SCROLL MODAL "EDITAR PEDIDO"
             document.querySelectorAll('div, h1, h2, h3, span').forEach(el => {
                 if (el.textContent && el.textContent.trim() === "Editar Pedido") {
                     let modal = el.closest('div[style*="position: fixed"]') || el.closest('div[style*="z-index"]');
-                    if (!modal && el.parentElement?.parentElement) modal = el.parentElement.parentElement.parentElement;
-                    if (modal) {
-                        modal.style.setProperty('overflow-y', 'auto', 'important');
-                        modal.style.setProperty('max-height', '90vh', 'important');
-                        modal.style.setProperty('padding-bottom', '50px', 'important');
-                        modal.style.setProperty('top', '10px', 'important');
-                        modal.style.setProperty('bottom', 'auto', 'important');
-                    }
+                    if(modal) { modal.style.setProperty('overflow-y','auto','important'); modal.style.setProperty('max-height','90vh','important'); modal.style.setProperty('padding-bottom','50px','important'); }
                 }
             });
 
-            // D. *** INYECTOR DEL BOTÓN EN LA PESTAÑA CLIENTES ***
-            // Buscamos el texto "Seleccionar Archivo" (el botón original de la app)
+            // C. INYECTOR BOTÓN "REPARAR" EN LISTA CLIENTES
             const botonesTexto = document.querySelectorAll('div, button, label, span');
             let botonOriginal = null;
-            botonesTexto.forEach(el => {
-                if (el.textContent && el.textContent.trim() === "Seleccionar Archivo") {
-                    // Verificamos que sea visible
-                    if(el.offsetParent !== null) botonOriginal = el;
-                }
-            });
+            botonesTexto.forEach(el => { if (el.textContent && el.textContent.trim() === "Seleccionar Archivo" && el.offsetParent !== null) botonOriginal = el; });
 
             if (botonOriginal) {
-                // Buscamos el contenedor padre donde insertar nuestro botón
-                // Subimos un par de niveles para salir del botón original y estar en la caja contenedora
                 let contenedor = botonOriginal.parentElement;
-                while(contenedor && contenedor.tagName !== 'DIV' && !contenedor.className.includes('card')) {
-                    contenedor = contenedor.parentElement;
-                }
+                while(contenedor && contenedor.tagName !== 'DIV' && !contenedor.className.includes('card')) { contenedor = contenedor.parentElement; }
                 if(!contenedor) contenedor = botonOriginal.parentElement.parentElement;
 
-                // Verificamos si ya hemos puesto nuestro botón para no repetirlo
                 if (contenedor && !document.getElementById('btn-reparar-inyectado')) {
                     const btn = document.createElement('div');
                     btn.id = 'btn-reparar-inyectado';
                     btn.innerHTML = '🛠️ REPARAR FICHA BLANCA';
-                    btn.onclick = function() {
-                        repararBaseDatos();
-                    };
-                    // Lo insertamos después del contenedor del botón original
+                    btn.onclick = function() { repararBaseDatos(); };
                     contenedor.appendChild(btn);
                 }
             }
 
+            // D. *** DETECTOR DE "FICHA CLIENTE" PARA MOSTRAR EL LÁPIZ ***
+            detectarClienteEnPantalla();
+
         }, 500);
 
-        // 2. MAPA
+        // --- LÓGICA DEL EDITOR ---
+
+        function detectarClienteEnPantalla() {
+            const btn = document.getElementById('btn-editar-flotante');
+            // Si estamos en el mapa, no mostrar el botón
+            if(document.getElementById('visor-mapa').style.display === 'block') {
+                btn.style.display = 'none';
+                return;
+            }
+
+            // Buscamos si hay un nombre de cliente visible en grande (H1, H2, H3)
+            const titulos = document.querySelectorAll('h1, h2, h3, div[class*="title"], span[class*="title"]');
+            const clientes = JSON.parse(localStorage.getItem('clients') || '[]');
+            
+            let encontrado = null;
+
+            for (let el of titulos) {
+                const texto = el.textContent ? el.textContent.trim().toUpperCase() : "";
+                if(texto.length > 3) {
+                    // Buscar coincidencia exacta en nuestra base de datos
+                    const match = clientes.find(c => (c.name || "").toUpperCase() === texto);
+                    if(match) {
+                        encontrado = match;
+                        break;
+                    }
+                }
+            }
+
+            if(encontrado) {
+                btn.style.display = 'flex'; // Mostrar lápiz
+                clienteEnEdicion = encontrado;
+            } else {
+                btn.style.display = 'none'; // Ocultar lápiz
+                // No borramos clienteEnEdicion inmediatamente por si el usuario hace scroll
+            }
+        }
+
+        function abrirEditor() {
+            if(!clienteEnEdicion) return;
+            
+            document.getElementById('edit-id').value = clienteEnEdicion.id || "";
+            document.getElementById('edit-name').value = clienteEnEdicion.name || "";
+            document.getElementById('edit-address').value = clienteEnEdicion.address || "";
+            document.getElementById('edit-phone').value = clienteEnEdicion.phone || "";
+            document.getElementById('edit-email').value = clienteEnEdicion.email || "";
+            document.getElementById('edit-notes').value = clienteEnEdicion.notes || "";
+            document.getElementById('edit-lat').value = clienteEnEdicion.lat || 0;
+            document.getElementById('edit-lon').value = clienteEnEdicion.lon || 0;
+
+            document.getElementById('modal-editor').style.display = 'block';
+        }
+
+        function cerrarEditor() {
+            document.getElementById('modal-editor').style.display = 'none';
+        }
+
+        function guardarEdicion() {
+            const id = document.getElementById('edit-id').value;
+            const clientes = JSON.parse(localStorage.getItem('clients') || '[]');
+            
+            // Buscar índice
+            const index = clientes.findIndex(c => String(c.id) === String(id));
+            if(index === -1) { alert("Error: No encuentro al cliente para guardar."); return; }
+
+            // Actualizar datos
+            const c = clientes[index];
+            c.name = document.getElementById('edit-name').value;
+            c.address = document.getElementById('edit-address').value;
+            c.phone = document.getElementById('edit-phone').value;
+            c.email = document.getElementById('edit-email').value;
+            c.notes = document.getElementById('edit-notes').value;
+            c.lat = parseFloat(document.getElementById('edit-lat').value) || 0;
+            c.lon = parseFloat(document.getElementById('edit-lon').value) || 0;
+
+            // Actualizar espejo (Español)
+            c.nombre = c.name;
+            c.direccion = c.address;
+            c.telefono = c.phone;
+            c.correo = c.email;
+            c.notas = c.notes;
+
+            // Guardar y Recargar
+            clientes[index] = c;
+            localStorage.setItem('clients', JSON.stringify(clientes));
+            
+            alert("✅ Datos guardados correctamente.");
+            location.reload(); 
+        }
+
+        // --- FUNCIONES MAPA ---
         let map = null;
         function iniciarMapa() {
             map = L.map('mi-mapa-real', { zoomControl: false }).setView([43.36, -5.85], 8);
@@ -189,7 +337,6 @@
         function toggleImportar() { document.getElementById('panel-importar').classList.toggle('activo'); }
         function borrarDatos() { if(confirm("¿Borrar?")) { localStorage.setItem('clients', '[]'); location.reload(); } }
 
-        // 3. CARGAR EXCEL (MAPA)
         function cargarExcel(input) {
             const file = input.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -213,60 +360,30 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // 4. *** REPARADOR DE BASE DE DATOS (EL SALVAVIDAS) ***
         function repararBaseDatos() {
             try {
                 const rawData = localStorage.getItem('clients');
-                if(!rawData || rawData === '[]') { alert("No hay clientes guardados para reparar."); return; }
-                
+                if(!rawData || rawData === '[]') { alert("No hay clientes guardados."); return; }
                 let clientes = JSON.parse(rawData);
                 let reparados = 0;
-
                 clientes = clientes.map(c => {
                     const safe = (val) => (val === undefined || val === null) ? "" : String(val);
-
-                    // 1. Recuperar nombre
                     c.name = safe(c.name || c.nombre || c.tienda || c.cliente || "Sin Nombre");
-                    
-                    // 2. Recuperar otros campos o poner vacíos
                     c.address = safe(c.address || c.direccion || c.domicilio);
                     c.city = safe(c.city || c.poblacion || c.ciudad);
-                    c.province = safe(c.province || c.provincia);
-                    
-                    // 3. El error de pantalla blanca suele ser por estos campos undefined:
                     c.phone = safe(c.phone || c.telefono || c.movil);
-                    c.email = safe(c.email || c.correo || c.mail);
-                    c.contact = safe(c.contact || c.contacto || c.persona);
-                    c.cp = safe(c.cp || c.zip || c.postal || c.codigo_postal);
-                    c.cif = safe(c.cif || c.nif || c.dni || c.vat);
-                    c.notes = safe(c.notes || c.notas || c.observaciones);
-                    
+                    c.email = safe(c.email || c.correo);
+                    c.notes = safe(c.notes || c.notas);
                     if(!c.id) c.id = "FIX-" + Math.floor(Math.random()*1000000);
-
-                    // 4. Duplicar al español (blindaje total)
-                    c.nombre = c.name;
-                    c.direccion = c.address;
-                    c.poblacion = c.city;
-                    c.provincia = c.province;
-                    c.telefono = c.phone;
-                    c.correo = c.email;
-                    c.contacto = c.contact;
-                    c.codigo_postal = c.cp;
-
-                    reparados++;
-                    return c;
+                    c.nombre = c.name; c.direccion = c.address; c.telefono = c.phone; c.correo = c.email;
+                    reparados++; return c;
                 });
-
                 localStorage.setItem('clients', JSON.stringify(clientes));
-                alert(`✅ Se han reparado ${reparados} clientes.\n\nLa página se recargará ahora.`);
+                alert(`✅ Reparados ${reparados} clientes.`);
                 location.reload(); 
-
-            } catch (e) {
-                alert("Error al reparar: " + e.message);
-            }
+            } catch (e) { alert("Error: " + e.message); }
         }
 
-        // 5. PINTAR
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
