@@ -30,8 +30,8 @@
             background-color: #1e293b; 
             font-family: sans-serif; 
             overflow-x: hidden !important; 
-            overflow-y: auto !important; /* Permitir scroll vertical siempre */
-            padding-bottom: 100px !important; /* Espacio extra abajo para que la botonera no tape */
+            overflow-y: auto !important; 
+            padding-bottom: 100px !important; 
         }
 
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
@@ -112,23 +112,20 @@
             const visor = document.getElementById('visor-mapa');
             
             if (mapaActivo) {
-                // ENTRANDO AL MAPA
                 if (visor.style.display !== 'block') {
                     visor.style.display = 'block';
-                    document.body.style.overflow = 'hidden'; // Bloquea scroll solo mientras ves el mapa
+                    document.body.style.overflow = 'hidden'; 
                     if (!map) iniciarMapa();
                     else { map.invalidateSize(); pintarPuntos(); }
                 }
             } else {
-                // SALIENDO DEL MAPA
                 if (visor.style.display !== 'none') {
                     visor.style.display = 'none';
-                    document.body.style.overflow = 'auto'; // Devuelve el scroll al salir
+                    document.body.style.overflow = 'auto'; 
                     document.getElementById('panel-importar').classList.remove('activo');
                 }
             }
 
-            // Limpieza visual
             document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
             document.querySelectorAll('div').forEach(d => {
                 const r = d.getBoundingClientRect();
@@ -147,15 +144,9 @@
             pintarPuntos();
         }
 
-        // --- ARREGLO FINAL DEL BOTÓN VOLVER ---
         function cerrarMapa() {
-            // 1. Ocultar el mapa manualmente
             document.getElementById('visor-mapa').style.display = 'none';
-            // 2. Devolver el scroll
             document.body.style.overflow = 'auto';
-            
-            // 3. Buscar y pulsar el botón "Dash" de la app original
-            // Esto le dice a la app interna "Vete al inicio", sin usar el navegador
             const botones = document.querySelectorAll('span, p, div, a');
             for (let btn of botones) {
                 if (btn.textContent && btn.textContent.trim() === 'Dash') {
@@ -192,7 +183,7 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // 4. PINTAR (Iconos Pequeños + Color Correcto)
+        // 4. PINTAR (CON AGRUPACIÓN DE PUNTOS)
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
@@ -200,7 +191,7 @@
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
 
-            // ICONOS MINI
+            // Estilos de Iconos
             const smallIconSize = [15, 24];
             const smallIconAnchor = [7, 24]; 
             const smallPopupAnchor = [1, -24];
@@ -214,6 +205,7 @@
                 iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor, shadowUrl: null 
             });
 
+            // Funciones Auxiliares
             const now = new Date();
             const limite30dias = new Date();
             limite30dias.setDate(now.getDate() - 30);
@@ -229,11 +221,33 @@
                 return null;
             };
 
-            const bounds = [];
-
+            // 1. AGRUPAR CLIENTES POR COORDENADAS
+            const grupos = {}; // Clave: "LAT_LON", Valor: Array de clientes
+            
             clients.forEach(c => {
                 if(c.lat && c.lon && c.lat !== 0) {
+                    const key = `${c.lat}_${c.lon}`;
+                    if(!grupos[key]) grupos[key] = [];
+                    grupos[key].push(c);
+                }
+            });
+
+            const bounds = [];
+
+            // 2. PROCESAR CADA GRUPO
+            for (const key in grupos) {
+                const grupo = grupos[key];
+                const lat = grupo[0].lat;
+                const lon = grupo[0].lon;
+
+                // Analizar el estado de CADA cliente del grupo
+                let algunVerde = false;
+                let contenidoPopup = `<div style="text-align:center; max-height:200px; overflow-y:auto; padding-right:5px;">`;
+
+                grupo.forEach((c, index) => {
                     const nombreExcel = norm(c.name);
+                    
+                    // Buscar pedidos para este cliente concreto
                     const misPedidos = orders.filter(o => {
                         const nombrePedido = norm(o.clientName || o.client_name || o.cliente || "");
                         if (nombrePedido && nombreExcel) {
@@ -253,25 +267,37 @@
                         lastOrderDate = parsearFecha(p.date || p.fecha || p.timestamp || p.creationDate);
                     }
 
-                    let icono = redIcon;
-                    if (lastOrderDate && !isNaN(lastOrderDate) && lastOrderDate >= limite30dias) {
-                        icono = greenIcon;
-                    }
+                    // Es verde?
+                    const esVerde = (lastOrderDate && !isNaN(lastOrderDate) && lastOrderDate >= limite30dias);
+                    if (esVerde) algunVerde = true;
 
-                    L.marker([c.lat, c.lon], {icon: icono})
-                        .bindPopup(`
-                            <div style="text-align:center">
-                                <b>${c.name}</b><br>
-                                <span style="font-size:10px; color:#555">${c.address}</span><br>
-                                <div style="margin-top:5px; padding:3px; color:white; font-size:11px; font-weight:bold; border-radius:4px; background:${icono === greenIcon ? '#16a34a' : '#ef4444'}">
-                                    ${lastOrderDate ? lastOrderDate.toLocaleDateString() : 'Sin Pedidos'}
-                                </div>
+                    // Construir HTML para este cliente
+                    if (index > 0) contenidoPopup += `<hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">`;
+                    
+                    contenidoPopup += `
+                        <div style="padding:2px 0;">
+                            <b>${c.name}</b><br>
+                            <span style="font-size:10px; color:#555">${c.address}</span><br>
+                            <div style="margin-top:4px; padding:2px 6px; display:inline-block; color:white; font-size:10px; font-weight:bold; border-radius:4px; background:${esVerde ? '#16a34a' : '#ef4444'}">
+                                ${lastOrderDate ? lastOrderDate.toLocaleDateString() : 'Sin Pedidos'}
                             </div>
-                        `)
-                        .addTo(map);
-                    bounds.push([c.lat, c.lon]);
-                }
-            });
+                        </div>
+                    `;
+                });
+
+                contenidoPopup += `</div>`;
+
+                // Determinar icono final del grupo
+                // Si al menos UNO es verde, la chincheta es VERDE
+                const iconoFinal = algunVerde ? greenIcon : redIcon;
+
+                L.marker([lat, lon], {icon: iconoFinal})
+                    .bindPopup(contenidoPopup)
+                    .addTo(map);
+                
+                bounds.push([lat, lon]);
+            }
+
             if (bounds.length > 0) map.fitBounds(bounds);
         }
     </script>
