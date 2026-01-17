@@ -7,14 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Gestión de Ventas</title>
 
-    <script>
-        const fakePos = { coords: { latitude: 40.4168, longitude: -3.7038, accuracy: 50 }, timestamp: Date.now() };
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition = (s) => s(fakePos);
-            navigator.geolocation.watchPosition = (s) => { s(fakePos); return 999; };
-        }
-    </script>
-
     <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
     <link rel="stylesheet" href="./index-cqvvk0bb.css?v=final">
     <link rel="manifest" href="./manifest.webmanifest">
@@ -24,7 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* --- ESTILOS VISUALES --- */
+        /* --- ESTILOS GENERALES --- */
         body { 
             margin: 0; background-color: #1e293b; font-family: sans-serif; 
             overflow-x: hidden !important; overflow-y: auto !important; 
@@ -47,13 +39,13 @@
         #panel-importar { position: absolute; top: 65px; right: 15px; width: 280px; background: rgba(255,255,255,0.98); border-radius: 12px; padding: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.4); z-index: 10002; transform: translateX(130%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-height:80vh; overflow-y:auto; }
         #panel-importar.activo { transform: translateX(0); }
         
-        /* BOTONES ESTILOS */
+        /* BOTONES */
         .btn-accion { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
         .btn-verde { background: #16a34a; color: white; }
         .btn-rojo { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
         .btn-naranja { background: #f97316; color: white; border:1px solid #ea580c; }
         
-        /* BOTÓN REPARAR (INYECTADO) */
+        /* BOTÓN REPARAR */
         #btn-reparar-inyectado {
             width: 100%; padding: 12px; margin-top: 15px; 
             border-radius: 8px; border: none; cursor: pointer; 
@@ -63,7 +55,7 @@
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
 
-        /* BOTÓN FLOTANTE EDITAR (NUEVO) */
+        /* LÁPIZ FLOTANTE */
         #btn-editar-flotante {
             position: fixed; bottom: 80px; right: 20px;
             width: 56px; height: 56px; border-radius: 50%;
@@ -75,7 +67,7 @@
         }
         #btn-editar-flotante:active { transform: scale(0.9); }
 
-        /* MODAL EDITOR (NUEVO) */
+        /* MODAL EDITOR */
         #modal-editor {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 100000;
@@ -89,7 +81,17 @@
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; font-size: 11px; color: #666; margin-bottom: 5px; font-weight: bold; }
         .form-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        .coord-row { display: flex; gap: 10px; }
+        
+        .coord-row { display: flex; gap: 10px; align-items: center; }
+        
+        /* NUEVO BOTÓN GPS */
+        .btn-gps {
+            background: #0ea5e9; color: white; border: none;
+            border-radius: 6px; padding: 0 15px; height: 38px;
+            font-weight: bold; cursor: pointer; white-space: nowrap;
+            display: flex; align-items: center; gap: 5px; font-size: 12px;
+        }
+        .btn-gps:active { background: #0284c7; }
 
         #input-excel { display: none; }
         nav, div[style*="bottom: 0"], div[class*="bottom"] { z-index: 9999 !important; position: fixed !important; }
@@ -133,10 +135,11 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">COORDENADAS (Lat / Lon)</label>
+                <label class="form-label">UBICACIÓN GPS</label>
                 <div class="coord-row">
-                    <input type="number" id="edit-lat" class="form-input" placeholder="Lat">
-                    <input type="number" id="edit-lon" class="form-input" placeholder="Lon">
+                    <input type="number" id="edit-lat" class="form-input" placeholder="Latitud">
+                    <input type="number" id="edit-lon" class="form-input" placeholder="Longitud">
+                    <button class="btn-gps" onclick="capturarGPSPropio()">📍 GPS AQUÍ</button>
                 </div>
             </div>
 
@@ -165,13 +168,10 @@
     </div>
 
     <script>
-        // VARIABLES GLOBALES PARA EL EDITOR
         let clienteEnEdicion = null;
 
         // 1. INTERVALO MAESTRO
         setInterval(() => {
-            
-            // A. DETECTOR DE PESTAÑA MAPA
             let mapaActivo = false;
             document.querySelectorAll('a, div, span, p').forEach(el => {
                 const txt = el.textContent ? el.textContent.trim().toLowerCase() : '';
@@ -197,12 +197,13 @@
                 }
             }
 
-            // B. ARREGLOS DE PANTALLA
             document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
             document.querySelectorAll('div').forEach(d => {
                 const r = d.getBoundingClientRect();
                 if(d.style.position === 'fixed' && r.bottom >= window.innerHeight) { d.style.zIndex = "9999"; d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)'); }
             });
+
+            // Scroll Modal
             document.querySelectorAll('div, h1, h2, h3, span').forEach(el => {
                 if (el.textContent && el.textContent.trim() === "Editar Pedido") {
                     let modal = el.closest('div[style*="position: fixed"]') || el.closest('div[style*="z-index"]');
@@ -210,7 +211,7 @@
                 }
             });
 
-            // C. INYECTOR BOTÓN "REPARAR" EN LISTA CLIENTES
+            // Botón Reparar
             const botonesTexto = document.querySelectorAll('div, button, label, span');
             let botonOriginal = null;
             botonesTexto.forEach(el => { if (el.textContent && el.textContent.trim() === "Seleccionar Archivo" && el.offsetParent !== null) botonOriginal = el; });
@@ -219,7 +220,6 @@
                 let contenedor = botonOriginal.parentElement;
                 while(contenedor && contenedor.tagName !== 'DIV' && !contenedor.className.includes('card')) { contenedor = contenedor.parentElement; }
                 if(!contenedor) contenedor = botonOriginal.parentElement.parentElement;
-
                 if (contenedor && !document.getElementById('btn-reparar-inyectado')) {
                     const btn = document.createElement('div');
                     btn.id = 'btn-reparar-inyectado';
@@ -229,51 +229,37 @@
                 }
             }
 
-            // D. *** DETECTOR DE "FICHA CLIENTE" PARA MOSTRAR EL LÁPIZ ***
             detectarClienteEnPantalla();
-
         }, 500);
 
-        // --- LÓGICA DEL EDITOR ---
+        // --- FUNCIONES DEL EDITOR ---
 
         function detectarClienteEnPantalla() {
             const btn = document.getElementById('btn-editar-flotante');
-            // Si estamos en el mapa, no mostrar el botón
-            if(document.getElementById('visor-mapa').style.display === 'block') {
-                btn.style.display = 'none';
-                return;
-            }
+            if(document.getElementById('visor-mapa').style.display === 'block') { btn.style.display = 'none'; return; }
 
-            // Buscamos si hay un nombre de cliente visible en grande (H1, H2, H3)
             const titulos = document.querySelectorAll('h1, h2, h3, div[class*="title"], span[class*="title"]');
             const clientes = JSON.parse(localStorage.getItem('clients') || '[]');
             
             let encontrado = null;
-
             for (let el of titulos) {
                 const texto = el.textContent ? el.textContent.trim().toUpperCase() : "";
                 if(texto.length > 3) {
-                    // Buscar coincidencia exacta en nuestra base de datos
                     const match = clientes.find(c => (c.name || "").toUpperCase() === texto);
-                    if(match) {
-                        encontrado = match;
-                        break;
-                    }
+                    if(match) { encontrado = match; break; }
                 }
             }
 
             if(encontrado) {
-                btn.style.display = 'flex'; // Mostrar lápiz
+                btn.style.display = 'flex';
                 clienteEnEdicion = encontrado;
             } else {
-                btn.style.display = 'none'; // Ocultar lápiz
-                // No borramos clienteEnEdicion inmediatamente por si el usuario hace scroll
+                btn.style.display = 'none';
             }
         }
 
         function abrirEditor() {
             if(!clienteEnEdicion) return;
-            
             document.getElementById('edit-id').value = clienteEnEdicion.id || "";
             document.getElementById('edit-name').value = clienteEnEdicion.name || "";
             document.getElementById('edit-address').value = clienteEnEdicion.address || "";
@@ -282,23 +268,46 @@
             document.getElementById('edit-notes').value = clienteEnEdicion.notes || "";
             document.getElementById('edit-lat').value = clienteEnEdicion.lat || 0;
             document.getElementById('edit-lon').value = clienteEnEdicion.lon || 0;
-
             document.getElementById('modal-editor').style.display = 'block';
         }
 
-        function cerrarEditor() {
-            document.getElementById('modal-editor').style.display = 'none';
+        // *** NUEVA FUNCIÓN CAPTURAR GPS ***
+        function capturarGPSPropio() {
+            if (!navigator.geolocation) { alert("Tu navegador no soporta GPS."); return; }
+            
+            const latField = document.getElementById('edit-lat');
+            const lonField = document.getElementById('edit-lon');
+            const btn = document.querySelector('.btn-gps');
+            const textoOriginal = btn.innerHTML;
+
+            btn.innerHTML = "⏳ Buscando...";
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    latField.value = lat;
+                    lonField.value = lon;
+                    alert(`✅ Posición capturada:\nLat: ${lat.toFixed(5)}\nLon: ${lon.toFixed(5)}`);
+                    btn.innerHTML = textoOriginal;
+                },
+                (error) => {
+                    alert("❌ Error al obtener GPS. Asegúrate de dar permisos a la web.");
+                    console.error(error);
+                    btn.innerHTML = textoOriginal;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         }
+
+        function cerrarEditor() { document.getElementById('modal-editor').style.display = 'none'; }
 
         function guardarEdicion() {
             const id = document.getElementById('edit-id').value;
             const clientes = JSON.parse(localStorage.getItem('clients') || '[]');
-            
-            // Buscar índice
             const index = clientes.findIndex(c => String(c.id) === String(id));
-            if(index === -1) { alert("Error: No encuentro al cliente para guardar."); return; }
+            if(index === -1) { alert("Error al guardar."); return; }
 
-            // Actualizar datos
             const c = clientes[index];
             c.name = document.getElementById('edit-name').value;
             c.address = document.getElementById('edit-address').value;
@@ -308,18 +317,11 @@
             c.lat = parseFloat(document.getElementById('edit-lat').value) || 0;
             c.lon = parseFloat(document.getElementById('edit-lon').value) || 0;
 
-            // Actualizar espejo (Español)
-            c.nombre = c.name;
-            c.direccion = c.address;
-            c.telefono = c.phone;
-            c.correo = c.email;
-            c.notas = c.notes;
+            c.nombre = c.name; c.direccion = c.address; c.telefono = c.phone; c.correo = c.email; c.notas = c.notes;
 
-            // Guardar y Recargar
             clientes[index] = c;
             localStorage.setItem('clients', JSON.stringify(clientes));
-            
-            alert("✅ Datos guardados correctamente.");
+            alert("✅ Cliente actualizado con éxito.");
             location.reload(); 
         }
 
@@ -363,15 +365,15 @@
         function repararBaseDatos() {
             try {
                 const rawData = localStorage.getItem('clients');
-                if(!rawData || rawData === '[]') { alert("No hay clientes guardados."); return; }
+                if(!rawData || rawData === '[]') { alert("No hay clientes."); return; }
                 let clientes = JSON.parse(rawData);
                 let reparados = 0;
                 clientes = clientes.map(c => {
                     const safe = (val) => (val === undefined || val === null) ? "" : String(val);
                     c.name = safe(c.name || c.nombre || c.tienda || c.cliente || "Sin Nombre");
-                    c.address = safe(c.address || c.direccion || c.domicilio);
-                    c.city = safe(c.city || c.poblacion || c.ciudad);
-                    c.phone = safe(c.phone || c.telefono || c.movil);
+                    c.address = safe(c.address || c.direccion);
+                    c.city = safe(c.city || c.poblacion);
+                    c.phone = safe(c.phone || c.telefono);
                     c.email = safe(c.email || c.correo);
                     c.notes = safe(c.notes || c.notas);
                     if(!c.id) c.id = "FIX-" + Math.floor(Math.random()*1000000);
