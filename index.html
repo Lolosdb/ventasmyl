@@ -24,40 +24,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* =========================================
-           1. ARREGLOS DE SCROLL (CRÍTICOS)
-           ========================================= */
-        
-        /* Scroll General (Dash, Listas) */
+        /* --- ARREGLOS DE SCROLL GENERALES --- */
         body { 
             margin: 0; 
             background-color: #1e293b; 
             font-family: sans-serif; 
             overflow-x: hidden !important; 
-            overflow-y: auto !important; /* Habilitar scroll siempre */
-            padding-bottom: 120px !important; /* Espacio extra abajo para que la botonera no tape nada */
+            overflow-y: auto !important; /* Habilitar scroll siempre en la app */
+            padding-bottom: 120px !important; /* Espacio extra abajo */
         }
 
-        /* FIX PARA VENTANAS EMERGENTES (Como Editar Pedido) */
-        /* Forzamos que cualquier contenedor fijo que ocupe la pantalla permita scroll */
-        div[style*="position: fixed"][style*="z-index"],
-        div[style*="position: absolute"][style*="z-index"],
-        div[role="dialog"],
-        .modal {
-            overflow-y: auto !important; /* Permitir bajar */
-            max-height: 100vh !important; /* Que no sea más alto que la pantalla */
-        }
-        
-        /* Excepción: Mi propio mapa (ese no debe tener scroll del navegador) */
-        #visor-mapa { overflow: hidden !important; }
-        
-        /* Asegurar que el contenido dentro de los modales tenga espacio final */
-        form, div[class*="content"] {
-            padding-bottom: 50px; 
-        }
-
-        /* ----------------------------------------- */
-
+        /* Ocultar mapas originales */
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
         .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
@@ -72,7 +49,7 @@
         }
         #mi-mapa-real { width: 100%; height: 100%; }
 
-        /* BOTONES DEL MAPA */
+        /* BOTONES MAPA */
         .btn-mapa {
             position: absolute; top: 20px; background: white; color: #333;
             padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
@@ -121,8 +98,9 @@
     </div>
 
     <script>
-        // 1. CONTROL DE NAVEGACIÓN
+        // 1. CONTROL DE NAVEGACIÓN Y PARCHES
         setInterval(() => {
+            // A. DETECTOR DE MAPA
             let mapaActivo = false;
             document.querySelectorAll('a, div, span, p').forEach(el => {
                 const txt = el.textContent ? el.textContent.trim().toLowerCase() : '';
@@ -138,18 +116,19 @@
             if (mapaActivo) {
                 if (visor.style.display !== 'block') {
                     visor.style.display = 'block';
-                    document.body.style.overflow = 'hidden'; // Bloquea scroll del body SOLO en el mapa
+                    document.body.style.overflow = 'hidden'; 
                     if (!map) iniciarMapa();
                     else { map.invalidateSize(); pintarPuntos(); }
                 }
             } else {
                 if (visor.style.display !== 'none') {
                     visor.style.display = 'none';
-                    document.body.style.overflow = 'auto'; // Reactiva scroll general
+                    document.body.style.overflow = 'auto'; 
                     document.getElementById('panel-importar').classList.remove('activo');
                 }
             }
 
+            // B. LIMPIEZA VISUAL
             document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
             document.querySelectorAll('div').forEach(d => {
                 const r = d.getBoundingClientRect();
@@ -158,6 +137,32 @@
                      d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
                 }
             });
+
+            // C. *** PARCHE MARTILLO PARA EDITAR PEDIDO ***
+            // Buscamos cualquier elemento que contenga "Editar Pedido"
+            const elementosTexto = document.querySelectorAll('div, h1, h2, h3, span');
+            elementosTexto.forEach(el => {
+                if (el.textContent && el.textContent.trim() === "Editar Pedido") {
+                    // Encontramos el texto, buscamos su contenedor padre principal (el modal)
+                    // Subimos hasta encontrar el cuadro blanco o azul fijo
+                    let modal = el.closest('div[style*="position: fixed"]') || el.closest('div[style*="z-index"]');
+                    
+                    // Si no lo encontramos por estilo, subimos 3 o 4 niveles (brute force)
+                    if (!modal && el.parentElement && el.parentElement.parentElement) {
+                        modal = el.parentElement.parentElement.parentElement;
+                    }
+
+                    if (modal) {
+                        // FORZAMOS LOS ESTILOS PARA QUE HAYA SCROLL
+                        modal.style.setProperty('overflow-y', 'auto', 'important');
+                        modal.style.setProperty('max-height', '90vh', 'important'); // Dejar un margen arriba/abajo
+                        modal.style.setProperty('padding-bottom', '50px', 'important'); // Espacio para botones
+                        modal.style.setProperty('top', '10px', 'important'); // Pegarlo un poco arriba
+                        modal.style.setProperty('bottom', 'auto', 'important');
+                    }
+                }
+            });
+
         }, 500);
 
         // 2. MAPA
@@ -207,7 +212,7 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // 4. PINTAR (Agrupación + Colores Correctos)
+        // 4. PINTAR (Agrupación + Color)
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
@@ -215,7 +220,6 @@
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
 
-            // ICONOS MINI
             const smallIconSize = [15, 24];
             const smallIconAnchor = [7, 24]; 
             const smallPopupAnchor = [1, -24];
@@ -244,7 +248,6 @@
                 return null;
             };
 
-            // 1. AGRUPAR
             const grupos = {}; 
             clients.forEach(c => {
                 if(c.lat && c.lon && c.lat !== 0) {
@@ -256,7 +259,6 @@
 
             const bounds = [];
 
-            // 2. PROCESAR GRUPOS
             for (const key in grupos) {
                 const grupo = grupos[key];
                 const lat = grupo[0].lat;
