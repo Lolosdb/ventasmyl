@@ -24,17 +24,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* --- ARREGLOS DE SCROLL GENERALES --- */
+        /* --- ESTILOS: SCROLL Y VISUALIZACIÓN --- */
         body { 
             margin: 0; 
             background-color: #1e293b; 
             font-family: sans-serif; 
             overflow-x: hidden !important; 
-            overflow-y: auto !important; /* Habilitar scroll siempre en la app */
-            padding-bottom: 120px !important; /* Espacio extra abajo */
+            overflow-y: auto !important; 
+            padding-bottom: 120px !important; 
         }
 
-        /* Ocultar mapas originales */
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
         .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
@@ -138,26 +137,19 @@
                 }
             });
 
-            // C. *** PARCHE MARTILLO PARA EDITAR PEDIDO ***
-            // Buscamos cualquier elemento que contenga "Editar Pedido"
+            // C. PARCHE SCROLL PARA "EDITAR PEDIDO" (SOLO EN ESE POPUP)
             const elementosTexto = document.querySelectorAll('div, h1, h2, h3, span');
             elementosTexto.forEach(el => {
                 if (el.textContent && el.textContent.trim() === "Editar Pedido") {
-                    // Encontramos el texto, buscamos su contenedor padre principal (el modal)
-                    // Subimos hasta encontrar el cuadro blanco o azul fijo
                     let modal = el.closest('div[style*="position: fixed"]') || el.closest('div[style*="z-index"]');
-                    
-                    // Si no lo encontramos por estilo, subimos 3 o 4 niveles (brute force)
                     if (!modal && el.parentElement && el.parentElement.parentElement) {
                         modal = el.parentElement.parentElement.parentElement;
                     }
-
                     if (modal) {
-                        // FORZAMOS LOS ESTILOS PARA QUE HAYA SCROLL
                         modal.style.setProperty('overflow-y', 'auto', 'important');
-                        modal.style.setProperty('max-height', '90vh', 'important'); // Dejar un margen arriba/abajo
-                        modal.style.setProperty('padding-bottom', '50px', 'important'); // Espacio para botones
-                        modal.style.setProperty('top', '10px', 'important'); // Pegarlo un poco arriba
+                        modal.style.setProperty('max-height', '90vh', 'important');
+                        modal.style.setProperty('padding-bottom', '50px', 'important');
+                        modal.style.setProperty('top', '10px', 'important');
                         modal.style.setProperty('bottom', 'auto', 'important');
                     }
                 }
@@ -188,31 +180,84 @@
         function toggleImportar() { document.getElementById('panel-importar').classList.toggle('activo'); }
         function borrarDatos() { if(confirm("¿Borrar?")) { localStorage.setItem('clients', '[]'); location.reload(); } }
 
-        // 3. CARGAR EXCEL
+        // 3. CARGAR EXCEL (VERSIÓN ESPEJO + BLINDAJE)
         function cargarExcel(input) {
             const file = input.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                
                 const nuevos = json.map((row, i) => {
-                    const get = (k) => row[k] || row[k.toUpperCase()] || "";
+                    // Función para buscar columna ignorando mayúsculas/minúsculas y espacios
+                    const get = (key) => {
+                        if (row[key] !== undefined) return row[key];
+                        // Búsqueda flexible
+                        const found = Object.keys(row).find(k => k.trim().toUpperCase() === key.toUpperCase());
+                        return found ? row[found] : "";
+                    };
+
+                    // Limpieza de Coordenadas (comas a puntos)
+                    const cleanCoord = (val) => {
+                        if (!val) return 0;
+                        let s = val.toString().replace(',', '.'); // Arreglar formato europeo
+                        return parseFloat(s) || 0;
+                    };
+
+                    // EXTRACCIÓN DE DATOS
+                    const id = get('CODIGO') || get('ID') || ("GEN-" + i);
+                    const nombre = get('TIENDA') || get('NOMBRE') || get('CLIENTE') || "Sin Nombre";
+                    const direccion = get('DIRECCION') || get('DOMICILIO') || "";
+                    const poblacion = get('POBLACION') || get('CIUDAD') || "";
+                    const provincia = get('PROVINCIA') || "";
+                    const telefono = get('TELEFONO') || get('TELEFON') || get('MOVIL') || get('CELULAR') || "";
+                    const email = get('EMAIL') || get('CORREO') || get('MAIL') || "";
+                    const contacto = get('CONTACTO') || get('PERSONA') || get('CONTACT') || "";
+                    
+                    // COORDENADAS
+                    const lat = cleanCoord(get('LATITUD'));
+                    const lon = cleanCoord(get('LONGITUD'));
+
+                    // OBJETO ESPEJO (Guardamos en Inglés y Español para que la App no falle)
                     return {
-                        id: get('CODIGO') || i,
-                        name: get('TIENDA') || get('NOMBRE') || "Cliente",
-                        address: get('DIRECCION'), city: get('POBLACION'),
-                        lat: parseFloat(get('LATITUD') || 0), lon: parseFloat(get('LONGITUD') || 0)
+                        // Estándar
+                        id: id,
+                        name: nombre,
+                        address: direccion,
+                        city: poblacion,
+                        province: provincia,
+                        phone: telefono,
+                        email: email,
+                        contact: contacto,
+                        
+                        // Espejo en Español (Por si la app usa estas claves)
+                        nombre: nombre,
+                        direccion: direccion,
+                        poblacion: poblacion,
+                        provincia: provincia,
+                        telefono: telefono,
+                        correo: email,
+                        contacto: contacto,
+                        
+                        // Coordenadas
+                        lat: lat,
+                        lon: lon
                     };
                 });
+                
                 const validos = nuevos.filter(c => c.lat !== 0);
+                
+                // Guardar y notificar
                 localStorage.setItem('clients', JSON.stringify(nuevos));
-                alert(`✅ Cargados ${nuevos.length} clientes (${validos.length} con mapa).`);
-                toggleImportar(); pintarPuntos();
+                
+                alert(`✅ Cargados ${nuevos.length} clientes.\n(Datos duplicados internamente para asegurar compatibilidad)`);
+                toggleImportar(); 
+                pintarPuntos();
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // 4. PINTAR (Agrupación + Color)
+        // 4. PINTAR MAPA (Agrupación + Color)
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
