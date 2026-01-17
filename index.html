@@ -155,7 +155,9 @@
 
         <div id="panel-importar">
             <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">Herramientas</h4>
-            <div style="font-size:11px; color:#555; margin-bottom:5px;">Carga <i>Clientes_CON_COORDENADAS.xlsx</i></div>
+            <div style="font-size:11px; color:#555; margin-bottom:5px;">
+                Carga <i>Clientes_CON_COORDENADAS.xlsx</i> o <i>Clientes.xlsx</i>
+            </div>
             <input type="file" id="input-excel" accept=".xlsx,.xls" onchange="cargarExcel(this)">
             <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">Subir Excel Mapa</button>
             <button class="btn-accion btn-naranja" onclick="repararBaseDatos()">🛠️ REPARAR DATOS</button>
@@ -329,29 +331,77 @@
         function toggleImportar() { document.getElementById('panel-importar').classList.toggle('activo'); }
         function borrarDatos() { if(confirm("¿Borrar?")) { localStorage.setItem('clients', '[]'); location.reload(); } }
 
+        // 3. CARGAR EXCEL (ESTRICTO POR POSICIÓN DE COLUMNAS)
         function cargarExcel(input) {
             const file = input.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                const nuevos = json.map((row, i) => {
-                    const get = (k) => { const f = Object.keys(row).find(x => x.toUpperCase().trim()===k); return f?row[f]:""; };
-                    const clean = (v) => v ? parseFloat(v.toString().replace(',','.')) || 0 : 0;
-                    return {
-                        id: get('CODIGO') || i,
-                        name: get('TIENDA') || get('NOMBRE') || "Cliente",
-                        address: get('DIRECCION'), city: get('POBLACION'),
-                        lat: clean(get('LATITUD')), lon: clean(get('LONGITUD'))
+                // Usamos header: 1 para obtener Array de Arrays (Posiciones fijas)
+                const sheetData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
+                
+                // Empezamos en i=1 para saltar cabecera
+                const nuevos = [];
+                for(let i=1; i<sheetData.length; i++) {
+                    const row = sheetData[i];
+                    if(!row || row.length === 0) continue;
+
+                    // LIMPIEZA
+                    const clean = (val) => (val === undefined || val === null) ? "" : String(val).trim();
+                    const cleanCoord = (val) => {
+                        if(!val) return 0;
+                        return parseFloat(String(val).replace(',', '.')) || 0;
                     };
-                });
+
+                    // MAPEO MILIMÉTRICO BASADO EN TUS CAPTURAS
+                    // A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, J=9, K=10 ... V=21, W=22
+                    const obj = {
+                        id: clean(row[0]),          // A: CODIGO
+                        name: clean(row[1]),        // B: TIENDA
+                        cif: clean(row[2]),         // C: NIF
+                        email: clean(row[3]),       // D: MAIL
+                        address: clean(row[4]),     // E: DIRECCION
+                        contact: clean(row[5]),     // F: CONTACTO
+                        city: clean(row[6]),        // G: POBLACION
+                        province: clean(row[7]),    // H: PROVINCIA
+                        phone: clean(row[10]),      // K: TELEFONO (La columna 10 es la K)
+                        
+                        // Coordenadas en V(21) y W(22)
+                        lat: cleanCoord(row[21]),
+                        lon: cleanCoord(row[22]),
+
+                        // ESPEJOS PARA BLINDAJE
+                        nombre: clean(row[1]),
+                        tienda: clean(row[1]),
+                        cliente: clean(row[1]),
+                        
+                        correo: clean(row[3]),
+                        
+                        direccion: clean(row[4]),
+                        
+                        contacto: clean(row[5]),
+                        
+                        poblacion: clean(row[6]),
+                        provincia: clean(row[7]),
+                        
+                        telefono: clean(row[10]),
+                        movil: clean(row[10]),
+                        
+                        notes: ""
+                    };
+
+                    if(obj.id || obj.name) nuevos.push(obj);
+                }
+
                 localStorage.setItem('clients', JSON.stringify(nuevos));
-                alert(`✅ Mapa actualizado: ${nuevos.length} clientes.`);
-                toggleImportar(); pintarPuntos();
+                alert(`✅ Importación Exitosa: ${nuevos.length} clientes procesados.\nLas fichas ahora se verán completas.`);
+                toggleImportar(); 
+                pintarPuntos();
             };
             reader.readAsArrayBuffer(file);
         }
 
+        // 4. REPARAR DATOS (SALVAVIDAS)
         function repararBaseDatos() {
             try {
                 const rawData = localStorage.getItem('clients');
@@ -360,14 +410,14 @@
                 let reparados = 0;
                 clientes = clientes.map(c => {
                     const safe = (val) => (val === undefined || val === null) ? "" : String(val);
-                    c.name = safe(c.name || c.nombre || c.tienda || c.cliente || "Sin Nombre");
-                    c.address = safe(c.address || c.direccion);
-                    c.city = safe(c.city || c.poblacion);
-                    c.phone = safe(c.phone || c.telefono);
-                    c.email = safe(c.email || c.correo);
-                    c.notes = safe(c.notes || c.notas);
-                    if(!c.id) c.id = "FIX-" + Math.floor(Math.random()*1000000);
+                    if(!c.name) c.name = safe(c.nombre || c.tienda || "Sin Nombre");
+                    if(!c.address) c.address = safe(c.direccion);
+                    if(!c.phone) c.phone = safe(c.telefono || c.movil);
+                    if(!c.email) c.email = safe(c.correo);
+                    if(!c.contact) c.contact = safe(c.contacto);
+                    
                     c.nombre = c.name; c.direccion = c.address; c.telefono = c.phone; c.correo = c.email;
+                    
                     reparados++; return c;
                 });
                 localStorage.setItem('clients', JSON.stringify(clientes));
@@ -398,15 +448,13 @@
                     const norm = (s) => s ? s.toString().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
                     const cName = norm(c.name);
                     
-                    // LÓGICA ESTRICTA (COINCIDENCIA EXACTA O ID)
                     const mis = orders.filter(o => {
                         const oId = String(o.cliente_id || o.client_code || o.id_cliente || o.id || "").trim();
                         const cId = String(c.id).trim();
-                        if (oId && cId && oId === cId) return true; // Prioridad ID
+                        if (oId && cId && oId === cId) return true; 
                         
                         const oName = norm(o.clientName || o.client_name || o.cliente || "");
-                        // Solo aceptamos coincidencia EXACTA
-                        return (oName === cName && cName.length > 0);
+                        return (oName === cName && cName.length > 0); // COINCIDENCIA ESTRICTA
                     });
 
                     let last = null;
