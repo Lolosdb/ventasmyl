@@ -24,15 +24,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* --- ARREGLOS DE SCROLL --- */
+        /* =========================================
+           1. ARREGLOS DE SCROLL (CRÍTICOS)
+           ========================================= */
+        
+        /* Scroll General (Dash, Listas) */
         body { 
             margin: 0; 
             background-color: #1e293b; 
             font-family: sans-serif; 
             overflow-x: hidden !important; 
-            overflow-y: auto !important; 
-            padding-bottom: 100px !important; 
+            overflow-y: auto !important; /* Habilitar scroll siempre */
+            padding-bottom: 120px !important; /* Espacio extra abajo para que la botonera no tape nada */
         }
+
+        /* FIX PARA VENTANAS EMERGENTES (Como Editar Pedido) */
+        /* Forzamos que cualquier contenedor fijo que ocupe la pantalla permita scroll */
+        div[style*="position: fixed"][style*="z-index"],
+        div[style*="position: absolute"][style*="z-index"],
+        div[role="dialog"],
+        .modal {
+            overflow-y: auto !important; /* Permitir bajar */
+            max-height: 100vh !important; /* Que no sea más alto que la pantalla */
+        }
+        
+        /* Excepción: Mi propio mapa (ese no debe tener scroll del navegador) */
+        #visor-mapa { overflow: hidden !important; }
+        
+        /* Asegurar que el contenido dentro de los modales tenga espacio final */
+        form, div[class*="content"] {
+            padding-bottom: 50px; 
+        }
+
+        /* ----------------------------------------- */
 
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
@@ -97,7 +121,7 @@
     </div>
 
     <script>
-        // 1. CONTROL DE PANTALLAS
+        // 1. CONTROL DE NAVEGACIÓN
         setInterval(() => {
             let mapaActivo = false;
             document.querySelectorAll('a, div, span, p').forEach(el => {
@@ -114,14 +138,14 @@
             if (mapaActivo) {
                 if (visor.style.display !== 'block') {
                     visor.style.display = 'block';
-                    document.body.style.overflow = 'hidden'; 
+                    document.body.style.overflow = 'hidden'; // Bloquea scroll del body SOLO en el mapa
                     if (!map) iniciarMapa();
                     else { map.invalidateSize(); pintarPuntos(); }
                 }
             } else {
                 if (visor.style.display !== 'none') {
                     visor.style.display = 'none';
-                    document.body.style.overflow = 'auto'; 
+                    document.body.style.overflow = 'auto'; // Reactiva scroll general
                     document.getElementById('panel-importar').classList.remove('activo');
                 }
             }
@@ -183,7 +207,7 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // 4. PINTAR (CON AGRUPACIÓN DE PUNTOS)
+        // 4. PINTAR (Agrupación + Colores Correctos)
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
@@ -191,7 +215,7 @@
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
 
-            // Estilos de Iconos
+            // ICONOS MINI
             const smallIconSize = [15, 24];
             const smallIconAnchor = [7, 24]; 
             const smallPopupAnchor = [1, -24];
@@ -205,7 +229,6 @@
                 iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor, shadowUrl: null 
             });
 
-            // Funciones Auxiliares
             const now = new Date();
             const limite30dias = new Date();
             limite30dias.setDate(now.getDate() - 30);
@@ -221,9 +244,8 @@
                 return null;
             };
 
-            // 1. AGRUPAR CLIENTES POR COORDENADAS
-            const grupos = {}; // Clave: "LAT_LON", Valor: Array de clientes
-            
+            // 1. AGRUPAR
+            const grupos = {}; 
             clients.forEach(c => {
                 if(c.lat && c.lon && c.lat !== 0) {
                     const key = `${c.lat}_${c.lon}`;
@@ -234,20 +256,17 @@
 
             const bounds = [];
 
-            // 2. PROCESAR CADA GRUPO
+            // 2. PROCESAR GRUPOS
             for (const key in grupos) {
                 const grupo = grupos[key];
                 const lat = grupo[0].lat;
                 const lon = grupo[0].lon;
 
-                // Analizar el estado de CADA cliente del grupo
                 let algunVerde = false;
                 let contenidoPopup = `<div style="text-align:center; max-height:200px; overflow-y:auto; padding-right:5px;">`;
 
                 grupo.forEach((c, index) => {
                     const nombreExcel = norm(c.name);
-                    
-                    // Buscar pedidos para este cliente concreto
                     const misPedidos = orders.filter(o => {
                         const nombrePedido = norm(o.clientName || o.client_name || o.cliente || "");
                         if (nombrePedido && nombreExcel) {
@@ -267,11 +286,9 @@
                         lastOrderDate = parsearFecha(p.date || p.fecha || p.timestamp || p.creationDate);
                     }
 
-                    // Es verde?
                     const esVerde = (lastOrderDate && !isNaN(lastOrderDate) && lastOrderDate >= limite30dias);
                     if (esVerde) algunVerde = true;
 
-                    // Construir HTML para este cliente
                     if (index > 0) contenidoPopup += `<hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">`;
                     
                     contenidoPopup += `
@@ -286,9 +303,6 @@
                 });
 
                 contenidoPopup += `</div>`;
-
-                // Determinar icono final del grupo
-                // Si al menos UNO es verde, la chincheta es VERDE
                 const iconoFinal = algunVerde ? greenIcon : redIcon;
 
                 L.marker([lat, lon], {icon: iconoFinal})
