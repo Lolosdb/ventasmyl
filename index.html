@@ -84,7 +84,6 @@
         
         .coord-row { display: flex; gap: 10px; align-items: center; }
         
-        /* NUEVO BOTÓN GPS */
         .btn-gps {
             background: #0ea5e9; color: white; border: none;
             border-radius: 6px; padding: 0 15px; height: 38px;
@@ -271,31 +270,22 @@
             document.getElementById('modal-editor').style.display = 'block';
         }
 
-        // *** NUEVA FUNCIÓN CAPTURAR GPS ***
         function capturarGPSPropio() {
             if (!navigator.geolocation) { alert("Tu navegador no soporta GPS."); return; }
-            
             const latField = document.getElementById('edit-lat');
             const lonField = document.getElementById('edit-lon');
             const btn = document.querySelector('.btn-gps');
             const textoOriginal = btn.innerHTML;
-
             btn.innerHTML = "⏳ Buscando...";
-            
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    latField.value = lat;
-                    lonField.value = lon;
+                    latField.value = lat; lonField.value = lon;
                     alert(`✅ Posición capturada:\nLat: ${lat.toFixed(5)}\nLon: ${lon.toFixed(5)}`);
                     btn.innerHTML = textoOriginal;
                 },
-                (error) => {
-                    alert("❌ Error al obtener GPS. Asegúrate de dar permisos a la web.");
-                    console.error(error);
-                    btn.innerHTML = textoOriginal;
-                },
+                (error) => { alert("❌ Error al obtener GPS."); btn.innerHTML = textoOriginal; },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
@@ -407,10 +397,18 @@
                 g.forEach((c,i) => {
                     const norm = (s) => s ? s.toString().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
                     const cName = norm(c.name);
+                    
+                    // LÓGICA ESTRICTA (COINCIDENCIA EXACTA O ID)
                     const mis = orders.filter(o => {
+                        const oId = String(o.cliente_id || o.client_code || o.id_cliente || o.id || "").trim();
+                        const cId = String(c.id).trim();
+                        if (oId && cId && oId === cId) return true; // Prioridad ID
+                        
                         const oName = norm(o.clientName || o.client_name || o.cliente || "");
-                        return (oName && cName && (oName.includes(cName) || cName.includes(oName)));
+                        // Solo aceptamos coincidencia EXACTA
+                        return (oName === cName && cName.length > 0);
                     });
+
                     let last = null;
                     if(mis.length){
                         mis.sort((a,b)=> new Date(b.date||b.fecha||0) - new Date(a.date||a.fecha||0));
