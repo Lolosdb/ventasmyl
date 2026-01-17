@@ -24,53 +24,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* --- ESTILOS: SCROLL Y VISUALIZACIÓN --- */
+        /* --- ESTILOS VISUALES Y ARREGLOS --- */
         body { 
             margin: 0; 
             background-color: #1e293b; 
             font-family: sans-serif; 
             overflow-x: hidden !important; 
-            overflow-y: auto !important; 
+            overflow-y: auto !important; /* Scroll siempre activo */
             padding-bottom: 120px !important; 
         }
 
         .leaflet-container:not(#mi-mapa-real) { opacity: 0 !important; pointer-events: none !important; z-index: 0 !important; }
         .texto-ventas { text-transform: uppercase !important; font-weight: 700 !important; color: #ffffff !important; }
-        .euro-menu-fix { font-size: 24px !important; display: inline-block; transform: translateY(1px); }
-
-        /* --- VISOR MAPA --- */
-        #visor-mapa { 
-            display: none; 
-            position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: #1e293b; 
-            z-index: 10000; 
-        }
+        
+        /* VISOR MAPA */
+        #visor-mapa { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1e293b; z-index: 10000; }
         #mi-mapa-real { width: 100%; height: 100%; }
 
-        /* BOTONES MAPA */
-        .btn-mapa {
-            position: absolute; top: 20px; background: white; color: #333;
-            padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            font-weight: bold; font-size: 13px; cursor: pointer; z-index: 10001; display: flex; align-items: center; gap: 6px; border: 1px solid #ccc;
-        }
+        /* BOTONES */
+        .btn-mapa { position: absolute; top: 20px; background: white; color: #333; padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold; font-size: 13px; cursor: pointer; z-index: 10001; display: flex; align-items: center; gap: 6px; border: 1px solid #ccc; }
         #btn-salir { left: 15px; }
         #btn-opciones { right: 15px; background: #2563eb; color: white; border: none; }
 
-        /* PANEL IMPORTAR */
-        #panel-importar {
-            position: absolute; top: 65px; right: 15px; width: 260px;
-            background: rgba(255,255,255,0.98); border-radius: 12px; padding: 15px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.4); z-index: 10002;
-            transform: translateX(130%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        /* PANEL LATERAL */
+        #panel-importar { position: absolute; top: 65px; right: 15px; width: 280px; background: rgba(255,255,255,0.98); border-radius: 12px; padding: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.4); z-index: 10002; transform: translateX(130%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-height:80vh; overflow-y:auto; }
         #panel-importar.activo { transform: translateX(0); }
         
         .btn-accion { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
         .btn-verde { background: #16a34a; color: white; }
         .btn-rojo { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+        .btn-naranja { background: #f97316; color: white; margin-top: 15px; border:1px solid #ea580c; }
         
         #input-excel { display: none; }
+        
+        /* Asegurar menú visible */
         nav, div[style*="bottom: 0"], div[class*="bottom"] { z-index: 9999 !important; position: fixed !important; }
     </style>
 </head>
@@ -83,13 +70,17 @@
         <div id="btn-opciones" class="btn-mapa" onclick="toggleImportar()">📂 Opciones</div>
 
         <div id="panel-importar">
-            <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">Configuración</h4>
-            <div style="font-size:11px; color:#555; margin-bottom:10px;">
-                Carga <b>Clientes.xlsx</b> o <b>Clientes_CON_COORDENADAS.xlsx</b>
-            </div>
+            <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">Herramientas</h4>
+            
+            <div style="font-size:11px; color:#555; margin-bottom:5px;"><b>1. Cargar Mapa:</b> Usa <i>Clientes_CON_COORDENADAS.xlsx</i></div>
             <input type="file" id="input-excel" accept=".xlsx,.xls" onchange="cargarExcel(this)">
-            <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">Subir Excel</button>
-            <button class="btn-accion btn-rojo" onclick="borrarDatos()">Borrar Mapa</button>
+            <button class="btn-accion btn-verde" onclick="document.getElementById('input-excel').click()">Subir Excel Mapa</button>
+            
+            <div style="margin-top:20px; font-size:11px; color:#555; margin-bottom:5px;"><b>2. ¿Fichas en blanco?</b> Pulsa aquí para arreglar los datos importados:</div>
+            <button class="btn-accion btn-naranja" onclick="repararBaseDatos()">🛠️ REPARAR DATOS</button>
+            
+            <button class="btn-accion btn-rojo" onclick="borrarDatos()" style="margin-top:20px;">Borrar Mapa</button>
+            
             <div style="margin-top:10px; text-align:center; font-size:10px; color:#999; cursor:pointer;" onclick="toggleImportar()">Cerrar</div>
         </div>
 
@@ -97,9 +88,9 @@
     </div>
 
     <script>
-        // 1. CONTROL DE NAVEGACIÓN Y PARCHES
+        // 1. DETECCIÓN DE PANTALLA Y ARREGLOS
         setInterval(() => {
-            // A. DETECTOR DE MAPA
+            // A. Detectar Mapa
             let mapaActivo = false;
             document.querySelectorAll('a, div, span, p').forEach(el => {
                 const txt = el.textContent ? el.textContent.trim().toLowerCase() : '';
@@ -111,13 +102,11 @@
             if (window.location.href.includes('/map')) mapaActivo = true;
 
             const visor = document.getElementById('visor-mapa');
-            
             if (mapaActivo) {
                 if (visor.style.display !== 'block') {
                     visor.style.display = 'block';
                     document.body.style.overflow = 'hidden'; 
-                    if (!map) iniciarMapa();
-                    else { map.invalidateSize(); pintarPuntos(); }
+                    if (!map) iniciarMapa(); else { map.invalidateSize(); pintarPuntos(); }
                 }
             } else {
                 if (visor.style.display !== 'none') {
@@ -127,24 +116,18 @@
                 }
             }
 
-            // B. LIMPIEZA VISUAL
+            // B. Limpieza
             document.querySelectorAll('div,p,span').forEach(e => { if(e.textContent.includes('Mejorando precisión')) e.style.display='none'; });
             document.querySelectorAll('div').forEach(d => {
                 const r = d.getBoundingClientRect();
-                if(d.style.position === 'fixed' && r.bottom >= window.innerHeight) {
-                     d.style.zIndex = "9999"; 
-                     d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)');
-                }
+                if(d.style.position === 'fixed' && r.bottom >= window.innerHeight) { d.style.zIndex = "9999"; d.querySelectorAll('svg, img').forEach(i => i.style.filter='brightness(0) invert(1)'); }
             });
 
-            // C. PARCHE SCROLL PARA "EDITAR PEDIDO" (SOLO EN ESE POPUP)
-            const elementosTexto = document.querySelectorAll('div, h1, h2, h3, span');
-            elementosTexto.forEach(el => {
+            // C. ARREGLO SCROLL "EDITAR PEDIDO"
+            document.querySelectorAll('div, h1, h2, h3, span').forEach(el => {
                 if (el.textContent && el.textContent.trim() === "Editar Pedido") {
                     let modal = el.closest('div[style*="position: fixed"]') || el.closest('div[style*="z-index"]');
-                    if (!modal && el.parentElement && el.parentElement.parentElement) {
-                        modal = el.parentElement.parentElement.parentElement;
-                    }
+                    if (!modal && el.parentElement?.parentElement) modal = el.parentElement.parentElement.parentElement;
                     if (modal) {
                         modal.style.setProperty('overflow-y', 'auto', 'important');
                         modal.style.setProperty('max-height', '90vh', 'important');
@@ -164,202 +147,136 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             pintarPuntos();
         }
-
         function cerrarMapa() {
-            document.getElementById('visor-mapa').style.display = 'none';
-            document.body.style.overflow = 'auto';
-            const botones = document.querySelectorAll('span, p, div, a');
-            for (let btn of botones) {
-                if (btn.textContent && btn.textContent.trim() === 'Dash') {
-                    btn.click();
-                    break;
-                }
-            }
+            document.getElementById('visor-mapa').style.display = 'none'; document.body.style.overflow = 'auto';
+            const b = Array.from(document.querySelectorAll('span,p,div,a')).find(e => e.textContent.trim() === 'Dash'); if(b) b.click();
         }
-
         function toggleImportar() { document.getElementById('panel-importar').classList.toggle('activo'); }
-        function borrarDatos() { if(confirm("¿Borrar?")) { localStorage.setItem('clients', '[]'); location.reload(); } }
+        function borrarDatos() { if(confirm("¿Borrar datos del mapa?")) { localStorage.setItem('clients', '[]'); location.reload(); } }
 
-        // 3. CARGAR EXCEL (VERSIÓN ESPEJO + BLINDAJE)
+        // 3. CARGAR EXCEL (Para el mapa)
         function cargarExcel(input) {
             const file = input.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                
                 const nuevos = json.map((row, i) => {
-                    // Función para buscar columna ignorando mayúsculas/minúsculas y espacios
-                    const get = (key) => {
-                        if (row[key] !== undefined) return row[key];
-                        // Búsqueda flexible
-                        const found = Object.keys(row).find(k => k.trim().toUpperCase() === key.toUpperCase());
-                        return found ? row[found] : "";
-                    };
-
-                    // Limpieza de Coordenadas (comas a puntos)
-                    const cleanCoord = (val) => {
-                        if (!val) return 0;
-                        let s = val.toString().replace(',', '.'); // Arreglar formato europeo
-                        return parseFloat(s) || 0;
-                    };
-
-                    // EXTRACCIÓN DE DATOS
-                    const id = get('CODIGO') || get('ID') || ("GEN-" + i);
-                    const nombre = get('TIENDA') || get('NOMBRE') || get('CLIENTE') || "Sin Nombre";
-                    const direccion = get('DIRECCION') || get('DOMICILIO') || "";
-                    const poblacion = get('POBLACION') || get('CIUDAD') || "";
-                    const provincia = get('PROVINCIA') || "";
-                    const telefono = get('TELEFONO') || get('TELEFON') || get('MOVIL') || get('CELULAR') || "";
-                    const email = get('EMAIL') || get('CORREO') || get('MAIL') || "";
-                    const contacto = get('CONTACTO') || get('PERSONA') || get('CONTACT') || "";
-                    
-                    // COORDENADAS
-                    const lat = cleanCoord(get('LATITUD'));
-                    const lon = cleanCoord(get('LONGITUD'));
-
-                    // OBJETO ESPEJO (Guardamos en Inglés y Español para que la App no falle)
+                    const get = (k) => { const f = Object.keys(row).find(x => x.toUpperCase().trim()===k); return f?row[f]:""; };
+                    const clean = (v) => v ? parseFloat(v.toString().replace(',','.')) || 0 : 0;
                     return {
-                        // Estándar
-                        id: id,
-                        name: nombre,
-                        address: direccion,
-                        city: poblacion,
-                        province: provincia,
-                        phone: telefono,
-                        email: email,
-                        contact: contacto,
-                        
-                        // Espejo en Español (Por si la app usa estas claves)
-                        nombre: nombre,
-                        direccion: direccion,
-                        poblacion: poblacion,
-                        provincia: provincia,
-                        telefono: telefono,
-                        correo: email,
-                        contacto: contacto,
-                        
-                        // Coordenadas
-                        lat: lat,
-                        lon: lon
+                        id: get('CODIGO') || i,
+                        name: get('TIENDA') || get('NOMBRE') || "Cliente",
+                        address: get('DIRECCION'), city: get('POBLACION'),
+                        lat: clean(get('LATITUD')), lon: clean(get('LONGITUD'))
                     };
                 });
-                
-                const validos = nuevos.filter(c => c.lat !== 0);
-                
-                // Guardar y notificar
                 localStorage.setItem('clients', JSON.stringify(nuevos));
-                
-                alert(`✅ Cargados ${nuevos.length} clientes.\n(Datos duplicados internamente para asegurar compatibilidad)`);
-                toggleImportar(); 
-                pintarPuntos();
+                alert(`✅ Mapa actualizado: ${nuevos.length} clientes.`);
+                toggleImportar(); pintarPuntos();
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // 4. PINTAR MAPA (Agrupación + Color)
+        // 4. *** REPARADOR DE BASE DE DATOS (EL SALVAVIDAS) ***
+        function repararBaseDatos() {
+            try {
+                const rawData = localStorage.getItem('clients');
+                if(!rawData || rawData === '[]') { alert("No hay clientes guardados para reparar."); return; }
+                
+                let clientes = JSON.parse(rawData);
+                let reparados = 0;
+
+                // Lista de campos que la app PODRÍA necesitar (rellenamos todos por si acaso)
+                clientes = clientes.map(c => {
+                    // Asegurar string vacía en lugar de undefined/null
+                    const safe = (val) => (val === undefined || val === null) ? "" : String(val);
+
+                    // Mapeo inteligente de lo que pueda haber
+                    // Si ya tiene 'phone', lo deja. Si no, busca 'telefono' o 'movil'. Si no, pone "".
+                    c.name = safe(c.name || c.nombre || c.tienda || c.cliente || "Sin Nombre");
+                    c.address = safe(c.address || c.direccion || c.domicilio);
+                    c.city = safe(c.city || c.poblacion || c.ciudad || c.municipio);
+                    c.province = safe(c.province || c.provincia);
+                    c.phone = safe(c.phone || c.telefono || c.movil || c.celular);
+                    c.email = safe(c.email || c.correo || c.mail);
+                    c.contact = safe(c.contact || c.contacto || c.persona);
+                    c.cp = safe(c.cp || c.zip || c.postal || c.codigo_postal);
+                    c.cif = safe(c.cif || c.nif || c.dni || c.vat);
+                    c.notes = safe(c.notes || c.notas || c.observaciones);
+                    
+                    // Asegurar campos ID
+                    if(!c.id) c.id = "FIX-" + Math.floor(Math.random()*1000000);
+
+                    // Duplicar claves al español por si la app usa esas
+                    c.nombre = c.name;
+                    c.direccion = c.address;
+                    c.poblacion = c.city;
+                    c.provincia = c.province;
+                    c.telefono = c.phone;
+                    c.correo = c.email;
+                    c.contacto = c.contact;
+                    c.codigo_postal = c.cp;
+
+                    reparados++;
+                    return c;
+                });
+
+                localStorage.setItem('clients', JSON.stringify(clientes));
+                alert(`✅ ¡ÉXITO! Se han reparado y blindado ${reparados} clientes.\n\nAhora intenta entrar en la ficha del cliente de nuevo.`);
+                location.reload(); // Recargar para aplicar cambios
+
+            } catch (e) {
+                alert("Error al reparar: " + e.message);
+            }
+        }
+
+        // 5. PINTAR PUNTOS
         function pintarPuntos() {
             if(!map) return;
             map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
             
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-
-            const smallIconSize = [15, 24];
-            const smallIconAnchor = [7, 24]; 
-            const smallPopupAnchor = [1, -24];
-
-            const greenIcon = L.icon({ 
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', 
-                iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor, shadowUrl: null 
-            });
-            const redIcon = L.icon({ 
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', 
-                iconSize: smallIconSize, iconAnchor: smallIconAnchor, popupAnchor: smallPopupAnchor, shadowUrl: null 
-            });
-
-            const now = new Date();
-            const limite30dias = new Date();
-            limite30dias.setDate(now.getDate() - 30);
+            const greenIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', iconSize:[15,24], iconAnchor:[7,24], popupAnchor:[1,-24], shadowUrl:null });
+            const redIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[15,24], iconAnchor:[7,24], popupAnchor:[1,-24], shadowUrl:null });
+            const now = new Date(); const limit = new Date(); limit.setDate(now.getDate()-30);
             
-            const norm = (s) => s ? s.toString().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
-            const parsearFecha = (val) => {
-                if(!val) return null;
-                if(typeof val === 'number') return new Date(val);
-                if(typeof val === 'string') {
-                    if(val.includes('/')) { const p = val.split('/'); if(p.length===3) return new Date(`${p[2]}-${p[1]}-${p[0]}`); }
-                    return new Date(val);
-                }
-                return null;
-            };
-
             const grupos = {}; 
-            clients.forEach(c => {
-                if(c.lat && c.lon && c.lat !== 0) {
-                    const key = `${c.lat}_${c.lon}`;
-                    if(!grupos[key]) grupos[key] = [];
-                    grupos[key].push(c);
-                }
-            });
-
+            clients.forEach(c => { if(c.lat && c.lon) { const k=`${c.lat}_${c.lon}`; if(!grupos[k]) grupos[k]=[]; grupos[k].push(c); }});
+            
             const bounds = [];
-
-            for (const key in grupos) {
-                const grupo = grupos[key];
-                const lat = grupo[0].lat;
-                const lon = grupo[0].lon;
-
-                let algunVerde = false;
-                let contenidoPopup = `<div style="text-align:center; max-height:200px; overflow-y:auto; padding-right:5px;">`;
-
-                grupo.forEach((c, index) => {
-                    const nombreExcel = norm(c.name);
-                    const misPedidos = orders.filter(o => {
-                        const nombrePedido = norm(o.clientName || o.client_name || o.cliente || "");
-                        if (nombrePedido && nombreExcel) {
-                            if (nombrePedido === nombreExcel || nombrePedido.includes(nombreExcel) || nombreExcel.includes(nombrePedido)) return true;
-                        }
-                        return false;
-                    });
-
-                    let lastOrderDate = null;
-                    if(misPedidos.length > 0) {
-                        misPedidos.sort((a,b) => {
-                            const da = parsearFecha(a.date || a.fecha || a.timestamp || a.creationDate);
-                            const db = parsearFecha(b.date || b.fecha || b.timestamp || b.creationDate);
-                            return (db || 0) - (da || 0);
-                        });
-                        const p = misPedidos[0];
-                        lastOrderDate = parsearFecha(p.date || p.fecha || p.timestamp || p.creationDate);
-                    }
-
-                    const esVerde = (lastOrderDate && !isNaN(lastOrderDate) && lastOrderDate >= limite30dias);
-                    if (esVerde) algunVerde = true;
-
-                    if (index > 0) contenidoPopup += `<hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">`;
-                    
-                    contenidoPopup += `
-                        <div style="padding:2px 0;">
-                            <b>${c.name}</b><br>
-                            <span style="font-size:10px; color:#555">${c.address}</span><br>
-                            <div style="margin-top:4px; padding:2px 6px; display:inline-block; color:white; font-size:10px; font-weight:bold; border-radius:4px; background:${esVerde ? '#16a34a' : '#ef4444'}">
-                                ${lastOrderDate ? lastOrderDate.toLocaleDateString() : 'Sin Pedidos'}
-                            </div>
-                        </div>
-                    `;
-                });
-
-                contenidoPopup += `</div>`;
-                const iconoFinal = algunVerde ? greenIcon : redIcon;
-
-                L.marker([lat, lon], {icon: iconoFinal})
-                    .bindPopup(contenidoPopup)
-                    .addTo(map);
+            for(const k in grupos) {
+                const g = grupos[k];
+                let verde = false;
+                let html = `<div style="text-align:center;max-height:200px;overflow-y:auto;">`;
                 
-                bounds.push([lat, lon]);
+                g.forEach((c,i) => {
+                    const norm = (s) => s ? s.toString().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+                    const cName = norm(c.name);
+                    const mis = orders.filter(o => {
+                        const oName = norm(o.clientName || o.client_name || o.cliente || "");
+                        return (oName && cName && (oName.includes(cName) || cName.includes(oName)));
+                    });
+                    
+                    let last = null;
+                    if(mis.length){
+                        mis.sort((a,b)=> {
+                             const da = new Date(a.date||a.fecha||0); const db = new Date(b.date||b.fecha||0);
+                             return db - da;
+                        });
+                        last = new Date(mis[0].date||mis[0].fecha);
+                    }
+                    const isV = (last && !isNaN(last) && last >= limit);
+                    if(isV) verde = true;
+                    if(i>0) html+='<hr style="margin:5px 0;border-top:1px solid #eee">';
+                    html+=`<div><b>${c.name}</b><br><span style="font-size:10px">${c.address}</span><br><span style="font-size:10px;background:${isV?'#16a34a':'#ef4444'};color:white;padding:2px 4px;border-radius:3px">${last?last.toLocaleDateString():'Sin Pedidos'}</span></div>`;
+                });
+                html+='</div>';
+                L.marker([g[0].lat, g[0].lon], {icon: verde?greenIcon:redIcon}).bindPopup(html).addTo(map);
+                bounds.push([g[0].lat, g[0].lon]);
             }
-
-            if (bounds.length > 0) map.fitBounds(bounds);
+            if(bounds.length) map.fitBounds(bounds);
         }
     </script>
 </body>
