@@ -5,6 +5,7 @@
 window.currentLeafletMap = null;
 window.isRouteMode = false;
 window.selectedRoutePoints = [];
+window.userLocationMarker = null;
 
 async function renderMapa() {
     const app = document.getElementById('app');
@@ -109,20 +110,46 @@ async function initLeafletMap() {
         const now = new Date();
         const year = now.getFullYear();
 
-        // Grupo de clusters profesional con sensibilidad reducida
+        // Grupo de clusters con zoom inteligente y sin "palitos"
         const markers = L.markerClusterGroup({
-            spiderfyOnMaxZoom: true,
+            spiderfyOnMaxZoom: false,    // Desactiva los palitos
             showCoverageOnHover: false,
-            zoomToBoundsOnClick: true,
-            maxClusterRadius: 10,        // Agrupación mucho más cercana
-            disableClusteringAtZoom: 13 // Desactiva grupos en vista de ciudad
+            zoomToBoundsOnClick: false,  // Controlamos nosotros el evento para el zoom forzado
+            maxClusterRadius: 2,         // Sensibilidad máxima para separar puntos
+            disableClusteringAtZoom: 14  // Que aparezcan los puntos mucho antes de la vista de calle
         });
+
+        // Evento personalizado para zoom con encuadre perfecto
+        markers.on('clusterclick', function (a) {
+            const bounds = a.layer.getBounds();
+            // maxZoom: 17 garantiza ver calles sin acercarse excesivamente
+            window.currentLeafletMap.fitBounds(bounds, {
+                padding: [50, 50],
+                maxZoom: 17,
+                animate: true,
+                duration: 0.6
+            });
+        });
+
+        const seenCoords = new Map();
 
         clients.forEach(c => {
             if (!c.lat || !c.lng) return;
-            const lat = parseFloat(String(c.lat).replace(',', '.'));
-            const lng = parseFloat(String(c.lng).replace(',', '.'));
+            let lat = parseFloat(String(c.lat).replace(',', '.'));
+            let lng = parseFloat(String(c.lng).replace(',', '.'));
             if (isNaN(lat) || isNaN(lng)) return;
+
+            // Micro-desplazamiento para puntos en la misma ubicación (Jitter)
+            const coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+            if (seenCoords.has(coordKey)) {
+                const count = seenCoords.get(coordKey);
+                seenCoords.set(coordKey, count + 1);
+                // Desplazamiento muy pequeño (~10-15 metros) para separar visualmente
+                lat += (Math.random() - 0.5) * 0.00016; 
+                lng += (Math.random() - 0.5) * 0.00016;
+            } else {
+                seenCoords.set(coordKey, 1);
+            }
 
             // Cálculo de días desde último pedido
             const cOrders = orders.filter(o => o.shop === c.name && o.year === year);
@@ -150,11 +177,11 @@ async function initLeafletMap() {
                     <div class="flex flex-col gap-2">
                         <button class="popup-btn btn-detail"
                                 onclick="event.stopPropagation(); window.openClientDetailModal('${c.code}')">
-                            <span class="material-icons-round">info</span> VER DETALLE
+                            <span class="material-icons-round">account_circle</span> FICHA
                         </button>
-                        <button class="popup-btn btn-route-add"
-                                data-code="${c.code}" onclick="event.stopPropagation(); window.addPointToRoute('${c.code}', '${c.name.replace(/'/g, "\\'")}')">
-                            <span class="material-icons-round">add_road</span> AÑADIR A RUTA
+                        <button class="popup-btn btn-go-direct"
+                                onclick="event.stopPropagation(); window.open('https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}', '_blank')">
+                            <span class="material-icons-round">near_me</span> IR
                         </button>
                     </div>
                 </div>
@@ -164,8 +191,47 @@ async function initLeafletMap() {
         });
 
         map.addLayer(markers);
+        
+        // Auto-localizar al inicio
+        setTimeout(() => centerMapOnUser(false), 500);
 
     } catch (e) { console.error("Error en mapa", e); }
+}
+
+/**
+ * Crea o mueve el marcador de ubicación del usuario.
+ * @param {number} lat 
+ * @param {number} lng 
+ */
+function updateUserMarker(lat, lng) {
+    if (!window.currentLeafletMap) return;
+
+    const goldPulseIcon = L.divIcon({
+        className: 'user-location-marker',
+        html: `
+            <div style="position: relative; width: 16px; height: 16px;">
+                <div style="position: absolute; width: 100%; height: 100%; background: #fbbf24; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 2;"></div>
+                <div style="position: absolute; width: 100%; height: 100%; background: #fbbf24; border-radius: 50%; opacity: 0.6; animation: goldPulse 2s infinite ease-out; z-index: 1;"></div>
+            </div>
+            <style>
+                @keyframes goldPulse {
+                    0% { transform: scale(1); opacity: 0.6; }
+                    100% { transform: scale(3); opacity: 0; }
+                }
+            </style>
+        `,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+
+    if (window.userLocationMarker) {
+        window.userLocationMarker.setLatLng([lat, lng]);
+    } else {
+        window.userLocationMarker = L.marker([lat, lng], { 
+            icon: goldPulseIcon,
+            zIndexOffset: 1000 // Siempre por encima
+        }).addTo(window.currentLeafletMap);
+    }
 }
 
 function toggleRouteMode() {
@@ -260,6 +326,9 @@ async function searchLocation() {
     const input = document.getElementById('mapSearchInput');
     const query = input.value.trim();
     if (!query) return;
+    
+    // Ocultar teclado en móviles
+    input.blur();
 
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
@@ -275,11 +344,18 @@ function clearMapSearch() {
     clearSearchField('mapSearchInput', 'clearMapSearchBtn');
 }
 
-function centerMapOnUser() {
+function centerMapOnUser(doFly = true) {
     if (!navigator.geolocation) return alert("GPS no disponible");
+    
     navigator.geolocation.getCurrentPosition(p => {
-        window.currentLeafletMap.flyTo([p.coords.latitude, p.coords.longitude], 15);
-    }, null, { enableHighAccuracy: true });
+        const { latitude, longitude } = p.coords;
+        updateUserMarker(latitude, longitude);
+        if (doFly && window.currentLeafletMap) {
+            window.currentLeafletMap.flyTo([latitude, longitude], 15);
+        }
+    }, (err) => {
+        console.warn("Geolocation error:", err);
+    }, { enableHighAccuracy: true });
 }
 
 function toggleMapLegend() {

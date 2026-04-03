@@ -65,14 +65,36 @@ async function renderDash() {
                     ${(() => {
                         const prevYearSales = stats.ventasMes.totalAnterior || 0;
                         const diff = monthSales - prevYearSales;
-                        const diffPercent = prevYearSales > 0 ? ((diff / prevYearSales) * 100).toFixed(1) : (monthSales > 0 ? 100 : 0);
+                        const diffPercent = prevYearSales > 0 ? (diff / prevYearSales) * 100 : (monthSales > 0 ? 100 : 0);
                         const isPositive = diff >= 0;
-                        const color = isPositive ? '#10b981' : '#ef4444';
+                        
+                        // Determinar color dinámico (Degradado suave de 0% a 5%)
+                        let color, bgColor, borderColor;
+                        if (diffPercent < 0) {
+                            color = '#ef4444';
+                            bgColor = '#ef444415';
+                            borderColor = '#ef444430';
+                        } else if (diffPercent >= 5) {
+                            color = '#10b981';
+                            bgColor = '#10b98115';
+                            borderColor = '#10b98130';
+                        } else {
+                            // Escala entre Naranja (0%) y Verde (5%)
+                            // H:38 S:92 L:50 (Naranja) -> H:142 S:71 L:45 (Verde)
+                            const ratio = diffPercent / 5;
+                            const h = 38 + (142 - 38) * ratio;
+                            const s = 92 + (71 - 92) * ratio;
+                            const l = 50 + (45 - 50) * ratio;
+                            color = `hsl(${h}, ${s}%, ${l}%)`;
+                            bgColor = `hsla(${h}, ${s}%, ${l}%, 0.12)`;
+                            borderColor = `hsla(${h}, ${s}%, ${l}%, 0.25)`;
+                        }
+
                         const icon = isPositive ? 'trending_up' : 'trending_down';
                         return `
-                            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 99px; width: fit-content; background: ${color}15; color: ${color}; border: 1px solid ${color}30;">
+                            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 99px; width: fit-content; background: ${bgColor}; color: ${color}; border: 1px solid ${borderColor};">
                                 <span class="material-icons-round" style="font-size: 18px;">${icon}</span>
-                                <span style="font-size: 14px; font-weight: 700;">${isPositive ? '+' : ''}${diffPercent}% vs año ant.</span>
+                                <span style="font-size: 14px; font-weight: 700;">${isPositive ? '+' : ''}${diffPercent.toFixed(1)}% vs año ant.</span>
                             </div>
                         `;
                     })()}

@@ -19,7 +19,7 @@ async function renderPedidos() {
     contentHtml += `
         <div class="search-container mb-4">
             <span class="material-icons-round search-icon">search</span>
-            <input type="text" id="searchPedidosInput" class="search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()">
+            <input type="text" id="searchPedidosInput" class="search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
             <span id="clearPedidosSearchBtn" class="material-icons-round clear-icon" style="display: none;" onclick="clearPedidosSearch()">cancel</span>
         </div>
     `;
@@ -157,19 +157,24 @@ function injectPedidoModals() {
                     </div>
 
                     <div class="toggle-container">
-                        <span class="toggle-label">¿Cliente Nuevo?</span>
-                        <label class="switch">
-                            <input type="checkbox" id="isNewClientSwitch">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="modal-footer-custom">
                         <button type="button" class="btn-link-cancel" onclick="closeNewOrderModal()">
                             <span class="material-icons-round">close</span>
                             Cancelar
                         </button>
-                        <button type="button" id="btnDeleteOrder" class="btn-action-delete" style="display:none; height: 48px; border-radius: 16px;" onclick="deleteCurrentOrder()">Eliminar</button>
+                        <div class="flex items-center gap-2">
+                            <span class="toggle-label">¿Cliente Nuevo?</span>
+                            <label class="switch">
+                                <input type="checkbox" id="isNewClientSwitch">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer-custom">
+                        <button type="button" id="btnDeleteOrder" class="btn-action-delete" style="display:none;" onclick="deleteCurrentOrder()">
+                            <span class="material-icons-round">delete</span>
+                            Eliminar
+                        </button>
                         <button type="submit" class="btn-save-custom">
                             <span class="material-icons-round">check</span>
                             Guardar

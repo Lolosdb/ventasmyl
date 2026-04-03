@@ -44,6 +44,7 @@ const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1
             <input type="text" id="clientSearchInput" 
                    placeholder="Buscar por nombre o población..." 
                    onkeyup="filterClients(this.value)" 
+                   onkeydown="if(event.key==='Enter') this.blur()"
                    oninput="toggleClearSearch('clientSearchInput', 'clearSearchBtn')"
                    style="width: 100% !important; padding: 10px 40px 10px 40px !important; box-sizing: border-box !important; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 13.5px; font-weight: 700; color: #0f172a;">
             <span id="clearSearchBtn" class="material-icons-round" 

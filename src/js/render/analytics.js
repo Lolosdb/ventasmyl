@@ -214,7 +214,7 @@ async function renderAlertas() {
 // --- VENTAS HISTÓRICAS ---
 async function renderVentas() {
     const app = document.getElementById('app');
-    const headerHtml = getCommonHeaderHtml('Ventas mensuales');
+    const headerHtml = getCommonHeaderHtml('Ventas Mensuales');
     const history = await dataManager.getSalesHistory();
     const years = Object.keys(history).map(Number).sort((a,b) => a - b);
     const monthsFull = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -316,7 +316,12 @@ async function renderMedias() {
     const numYears = validYears.length;
     const yearsLabel = numYears === 1 ? 'año' : 'años';
     
-    const headerHtml = getCommonHeaderHtml(`Medias Mensuales (${numYears} ${yearsLabel})`);
+    const headerHtml = getCommonHeaderHtml(`
+        <div style="display: flex; flex-direction: column; line-height: 1.2; padding: 2px 0;">
+            <span style="font-size: 1.4rem; font-weight: 950; letter-spacing: -0.5px;">Medias Mensuales</span>
+            <span style="font-size: 0.95rem; font-weight: 600; font-style: italic; color: #fff; margin-top: 2px;">(${numYears} ${yearsLabel})</span>
+        </div>
+    `);
     
     const monthsNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const averages = monthsNames.map((_, i) => {
@@ -325,7 +330,7 @@ async function renderMedias() {
         return Math.floor(sum / validYears.length);
     });
 
-    let contentHtml = '<main class="medias-container">';
+    let contentHtml = '<main class="medias-container" style="padding-top: 1.5rem !important;">';
     
     // Contenedor Cuadrícula 3x4
     contentHtml += '<div class="months-grid">';
@@ -578,7 +583,7 @@ async function handleGoalUpdate(level, monthIdx, value) {
 // --- FACTURACIÓN REAL (V7 PREMIUM) ---
 async function renderFactura() {
     const app = document.getElementById('app');
-    const headerHtml = getCommonHeaderHtml('Factura');
+    const headerHtml = getCommonHeaderHtml('Facturación Real');
     const history = await dataManager.getInvoiceHistory();
     
     // Definir rango de años (2023 a 2026 según referencia)

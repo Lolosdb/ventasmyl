@@ -1172,3 +1172,37 @@ body.no-scroll {
 .btn-premium-cancel { background: #f8fafc !important; color: #475569 !important; border: 1.5px solid #cbd5e1 !important; padding: 10px 20px !important; border-radius: 16px !important; font-weight: 800 !important; font-size: 13px !important; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-premium-cancel:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; color: #1e293b !important; }
 
+
+
+/* --- PREMIUM FLOATING MENU (MOBILE OPTIMIZED) --- */
+.nav-menu-section { margin: 2.2rem 28px 0.8rem 28px !important; color: #64748b !important; font-weight: 950 !important; font-size: 10.5px !important; text-transform: uppercase !important; letter-spacing: 2.5px !important; opacity: 0.8 !important; }
+.nav-menu-item { display: flex !important; align-items: center !important; gap: 16px !important; padding: 16px 20px !important; margin: 12px 20px !important; border-radius: 20px !important; background: #ffffff !important; border: 1px solid #f1f5f9 !important; color: #1e293b !important; font-weight: 800 !important; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important; width: auto !important; }
+.nav-menu-item:active { background: #f8fafc !important; transform: scale(0.95) !important; box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important; border-color: #e2e8f0 !important; }
+.nav-menu-item .material-icons-round { font-size: 24px !important; color: #0ea5e9 !important; }
+.nav-menu-header { padding: 24px 28px !important; }
+.nav-menu-footer { padding: 20px 28px !important; border-top: 1px solid #f1f5f9 !important; }
+
+
+/* --- PREMIUM SIDEBAR V2 (SPACING & CONTRAST) --- */
+.nav-menu-header { padding: 14px 20px !important; }
+.nav-menu-header h2 { font-size: 1.1rem !important; }
+.nav-menu-body { padding-top: 5px !important; }
+.nav-menu-section { margin: 1.2rem 24px 0.5rem 24px !important; font-size: 10.5px !important; letter-spacing: 1.5px !important; color: #64748b !important; }
+.nav-menu-item { background: #ffffff !important; border: 1.5px solid #cbd5e1 !important; box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important; margin: 8px 20px !important; padding: 12px 18px !important; border-radius: 18px !important; }
+.nav-menu-item .material-icons-round { color: #0ea5e9 !important; font-size: 22px !important; }
+.nav-menu-item span { font-size: 13.5px !important; font-weight: 800 !important; }
+
+
+/* --- ALINEACIÓN TOTAL DE BOTONES --- */
+.nav-menu-body { display: flex !important; flex-direction: column !important; align-items: stretch !important; padding: 0 !important; }
+.nav-menu-item { width: auto !important; /* Ahora stretch del padre los igualará */ margin: 6px 24px !important; }
+
+
+/* --- CENTRADO TACTIL --- */
+.nav-menu-item { justify-content: center !important; }
+
+/* --- AJUSTE TITULO --- */
+.header-title { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+
+/* --- AJUSTE TITULO REAL --- */
+.header-title { white-space: nowrap !important; overflow: visible !important; max-width: none !important; font-size: 1.25rem !important; }

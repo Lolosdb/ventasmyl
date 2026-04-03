@@ -38,27 +38,27 @@ function getCommonHeaderHtml(title, options = {}) {
 function renderBottomNav(activeTab) {
     return `
         <nav class="bottom-nav">
-             <a href="#" onclick="renderDash()" class="nav-item ${activeTab === 'dash' ? 'active' : ''}">
+             <a href="javascript:void(0)" onclick="renderDash()" class="nav-item ${activeTab === 'dash' ? 'active' : ''}">
                 <span class="material-icons-round">grid_view</span>
                 <span>Dash</span>
              </a>
-             <a href="#" onclick="renderPedidos()" class="nav-item ${activeTab === 'pedidos' ? 'active' : ''}">
+             <a href="javascript:void(0)" onclick="renderPedidos()" class="nav-item ${activeTab === 'pedidos' ? 'active' : ''}">
                 <span class="material-icons-round">shopping_bag</span>
                 <span>Pedidos</span>
              </a>
-             <a href="#" onclick="renderTotales()" class="nav-item ${activeTab === 'totales' ? 'active' : ''}">
+             <a href="javascript:void(0)" onclick="renderTotales()" class="nav-item ${activeTab === 'totales' ? 'active' : ''}">
                 <span class="material-icons-round">euro</span>
                 <span>Totales</span>
              </a>
-             <a href="#" onclick="renderClientes()" class="nav-item ${activeTab === 'clientes' ? 'active' : ''}">
+             <a href="javascript:void(0)" onclick="renderClientes()" class="nav-item ${activeTab === 'clientes' ? 'active' : ''}">
                 <span class="material-icons-round">people</span>
                 <span>Clientes</span>
              </a>
-             <a href="#" onclick="renderAlertas()" class="nav-item ${activeTab === 'alertas' ? 'active' : ''}">
+             <a href="javascript:void(0)" onclick="renderAlertas()" class="nav-item ${activeTab === 'alertas' ? 'active' : ''}">
                 <span class="material-icons-round">notifications</span>
                 <span>Alertas</span>
              </a>
-             <a href="#" onclick="renderMapa()" class="nav-item ${activeTab === 'mapa' ? 'active' : ''}">
+             <a href="javascript:void(0)" onclick="renderMapa()" class="nav-item ${activeTab === 'mapa' ? 'active' : ''}">
                 <span class="material-icons-round">map</span>
                 <span>Mapa</span>
              </a>
@@ -109,7 +109,7 @@ function renderNavMenuHTML() {
                 <div class="nav-menu-section">Análisis</div>
                 <button class="nav-menu-item" onclick="closeNavMenu(); renderVentas();">
                     <span class="material-icons-round">trending_up</span>
-                    <span>Ventas mensuales</span>
+                    <span>Ventas Mensuales</span>
                 </button>
                 <button class="nav-menu-item" onclick="closeNavMenu(); renderFactura();">
                     <span class="material-icons-round">receipt_long</span>
@@ -132,32 +132,16 @@ function renderNavMenuHTML() {
                     <span class="material-icons-round">event_repeat</span>
                     <span>Objetivos Trimestrales</span>
                 </button>
-                <div class="nav-menu-section">Sistema</div>
-                <button class="nav-menu-item" onclick="toggleTheme()">
-                    <span class="material-icons-round theme-icon">${document.body.classList.contains('dark-mode') ? 'light_mode' : 'dark_mode'}</span>
-                    <span>Cambiar Tema</span>
-                </button>
                 <button class="nav-menu-item" onclick="closeNavMenu(); renderAjustes();">
-                    <span class="material-icons-round">settings</span>
-                    <span>Ajustes y Sistema</span>
-                </button>
-                <button class="nav-menu-item drive-item" onclick="closeNavMenu(); initiateDriveBackup();">
                     <span class="material-icons-round">cloud_upload</span>
-                    <span>Guardar en Drive</span>
+                    <span>Backups</span>
                 </button>
-                <button class="nav-menu-item drive-item" onclick="closeNavMenu(); openBackupsModal();">
-                    <span class="material-icons-round">settings_backup_restore</span>
-                    <span>Ver Historico Copias</span>
-                </button>
+
                 <button class="nav-menu-item" onclick="closeNavMenu(); openInfoModal();">
-                    <span class="material-icons-round">info</span>
+                    <span class="material-icons-round">menu_book</span>
                     <span>Manual de Usuario</span>
                 </button>
-                <div class="nav-menu-section" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; margin-top: 1rem;">Finalizar</div>
-                <button class="nav-menu-item text-red-400" onclick="closeNavMenu(); confirmExitApp();">
-                    <span class="material-icons-round">power_settings_new</span>
-                    <span>Salir de Aplicación</span>
-                </button>
+
             </div>
             <div class="nav-menu-footer">
                 <p>App Ventas v5.0 marzo 2026</p>
@@ -166,29 +150,14 @@ function renderNavMenuHTML() {
     `;
 }
 
-// --- TEMA (MODO OSCURO) ---
-function toggleTheme() {
-    const isDark = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    const icon = document.querySelector('.theme-icon');
-    if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
-    if (document.getElementById('trendChart')) renderDash();
-}
 
-function initTheme() {
-    const savedTheme = localStorage.getItem('theme');
-    const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if (isDark) document.body.classList.add('dark-mode');
-    else document.body.classList.remove('dark-mode');
-}
 
 // Hacer funciones globales para legacy
 window.getCommonHeaderHtml = getCommonHeaderHtml;
 window.renderBottomNav = renderBottomNav;
 window.openNavMenu = openNavMenu;
 window.closeNavMenu = closeNavMenu;
-window.toggleTheme = toggleTheme;
-window.initTheme = initTheme;
+
 
 /**
  * Gestiona la visibilidad del botón de borrado (X) en un input.
@@ -244,7 +213,7 @@ function formatCurrency(amount, decimals = 0) {
 window.formatCurrency = formatCurrency;
 
 // Inicializar al cargar
-initTheme();
+
 // --- MANUAL DE USUARIO ---
 function openInfoModal() {
     let modal = document.getElementById('infoModal');
@@ -271,8 +240,9 @@ function openInfoModal() {
             <!-- Cuerpo del Manual con Scroll -->
             <div style="padding: 2rem; max-height: 80vh; overflow-y: auto; background-color: #fff; line-height: 1.6; color: #334155; font-size: 0.9rem;">
                 
-                <p style="text-align: center; font-weight: 900; color: #009ee3; text-transform: uppercase; margin-bottom: 2rem; letter-spacing: 0.05em;">
-                    Aplicación creada por Manuel F. Serantes Pérez
+                <p style="text-align: center; font-weight: 900; color: #009ee3; text-transform: uppercase; margin-bottom: 2rem; letter-spacing: 0.05em; line-height: 1.4;">
+                    Aplicación creada por<br>
+                    <span style="font-size: 1.1em;">Manuel F. Serantes Pérez</span>
                 </p>
 
                 <div style="margin-bottom: 2.5rem;">
@@ -349,8 +319,9 @@ function openInfoModal() {
                     Recuerda revisar el estado de conexión en la sección de Ajustes para asegurar que los datos se están sincronizando correctamente con la nube.
                 </div>
 
-                <p style="text-align: center; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-top: 3rem; letter-spacing: 0.05em; font-size: 0.8rem;">
-                    Aplicación creada por Manuel F. Serantes Pérez
+                <p style="text-align: center; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-top: 3rem; letter-spacing: 0.05em; font-size: 0.8rem; line-height: 1.4;">
+                    Aplicación creada por<br>
+                    <span style="font-size: 1.1em;">Manuel F. Serantes Pérez</span>
                 </p>
             </div>
         </div>
@@ -368,76 +339,8 @@ function closeInfoModal() {
     }
 }
 
-// --- SALIDA DE APLICACIÓN ---
-function confirmExitApp() {
-    let modal = document.getElementById('exitModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'exitModal';
-        modal.className = 'modal-overlay';
-        document.body.appendChild(modal);
-    }
 
-    const exitContent = `
-        <div class="modal-content" style="border-radius: 28px; padding: 2rem; box-shadow: 0 25px 60px rgba(0,0,0,0.3); max-width: 350px; width: 85%; background-color: #fff; margin: auto; text-align: center;">
-            <div style="background-color: #f1f5f9; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
-                <span class="material-icons-round" style="color: #64748b; font-size: 32px;">logout</span>
-            </div>
-            
-            <h2 style="font-size: 1.5rem; font-weight: 900; color: #0f172a; margin-bottom: 0.5rem; line-height: 1.2;">¿Deseas salir?</h2>
-            <p style="color: #64748b; font-size: 1rem; margin-bottom: 2rem;">¿Estás seguro de que quieres cerrar la aplicación?</p>
-            
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <button onclick="executeAppExit()" style="background-color: #009ee3; color: #fff; border: none; padding: 1rem; border-radius: 16px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 20px rgba(0, 158, 227, 0.2);">
-                    SÍ, SALIR
-                </button>
-                <button onclick="closeExitModal()" style="background-color: #f1f5f9; color: #64748b; border: none; padding: 1rem; border-radius: 16px; font-weight: 700; font-size: 1rem; cursor: pointer;">
-                    NO, VOLVER
-                </button>
-            </div>
-        </div>
-    `;
-
-    modal.innerHTML = exitContent;
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-
-    // Para móviles: empujamos un estado al historial para capturar el 'atrás'
-    if (window.history && window.history.pushState) {
-        window.history.pushState({ type: 'exit-modal' }, '');
-    }
-}
-
-function closeExitModal() {
-    const modal = document.getElementById('exitModal');
-    if (modal) {
-        modal.classList.remove('open');
-        document.body.style.overflow = '';
-    }
-}
-
-function executeAppExit() {
-    // Intentamos cierre nativo de WebView si existe (Cordova/Capacitor)
-    if (navigator.app && navigator.app.exitApp) {
-        navigator.app.exitApp();
-    } else {
-        // Intentamos window.close() (solo funciona si el navegador lo permite)
-        window.close();
-        
-        // Como fallback para web, redirigimos o informamos
-        const modal = document.getElementById('exitModal');
-        if (modal) {
-            modal.innerHTML = `
-                <div class="modal-content" style="border-radius: 28px; padding: 2rem; background-color: #fff; text-align: center;">
-                    <h2 style="font-weight: 900; color: #0f172a;">Sesión Finalizada</h2>
-                    <p style="color: #64748b; margin-top: 1rem;">Ya puedes cerrar esta pestaña o la ventana de tu navegador.</p>
-                </div>
-            `;
-        }
-    }
-}
 
 // Exportar para uso global
-window.confirmExitApp = confirmExitApp;
-window.closeExitModal = closeExitModal;
-window.executeAppExit = executeAppExit;
+
+

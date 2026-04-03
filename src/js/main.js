@@ -69,40 +69,4 @@ function autoShrinkText(element, minFontSize = 8) {
 
 window.autoShrinkText = autoShrinkText;
 
-/**
- * GESTIÓN DE RETROCESO (Android Back Button) v8.3
- * Intercepta el botón físico para evitar cierres accidentales.
- */
-function initBackButtonHandler() {
-    // Empujamos un estado inicial para poder capturar el primer 'atrás'
-    if (window.history && window.history.pushState) {
-        window.history.pushState({ type: 'initial' }, '');
-        
-        window.addEventListener('popstate', function(event) {
-            // 1. Si el modal de salida está abierto, el 'atrás' lo cierra (equivale a NO salir)
-            const exitModal = document.getElementById('exitModal');
-            if (exitModal && exitModal.classList.contains('open')) {
-                closeExitModal();
-                // Volvemos a empujar el estado para la siguiente vez
-                window.history.pushState({ type: 'initial' }, '');
-                return;
-            }
 
-            // 2. Si hay otros modales o menús abiertos, los cerramos
-            const navMenu = document.getElementById('navMenuOverlay');
-            if (navMenu && navMenu.classList.contains('open')) {
-                closeNavMenu();
-                window.history.pushState({ type: 'initial' }, '');
-                return;
-            }
-
-            // 3. Caso general: Preguntar si desea salir
-            if (typeof confirmExitApp === 'function') {
-                confirmExitApp();
-            }
-        });
-    }
-}
-
-// Inicializar el manejador de retroceso
-initBackButtonHandler();
