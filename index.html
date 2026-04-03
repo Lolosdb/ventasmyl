@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Ventas</title>
+
+    <!-- PWA & Icon Tags -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="src/assets/icon.png">
+    <link rel="apple-touch-icon" href="src/assets/icon.png">
+    <meta name="theme-color" content="#009ee3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons (Using a CDN for material icons for now as placeholder) -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="src/css/theme.css">
+    <link rel="stylesheet" href="src/css/main.css?v=3">
+    <link rel="stylesheet" href="src/css/dash.css">
+    <link rel="stylesheet" href="src/css/order_modal.css">
+    <link rel="stylesheet" href="src/css/pedidos.css">
+    <link rel="stylesheet" href="src/css/totales.css">
+    <link rel="stylesheet" href="src/css/clientes.css">
+    <link rel="stylesheet" href="src/css/alertas.css">
+    <link rel="stylesheet" href="src/css/objetivos.css">
+    <link rel="stylesheet" href="src/css/mapa.css">
+    <link rel="stylesheet" href="src/css/factura.css">
+    <link rel="stylesheet" href="src/css/ventas.css">
+    <link rel="stylesheet" href="src/css/medias.css">
+    <link rel="stylesheet" href="src/css/ajustes.css">
+    <link rel="stylesheet" href="src/css/departamentos.css">
+    <link rel="stylesheet" href="src/css/ajustes.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet.markercluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Dashboard View needs to be rendered here -->
+    </div>
+
+    <!-- External Libs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+    <!-- Scripts -->
+    <script src="src/js/db.js?v=5.1"></script>
+    <script src="src/js/data-manager.js?v=5.1"></script>
+    <script src="src/js/data.js?v=5.1"></script>
+    <!-- Render Modules -->
+    <script src="src/js/render/common.js?v=5.1"></script>
+    <script src="src/js/render/dashboard.js?v=5.1"></script>
+    <script src="src/js/render/pedidos.js?v=5.1"></script>
+    <script src="src/js/render/clientes.js?v=5.1"></script>
+    <script src="src/js/render/mapa.js?v=5.1"></script>
+    <script src="src/js/render/analytics.js?v=5.1"></script>
+    <script src="src/js/render/departamentos.js?v=5.1"></script>
+    <script src="src/js/render/system.js?v=5.1"></script>
+    <script src="src/js/main.js?v=5.1"></script>
+</body>
+
+</html>

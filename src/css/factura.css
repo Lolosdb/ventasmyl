@@ -1,0 +1,204 @@
+/* Factura View Styles */
+
+.factura-container {
+    flex: 1;
+    /* Match parent height */
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* No vertical scroll */
+    position: relative;
+}
+
+/* Custom Scrollbar (Horizontal) */
+.factura-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.factura-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.factura-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.fac-header {
+    display: flex;
+    background-color: #1e293b;
+    color: white;
+    padding: 0.75rem 0.25rem;
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    text-align: center;
+    border-radius: 12px 12px 0 0;
+    min-width: max-content;
+    width: 100%;
+}
+
+/* Columns */
+.col-fac-mes {
+    flex: 0 0 85px;
+    min-width: 85px;
+    text-align: left;
+    padding-left: 0.75rem;
+    position: sticky;
+    left: 0;
+    z-index: 30;
+    background-color: #1e293b;
+    display: flex;
+    align-items: center;
+}
+
+.col-fac-year {
+    flex: 0 0 100px;
+    /* Fixed width to match screenshot appearance */
+    min-width: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.year-header-box {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 4px 0;
+    width: 90%;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 800;
+}
+
+.fac-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: max-content;
+}
+
+.fac-row {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.85rem;
+    padding: 0 0.25rem;
+    width: 100%;
+}
+
+.fac-row:nth-child(even) {
+    background-color: #fafafa;
+}
+
+/* Cells */
+.cell-fac-mes {
+    flex: 0 0 85px;
+    /* Sync with .col-fac-mes */
+    min-width: 85px;
+}
+
+.cell-fac-input {
+    flex: 0 0 100px;
+    /* Sync with .col-fac-year */
+    min-width: 100px;
+}
+
+.cell-fac-mes {
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding-left: 0.75rem;
+    /* Sync with .col-fac-mes */
+
+    /* Sticky Body Column */
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+
+.fac-row:nth-child(odd) .cell-fac-mes {
+    background-color: white;
+}
+
+.fac-row:nth-child(even) .cell-fac-mes {
+    background-color: #fafafa;
+}
+
+.cell-fac-input {
+    text-align: center;
+}
+
+/* Total Row */
+.fac-total-row .col-fac-mes.total-value {
+    flex: 0 0 85px;
+    min-width: 85px;
+    padding-left: 0.75rem;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background-color: #f1f5f9;
+}
+
+.fac-total-row .cell-fac-input.total-value {
+    flex: 0 0 100px;
+    min-width: 100px;
+    text-align: center;
+}
+
+.fac-input {
+    width: 100%;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    color: var(--primary-dark-blue);
+    font-family: inherit;
+    font-size: 0.7rem;
+}
+
+.fac-input:focus {
+    outline: none;
+    background-color: #e0f2fe;
+}
+
+.fac-total-row {
+    background-color: #f1f5f9;
+    border-top: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-size: 0.75rem;
+
+    width: 100%;
+    min-width: max-content;
+    flex-shrink: 0;
+}
+
+/* Sticky Total Label */
+.fac-total-row .col-fac-mes.total-value {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background-color: #f1f5f9;
+}
+
+/* Footer instruction */
+.factura-instruction {
+    font-size: 0.6rem;
+    text-align: center;
+    color: #94a3b8;
+    padding: 0.25rem;
+    font-style: italic;
+    background-color: white;
+    position: sticky;
+    left: 0;
+    /* Keep visible */
+}

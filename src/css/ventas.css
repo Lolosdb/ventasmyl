@@ -1,0 +1,203 @@
+/* --- VISTA ANÃ LISIS DE VENTAS (REDISEÃ‘O PREMIUM) --- */
+
+.analysis-view-container {
+    height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+    overflow: hidden;
+}
+
+.analysis-premium-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+    border: 1px solid #f1f5f9;
+}
+
+.analysis-table-wrapper {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden; /* No vertical scroll */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header Estilo Dark */
+.analysis-header {
+    display: flex;
+    background: #1e293b;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    min-width: max-content;
+    width: 100%;
+}
+
+.analysis-header-cell {
+    padding: 14px 10px;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+.col-month-fixed {
+    width: 90px;
+    min-width: 90px;
+    text-align: left;
+    padding-left: 20px;
+    position: sticky;
+    left: 0;
+    z-index: 60;
+    background: #1e293b;
+}
+
+.col-year-dynamic {
+    width: 110px;
+    min-width: 110px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.year-capsule {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 4px 16px;
+    border-radius: 10px;
+    font-weight: 800;
+    color: white;
+    font-size: 12px;
+}
+
+/* Filas de Meses */
+.analysis-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: max-content;
+    width: 100%;
+}
+
+.analysis-row {
+    flex: 1;
+    display: flex;
+    border-bottom: 1px solid #f8fafc;
+    transition: background 0.2s ease;
+}
+
+.analysis-row:hover { background: #fdfdfd; }
+
+.cell-month-label {
+    width: 90px;
+    min-width: 90px;
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    position: sticky;
+    left: 0;
+    z-index: 40;
+    background: white;
+}
+
+.analysis-row:nth-child(even) .cell-month-label { background: #fafafa; }
+.analysis-row:nth-child(even) { background: #fafafa; }
+
+.cell-data-input {
+    width: 110px;
+    min-width: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+}
+
+.v-input-premium {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+    font-family: inherit;
+    padding: 6px;
+}
+
+.v-input-premium:focus {
+    outline: none;
+    color: #0ea5e9;
+}
+
+/* Fila de Totales */
+.analysis-total-row {
+    display: flex;
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+    min-width: max-content;
+    width: 100%;
+    padding: 10px 0;
+}
+
+.cell-total-label {
+    width: 90px;
+    min-width: 90px;
+    padding-left: 20px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+    position: sticky;
+    left: 0;
+    z-index: 45;
+    background: #f8fafc;
+}
+
+.cell-year-total-complex {
+    width: 110px;
+    min-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.total-value-main {
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.variation-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.var-up { color: #10b981; }   /* Green 500 */
+.var-down { color: #ef4444; } /* Red 500 */
+.var-neutral { color: #94a3b8; }
+
+/* Ocultar scrollbar pero mantener funcionalidad */
+.analysis-table-wrapper::-webkit-scrollbar {
+    height: 4px;
+}
+.analysis-table-wrapper::-webkit-scrollbar-track { background: transparent; }
+.analysis-table-wrapper::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}

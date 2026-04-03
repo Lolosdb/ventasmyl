@@ -1,0 +1,17 @@
+{
+  "name": "App Ventas Manuel",
+  "short_name": "Ventas",
+  "description": "Aplicación de gestión de ventas y clientes",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#009ee3",
+  "icons": [
+    {
+      "src": "src/assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

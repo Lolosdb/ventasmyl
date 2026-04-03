@@ -1,0 +1,178 @@
+/* --- VISTA TOTALES (AJUSTE MILIMÉTRICO SIN SCROLL) --- */
+
+.totales-main {
+    background-color: #f1f5f9; /* Light grey backdrop like image */
+    padding: 1rem 1.5rem !important;
+    overflow-y: auto; 
+    height: calc(100vh - 70px); /* Adjust for bottom nav */
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: #1e293b;
+    margin-bottom: 12px;
+    margin-top: 0px;
+    letter-spacing: -0.5px;
+}
+
+/* Tarjeta Principal (Azul de la App) */
+.sales-summary-card {
+    background: #0ea5e9; /* Blue 500 para coincidir con la app */
+    border-radius: 20px;
+    padding: 16px 20px;
+    color: white;
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.25);
+    position: relative;
+    margin-bottom: 1rem !important;
+}
+
+.sales-summary-card .label {
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.8;
+}
+
+.sales-summary-card .trend-icon {
+    background: rgba(255, 255, 255, 0.15);
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: 16px;
+    top: 16px;
+}
+
+.sales-summary-card .total-amount {
+    font-size: 40px;
+    font-weight: 900;
+    margin: 4px 0 16px 0;
+    letter-spacing: -1px;
+    color: white !important;
+}
+
+.sales-summary-card .missing-text {
+    font-size: 13px;
+    font-weight: 500;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.sales-summary-card .percentage-badge {
+    background: rgba(255, 255, 255, 0.25);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 900;
+    position: absolute;
+    right: 20px;
+    bottom: 44px;
+}
+
+.sales-summary-card .meta-label {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.sales-summary-card .progress-bar-container {
+    background: rgba(0, 0, 0, 0.15); /* Darker track */
+    height: 8px;
+    border-radius: 10px;
+    width: 100%;
+}
+
+.sales-summary-card .progress-bar-fill {
+    background: white;
+    height: 100%;
+    border-radius: 10px;
+    width: 0%; /* Dynamic */
+}
+
+/* Tarjetas de Provincias */
+.province-card {
+    background: white;
+    border-radius: 20px;
+    padding: 12px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.province-card .province-name {
+    font-size: 15px;
+    font-weight: 900;
+    color: #1e293b;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+.province-card .province-amount {
+    font-size: 20px;
+    font-weight: 900;
+    margin-bottom: 0px;
+}
+
+.province-card .province-orders {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+/* Colores específicos de importes */
+.val-blue { color: #2563eb; }
+.val-red { color: #ef4444; }
+.val-purple { color: #9333ea; }
+.val-cyan { color: #0891b2; }
+
+/* Estadísticas Generales */
+.metric-card {
+    background: white;
+    border-radius: 20px;
+    padding: 14px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    text-align: center;
+}
+
+.metric-card .metric-label {
+    font-size: 11px;
+    font-weight: 900;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.metric-card .metric-value-line {
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.metric-card .unit {
+    font-size: 18px;
+    font-weight: 900;
+}
+
+/* Colores de métricas generales */
+.text-green-value { color: #10b981; }
+.text-orange-value { color: #f97316; }
+.text-blue-value { color: #3b82f6; }
+.text-purple-value { color: #8b5cf6; }
+
+/* Responsive para evitar scroll */
+@media (max-height: 800px) {
+    .sales-summary-card .total-amount { font-size: 40px; margin-bottom: 12px; }
+    .sales-summary-card { padding: 12px; }
+    .province-card { padding: 10px; }
+    .metric-card { padding: 10px; }
+    .section-title { font-size: 18px; margin-bottom: 8px; }
+}

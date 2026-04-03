@@ -1,0 +1,264 @@
+/* Dashboard Helpers */
+.dash-header-row {
+    margin-bottom: 1rem;
+}
+
+.icon-circle-btn {
+    background: white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+    border: none;
+    cursor: pointer;
+}
+
+.text-blue-primary {
+    color: var(--primary-blue);
+}
+
+.card-title-sm {
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.price-display-lg {
+    color: var(--text-primary);
+    font-size: 2.7rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+    letter-spacing: -1px;
+}
+
+.sales-card-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.progress-circle-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.progress-circle-svg {
+    transform: rotate(-90deg);
+    width: 100px;
+    height: 100px;
+}
+
+.progress-circle-bg {
+    fill: none;
+    stroke: #f1f5f9;
+    stroke-width: 8;
+}
+
+.progress-circle-fill {
+    fill: none;
+    stroke: url(#progressGradient);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+.progress-circle-text {
+    position: absolute;
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--primary-blue);
+}
+
+/* Header Specific Styles - PREMIUM CTA */
+.btn-header-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: none;
+    border-radius: 99px;
+    padding: 6px 14px;
+    color: #009ee3;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-header-pill:active {
+    background: #f1f5f9;
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-header-pill .material-icons-round {
+    font-size: 18px;
+}
+
+/* Dashboard Action Buttons - SOLID PREMIUM */
+.btn-dash-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #009ee3;
+    border: none;
+    border-radius: 99px;
+    padding: 10px 24px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 12px rgba(0, 158, 227, 0.25);
+}
+
+.btn-dash-action:active {
+    transform: scale(0.95);
+    background: #007bb3;
+    box-shadow: 0 2px 6px rgba(0, 158, 227, 0.3);
+}
+
+.btn-dash-action .material-icons-round {
+    font-size: 20px;
+}
+
+.icon-btn-dash {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #009ee3;
+    border: none;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 158, 227, 0.2);
+}
+
+.icon-btn-dash:active {
+    transform: scale(0.95);
+    background: #007bb3;
+}
+
+/* Stats Small Cards */
+.dash-stats-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+/* Top Clients */
+.rank-circle {
+    background-color: #f1f5f9;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+}
+
+/* --- CALENDARIO VISUAL --- */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 1rem;
+}
+
+.calendar-day-header {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 900;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.calendar-day {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid transparent;
+}
+
+.calendar-day.today {
+    background: #0ea5e915;
+    color: #0ea5e9;
+    border: 1.5px solid #0ea5e930;
+}
+
+.calendar-day.selected {
+    background: #0ea5e9;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0 4px;
+}
+
+.calendar-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.day-orders-list {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1.5px dashed #e2e8f0;
+}
+
+.day-order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8fafc;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
