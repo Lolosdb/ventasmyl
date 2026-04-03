@@ -121,20 +121,63 @@
 .v7-total-val { font-size: 16px; font-weight: 950; color: #15803d; text-align: center; padding: 14px 4px; }
 
 /* --- FACTURACIÓN REAL V7: COMPARATIVA ANUAL (SINGLE SCREEN) --- */
-.v7-factura-wrapper { height: calc(100vh - 120px); overflow: hidden; padding: 1.25rem; background: #f1f5f9; display: flex; flex-direction: column; }
+.v7-factura-wrapper {
+    height: calc(100vh - 115px); /* Ajustado para reducir espacio muerto */
+    overflow: hidden;
+    padding: 1rem;
+    background: #f1f5f9;
+    display: flex;
+    flex-direction: column;
+}
 .v7-factura-card { background: white; border-radius: 24px; display: flex; flex-direction: column; height: 100%; border: 1px solid #e2e8f0; box-shadow: 0 15px 40px rgba(0,0,0,0.06); overflow: hidden; }
 
 .v7-factura-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; scroll-behavior: smooth; }
 .v7-factura-table { border-collapse: separate; border-spacing: 0; min-width: 100%; width: max-content; }
 
 .v7-factura-table thead { position: sticky; top: 0; z-index: 30; background: #1e293b; }
-.v7-factura-table th { color: white; padding: 14px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
-.v7-factura-table th.sticky-col { position: sticky; left: 0; z-index: 40; background: #1e293b; text-align: left; padding-left: 18px; min-width: 85px; }
+.v7-factura-table th {
+    color: white;
+    padding: 10px 8px; /* Reducido */
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
 
-.v7-year-pill { background: #334155; border: 1px solid #475569; border-radius: 12px; padding: 6px 16px; font-size: 12px; font-weight: 900; color: #fff; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.v7-factura-table th.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 40;
+    background: #1e293b;
+    text-align: left;
+    padding-left: 20px;
+    min-width: 90px;
+}
 
-.v7-factura-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 700; color: #334155; font-size: 14px; position: relative; }
-.v7-factura-table td.sticky-col { position: sticky; left: 0; z-index: 20; background: white; text-align: left; padding-left: 18px; color: #64748b; font-weight: 600; border-right: 2px solid #f8fafc; }
+.v7-year-pill { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 6px 18px; font-size: 13px; font-weight: 900; color: #fff; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+.v7-factura-table td {
+    padding: 10px 8px; /* Aumentado para rellenar el espacio inferior */
+    border-bottom: 1px solid #f1f5f9;
+    text-align: center;
+    font-weight: 700;
+    color: #334155;
+    font-size: 14px;
+    position: relative;
+}
+
+.v7-factura-table td.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: white;
+    text-align: left;
+    padding-left: 15px;
+    color: #64748b;
+    font-weight: 600;
+    border-right: 2px solid #f8fafc;
+}
 
 .v7-factura-row:nth-child(even) td { background: #fafbfc; }
 .v7-factura-row:nth-child(even) td.sticky-col { background: #fafbfc; }
@@ -143,6 +186,24 @@
 .v7-factura-input:focus { background: #f0f9ff; box-shadow: inset 0 0 0 2px #009ee3; color: #0369a1; }
 .v7-factura-input:placeholder-shown { opacity: 0.3; }
 
-.v7-factura-total-row td { background: #f8fafc !important; border-top: 2px solid #e2e8f0; font-weight: 900; color: #0f172a; padding: 14px 10px; font-size: 14px; position: sticky; bottom: 0; z-index: 25; }
-.v7-factura-total-row td.sticky-col { color: #1e293b; border-right: 2px solid #e2e8f0; }
+.v7-factura-total-row td {
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0; /* Más suave */
+    font-weight: 900;
+    color: #1e293b;
+    padding: 12px 8px;
+    font-size: 14px;
+    position: sticky;
+    bottom: 0;
+    z-index: 25;
+}
+
+.v7-factura-total-row td.sticky-col {
+    color: #1e293b !important;
+    background: #f8fafc !important;
+    border-right: none !important; /* Eliminamos la línea vertical */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 50 !important;
+}
 

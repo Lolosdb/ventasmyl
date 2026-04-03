@@ -626,7 +626,7 @@ async function renderFactura() {
                             </tr>
                         `).join('')}
                         <tr class="v7-factura-total-row">
-                            <td class="sticky-col">TOTAL</td>
+                            <td class="sticky-col" style="color: #0f172a; font-weight: 900 !important; font-size: 14px;">TOTAL</td>
                             ${annualTotals.map(total => `
                                 <td>${formatCurrency(Math.round(total)).replace(' €', '')}</td>
                             `).join('')}
@@ -663,7 +663,18 @@ async function renderObjetivosTrimestrales() {
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Objetivos Trimestrales');
     const quarterly = await dataManager.getQuarterlyGoals();
+    const invoiceHistory = await dataManager.getInvoiceHistory();
+    const currentYear = new Date().getFullYear();
+    const history2026 = invoiceHistory[String(currentYear)] || Array(12).fill(0);
     
+    // Cálculo automático por trimestre (Sincronización Total)
+    const autoValues = {
+        q1: (parseFloat(history2026[0]) || 0) + (parseFloat(history2026[1]) || 0) + (parseFloat(history2026[2]) || 0),
+        q2: (parseFloat(history2026[3]) || 0) + (parseFloat(history2026[4]) || 0) + (parseFloat(history2026[5]) || 0),
+        q3: (parseFloat(history2026[6]) || 0) + (parseFloat(history2026[7]) || 0) + (parseFloat(history2026[8]) || 0),
+        q4: (parseFloat(history2026[9]) || 0) + (parseFloat(history2026[10]) || 0) + (parseFloat(history2026[11]) || 0)
+    };
+
     // Nombres compactos para ahorrar espacio
     const labels = {
         q1: '1T',
@@ -683,7 +694,10 @@ async function renderObjetivosTrimestrales() {
             <div class="trim-body">
                 ${Object.keys(labels).map(key => {
                     const data = quarterly[key] || { target: 0, actual: 0 };
-                    const isMet = data.actual >= data.target && data.target > 0;
+                    
+                    // Sincronizar automáticamente con el valor calculado
+                    const actualValue = autoValues[key];
+                    const isMet = actualValue >= data.target && data.target > 0;
                     
                     return `
                         <div class="trim-row">
@@ -696,7 +710,7 @@ async function renderObjetivosTrimestrales() {
                             </div>
                             <div class="trim-input-group">
                                 <input type="text" id="actual_${key}" class="trim-input" 
-                                       value="${formatCurrency(Math.round(data.actual)).replace(' €', '')}"
+                                       value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
                                        onfocus="this.select()">
                                 <span class="trim-currency">€</span>
                             </div>

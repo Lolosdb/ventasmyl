@@ -165,6 +165,7 @@ class DataManager {
                         province: getValue(row, 'PROVINCIA'),
                         cp: getValue(row, 'CP', 'C.P.', 'CODIGO POSTAL', 'CÓDIGO POSTAL'),
                         phone: String(getValue(row, 'TELEFONO', 'TELÉFONO', 'MOVIL') || '').replace(/^['´]+/, '').trim(),
+                        phone2: String(getValue(row, 'TELEFONO 2', 'TELÉFONO 2', 'MOVIL 2') || '').replace(/^['´]+/, '').trim(),
                         schedule: getValue(row, 'HORARIO', 'HORARIOS', 'SCHEDULE'),
                         lat: getValue(row, 'LATITUD', 'LAT', 'LATITUDE'),
                         lng: getValue(row, 'LONGITUD', 'LNG', 'LONG', 'LON', 'LONGITUDE'),
@@ -216,6 +217,7 @@ class DataManager {
             else if (['PROVINCIA'].includes(clean)) map.province = idx;
             else if (['CP', 'C.P.'].includes(clean)) map.cp = idx;
             else if (['TELEFONO', 'TELÉFONO', 'MOVIL'].includes(clean)) map.phone = idx;
+            else if (['TELEFONO 2', 'TELÉFONO 2', 'MOVIL 2'].includes(clean)) map.phone2 = idx;
             else if (['HORARIO', 'HORARIOS', 'SCHEDULE'].includes(clean)) map.schedule = idx;
             else if (['LATITUD', 'LAT'].includes(clean)) map.lat = idx;
             else if (['LONGITUD', 'LNG', 'LON'].includes(clean)) map.lng = idx;
@@ -224,7 +226,7 @@ class DataManager {
         const defaults = {
             code: 0, name: 1, nif: 2, email: 3, address: 4, contact: 5,
             location: 6, province: 7, cp: 8, phone: 9, schedule: 10,
-            lat: 21, lng: 22
+            lat: 21, lng: 22, phone2: 23
         };
 
         Object.keys(defaults).forEach(key => {
@@ -338,6 +340,7 @@ class DataManager {
             newRow[colMap.province] = newClientData.province;
             newRow[colMap.cp] = newClientData.cp;
             newRow[colMap.phone] = newClientData.phone;
+            if (colMap.phone2 !== undefined) newRow[colMap.phone2] = newClientData.phone2 || "";
             newRow[colMap.schedule] = newClientData.schedule;
             newRow[colMap.lat] = newClientData.lat;
             newRow[colMap.lng] = newClientData.lng;
@@ -379,6 +382,7 @@ class DataManager {
                     province: newClientData.province,
                     cp: newClientData.cp,
                     phone: newClientData.phone,
+                    phone2: newClientData.phone2 || "",
                     lat: newClientData.lat,
                     lng: newClientData.lng,
                     createdAt: new Date().toISOString()
@@ -441,6 +445,7 @@ class DataManager {
             rows[rowIndex][colMap.province] = updatedData.province;
             rows[rowIndex][colMap.cp] = updatedData.cp;
             rows[rowIndex][colMap.phone] = updatedData.phone;
+            if (colMap.phone2 !== undefined) rows[rowIndex][colMap.phone2] = updatedData.phone2 || "";
             rows[rowIndex][colMap.schedule] = updatedData.schedule;
             rows[rowIndex][colMap.lat] = updatedData.lat;
             rows[rowIndex][colMap.lng] = updatedData.lng;
@@ -484,6 +489,7 @@ class DataManager {
                     province: updatedData.province,
                     cp: updatedData.cp,
                     phone: updatedData.phone,
+                    phone2: updatedData.phone2 || "",
                     lat: updatedData.lat,
                     lng: updatedData.lng,
                     createdAt: new Date().toISOString()
@@ -731,7 +737,12 @@ class DataManager {
                 total: totalVentasMes,
                 totalAnterior: totalVentasMesAnteriorAnio,
                 objetivo: targetAmount,
-                porcentaje: ((totalVentasMes / targetAmount) * 100).toFixed(1)
+                porcentaje: ((totalVentasMes / targetAmount) * 100).toFixed(1),
+                thresholds: {
+                    p3: goals.data3[monthIdx],
+                    p4: goals.data4[monthIdx],
+                    p5: goals.data5[monthIdx]
+                }
             },
             stats: {
                 clientesActivos: activeClientsSet.size,

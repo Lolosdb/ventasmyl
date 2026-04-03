@@ -239,15 +239,34 @@ async function openClientDetailModal(clientCode) {
 
                 <div class="detail-item-row">
                     <div class="info-icon-circle"><span class="material-icons-round" style="color: #25d366;">call_made</span></div>
-                    <div class="flex-1 flex justify-between items-center" style="background: #eff6ff; padding: 1.25rem; border-radius: 20px; border: 1px solid #dbeafe; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05);">
+                    <div class="flex-1 flex flex-col gap-3" style="background: #eff6ff; padding: 1.25rem; border-radius: 24px; border: 1px solid #dbeafe; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05);">
                         <div class="field-vertical">
-                            <label class="detail-label" style="color: #1e40af; margin-bottom: 4px;">Teléfono de contacto</label>
+                            <label class="detail-label" style="color: #1e40af; margin-bottom: 4px;">Teléfono principal</label>
                             <a href="tel:${(client.phone || '').replace(/\s+/g, '')}" class="detail-value block" style="font-size: 19px !important; color: #1e3a8a !important; font-weight: 900 !important;">${client.phone || '---'}</a>
                         </div>
-                        <button class="btn-action-whatsapp-pill" onclick="window.open('https://wa.me/34${(client.phone || '').replace(/[^0-9]/g, '')}', '_blank')">
-                            <span class="material-icons-round" style="font-size: 20px;">chat</span>
-                            <span>WHATSAPP</span>
-                        </button>
+                        <div class="v7-phone-pill-row">
+                            <button class="btn-action-call-pill" onclick="window.location.href='tel:${(client.phone || '').replace(/\s+/g, '')}'">
+                                <span class="material-icons-round">call</span> LLAMAR
+                            </button>
+                            <button class="btn-action-whatsapp-pill" onclick="window.open('https://wa.me/34${(client.phone || '').replace(/[^0-9]/g, '')}', '_blank')">
+                                <span class="material-icons-round">chat</span> WHATSAPP
+                            </button>
+                        </div>
+
+                        ${client.phone2 && client.phone2.trim() !== '' ? `
+                        <div class="mt-2 pt-4 border-t border-blue-200 field-vertical">
+                            <label class="detail-label" style="color: #1e40af; margin-bottom: 4px;">Teléfono secundario</label>
+                            <a href="tel:${(client.phone2 || '').replace(/\s+/g, '')}" class="detail-value block" style="font-size: 17px !important; color: #1e3a8a !important; font-weight: 850 !important;">${client.phone2}</a>
+                            <div class="v7-phone-pill-row mt-2">
+                                <button class="btn-action-call-pill" onclick="window.location.href='tel:${(client.phone2 || '').replace(/\s+/g, '')}'">
+                                    <span class="material-icons-round">call</span> LLAMAR
+                                </button>
+                                <button class="btn-action-whatsapp-pill" onclick="window.open('https://wa.me/34${(client.phone2 || '').replace(/[^0-9]/g, '')}', '_blank')">
+                                    <span class="material-icons-round">chat</span> WHATSAPP
+                                </button>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
 
@@ -310,6 +329,7 @@ function openNewClientModal(code = null) {
             document.getElementById('ncName').value = client.name;
             document.getElementById('ncNIF').value = client.nif || '';
             document.getElementById('ncPhone').value = client.phone || '';
+            document.getElementById('ncPhone2').value = client.phone2 || '';
             document.getElementById('ncEmail').value = client.email || '';
             document.getElementById('ncLocation').value = client.location || '';
             document.getElementById('ncProvince').value = client.province || '';
@@ -342,6 +362,7 @@ async function saveNewClient() {
         name: document.getElementById('ncName').value,
         nif: document.getElementById('ncNIF').value,
         phone: document.getElementById('ncPhone').value,
+        phone2: document.getElementById('ncPhone2').value,
         email: document.getElementById('ncEmail').value,
         location: document.getElementById('ncLocation').value,
         province: document.getElementById('ncProvince').value,
@@ -420,105 +441,126 @@ function injectClientModals() {
     const html = `
     <div id="newClientModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 580px !important; width: 95% !important; max-height: 94vh; padding: 0; overflow: hidden; margin: 0 auto; border-radius: 24px;">
-            <!-- Estructura mediante Grid para fijar cabecera y pie -->
             <div style="display: grid; grid-template-rows: auto 1fr auto; height: 100%; width: 100%;">
                 
-                <!-- Cabecera Fija Premium con Margen de Seguridad -->
-                <div class="client-detail-header" style="flex-shrink: 0; padding: 2.5rem !important; border-radius: 24px 24px 0 0; position: relative;">
-                    <h2 class="text-2xl font-black uppercase text-white m-0" style="letter-spacing: -0.5px; padding-right: 60px;">Editar Cliente</h2>
-                    <button type="button" class="btn-close-modal" onclick="document.getElementById('newClientModal').classList.remove('open')" style="right: 2.25rem !important; top: 2.25rem !important;">
+                <div class="client-detail-header" style="flex-shrink: 0; padding: 2.25rem 2.75rem !important; border-radius: 24px 24px 0 0; position: relative;">
+                    <h2 class="text-2xl font-black uppercase text-white m-0" style="letter-spacing: -0.5px;">Nuevo Cliente</h2>
+                    <button type="button" class="btn-close-modal" onclick="document.getElementById('newClientModal').classList.remove('open')">
                         <span class="material-icons-round">close</span>
                     </button>
                 </div>
                 
-                <!-- Contenedor del Formulario (Scrollable) -->
                 <form id="newClientForm" onsubmit="event.preventDefault(); saveNewClient();" onkeydown="handleFormNavigation(event)" style="display: contents;">
-                    <div class="modal-body p-10 overflow-y-auto">
+                    <div class="modal-body p-6 overflow-y-auto" style="background: #f1f5f9;">
                         
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label class="premium-form-label">CÓDIGO *</label>
-                                <input type="text" id="ncCode" class="premium-form-input" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 1234" required>
+                        <!-- CARD 1: IDENTIDAD -->
+                        <div class="premium-form-card">
+                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #f8fafc; padding-bottom: 10px;">
+                                <span class="material-icons-round text-blue-500" style="font-size: 20px;">badge</span>
+                                <h4 class="text-xs font-black uppercase text-slate-500">Identidad Comercial</h4>
                             </div>
-                            <div>
-                                <label class="premium-form-label">TIENDA (NOMBRE) *</label>
-                                <input type="text" id="ncName" class="premium-form-input" placeholder="Nombre completo del establecimiento" required>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">CÓDIGO *</label>
+                                    <input type="text" id="ncCode" class="premium-form-input" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 1234" required>
+                                </div>
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">NIF / DNI</label>
+                                    <input type="text" id="ncNIF" class="premium-form-input" placeholder="A12345678">
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label class="premium-form-label">NIF</label>
-                                <input type="text" id="ncNIF" class="premium-form-input" placeholder="NIF/DNI">
-                            </div>
-                            <div>
-                                <label class="premium-form-label">TELÉFONO</label>
-                                <input type="text" id="ncPhone" class="premium-form-input" inputmode="numeric" pattern="[0-9]*" placeholder="600000000">
-                            </div>
-                        </div>
-
-                        <div class="premium-form-group mb-6">
-                            <label class="premium-form-label">EMAIL</label>
-                            <input type="email" id="ncEmail" class="premium-form-input" placeholder="cliente@correo.com">
-                        </div>
-
-                        <div class="premium-form-group mb-6">
-                            <label class="premium-form-label">DIRECCIÓN</label>
-                            <input type="text" id="ncAddress" class="premium-form-input" placeholder="Calle, número, piso...">
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 mb-6">
-                            <div>
-                                <label class="premium-form-label">POBLACIÓN</label>
-                                <input type="text" id="ncLocation" class="premium-form-input" placeholder="Ciudad">
-                            </div>
-                            <div>
-                                <label class="premium-form-label">PROVINCIA</label>
-                                <input type="text" id="ncProvince" class="premium-form-input" placeholder="Provincia">
-                            </div>
-                            <div>
-                                <label class="premium-form-label">C.P.</label>
-                                <input type="text" id="ncCP" class="premium-form-input" inputmode="numeric" pattern="[0-9]*" placeholder="33000">
+                            <div class="premium-form-group">
+                                <label class="premium-form-label">NOMBRE DE TIENDA *</label>
+                                <input type="text" id="ncName" class="premium-form-input" placeholder="Nombre comercial" required>
                             </div>
                         </div>
 
-                        <div class="premium-form-group mb-6">
-                            <label class="premium-form-label">CONTACTO (PERSONA)</label>
-                            <input type="text" id="ncContact" class="premium-form-input" placeholder="Nombre del responsable">
+                        <!-- CARD 2: CONTACTO -->
+                        <div class="premium-form-card">
+                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #f8fafc; padding-bottom: 10px;">
+                                <span class="material-icons-round text-emerald-500" style="font-size: 20px;">contact_phone</span>
+                                <h4 class="text-xs font-black uppercase text-slate-500">Contacto</h4>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">TELÉFONO 1</label>
+                                    <input type="text" id="ncPhone" class="premium-form-input" inputmode="numeric" placeholder="600000000">
+                                </div>
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">TELÉFONO 2</label>
+                                    <input type="text" id="ncPhone2" class="premium-form-input" inputmode="numeric" placeholder="Opcional">
+                                </div>
+                            </div>
+                            <div class="premium-form-group">
+                                <label class="premium-form-label">PERSONA DE CONTACTO</label>
+                                <input type="text" id="ncContact" class="premium-form-input" placeholder="Nombre del responsable">
+                            </div>
+                            <div class="premium-form-group">
+                                <label class="premium-form-label">EMAIL</label>
+                                <input type="email" id="ncEmail" class="premium-form-input" placeholder="cliente@correo.com">
+                            </div>
                         </div>
 
-                        <div class="premium-form-group mb-6">
-                            <label class="premium-form-label">HORARIO</label>
-                            <input type="text" id="ncSchedule" class="premium-form-input" placeholder="Ej: 9:00 - 14:00">
+                        <!-- CARD 3: UBICACIÓN -->
+                        <div class="premium-form-card">
+                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #f8fafc; padding-bottom: 10px;">
+                                <span class="material-icons-round text-orange-500" style="font-size: 20px;">map</span>
+                                <h4 class="text-xs font-black uppercase text-slate-500">Ubicación y Logística</h4>
+                            </div>
+                            <div class="premium-form-group">
+                                <label class="premium-form-label">DIRECCIÓN</label>
+                                <input type="text" id="ncAddress" class="premium-form-input" placeholder="Calle, número, oficina...">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">POBLACIÓN</label>
+                                    <input type="text" id="ncLocation" class="premium-form-input" placeholder="Ciudad">
+                                </div>
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">PROVINCIA</label>
+                                    <input type="text" id="ncProvince" class="premium-form-input" placeholder="Provincia">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">CP</label>
+                                    <input type="text" id="ncCP" class="premium-form-input" inputmode="numeric" placeholder="33000">
+                                </div>
+                                <div class="premium-form-group">
+                                    <label class="premium-form-label">HORARIO</label>
+                                    <input type="text" id="ncSchedule" class="premium-form-input" placeholder="Ej: 9:00 - 14:00">
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 mb-4 text-center">
-                            <label class="premium-form-label mb-4 flex items-center justify-center gap-2">
-                                <span class="material-icons-round text-blue-500" style="font-size: 18px;">location_on</span>
-                                UBICACIÓN (GPS)
-                            </label>
-                            <div class="grid grid-cols-2 gap-4 mb-6">
-                                <input type="text" id="ncLat" class="premium-form-input bg-white" placeholder="Latitud (Ej: 43.1234)">
-                                <input type="text" id="ncLng" class="premium-form-input bg-white" placeholder="Longitud (Ej: -6.1234)">
+                        <!-- CARD 4: GPS -->
+                        <div class="premium-form-card premium-gps-card">
+                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #e0f2fe; padding-bottom: 10px;">
+                                <span class="material-icons-round text-sky-600" style="font-size: 20px;">explore</span>
+                                <h4 class="text-xs font-black uppercase text-sky-700">Geolocalización (GPS)</h4>
                             </div>
-                            <div class="flex justify-center">
-                                <button type="button" class="btn-premium-save" style="width: auto !important; height: auto !important; padding: 12px 30px !important; margin: 0 !important; gap: 8px;" onclick="getCurrentCoordinates()">
-                                    <span class="material-icons-round" style="font-size: 20px;">gps_fixed</span> 
-                                    <span>Obtener Coordenadas</span>
-                                </button>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div class="field-vertical">
+                                    <label class="premium-form-label text-sky-600">LATITUD</label>
+                                    <input type="text" id="ncLat" class="premium-form-input bg-white" placeholder="43.xxxx">
+                                </div>
+                                <div class="field-vertical">
+                                    <label class="premium-form-label text-sky-600">LONGITUD</label>
+                                    <input type="text" id="ncLng" class="premium-form-input bg-white" placeholder="-6.xxxx">
+                                </div>
                             </div>
+                            <button type="button" class="btn-premium-gps" style="height: 50px !important; font-size: 13px !important;" onclick="getCurrentCoordinates()">
+                                <span class="material-icons-round">gps_fixed</span> OBTENER MI UBICACIÓN ACTUAL
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Pie Fijo (Footer) Premium - CENTRADO Y AIREADO -->
-                    <div class="bg-white border-t border-slate-100 flex items-center justify-center gap-6 p-10 px-20">
+                    <div class="bg-white border-t border-slate-200 flex items-center justify-center gap-6 p-6 px-10">
                         <button type="button" class="btn-link-cancel" onclick="document.getElementById('newClientModal').classList.remove('open')">
-                            <span class="material-icons-round">close</span>
-                            Cancelar
+                            <span class="material-icons-round">close</span> CANCELAR
                         </button>
                         <button type="submit" class="btn-premium-save">
-                            <span class="material-icons-round">cloud_upload</span>
-                            Guardar en Drive
+                            <span class="material-icons-round">save</span> GUARDAR CLIENTE
                         </button>
                     </div>
                 </form>

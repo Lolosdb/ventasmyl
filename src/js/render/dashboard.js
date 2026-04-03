@@ -2,6 +2,19 @@
  * Lógica de renderizado del Dashboard Principal
  */
 
+function getRemainingBusinessDays() {
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    let count = 0;
+    let current = new Date(today);
+    while (current <= lastDay) {
+        const d = current.getDay();
+        if (d !== 0 && d !== 6) count++;
+        current.setDate(current.getDate() + 1);
+    }
+    return count;
+}
+
 async function renderDash() {
     const app = document.getElementById('app');
     const stats = await dataManager.getDashStats();
@@ -49,70 +62,76 @@ async function renderDash() {
         </div>
     `;
 
+    // --- Lógica de objetivos dinámicos (3% -> 4% -> 5%) ---
+    const th = stats.ventasMes.thresholds;
+    let activeTarget = th.p3;
+    let activeLabel = "Objetivo 3% del Mes";
+    
+    if (monthSales >= th.p4) {
+        activeTarget = th.p5;
+        activeLabel = "Objetivo 5% del Mes";
+    } else if (monthSales >= th.p3) {
+        activeTarget = th.p4;
+        activeLabel = "Objetivo 4% del Mes";
+    }
+
+    const currentProgressPercent = Math.min((monthSales / activeTarget) * 100, 100).toFixed(1);
+    
+    // Cálculo de color dinámico (Rojo 0 -> Verde 120)
+    const hue = (currentProgressPercent / 100) * 120;
+    const barColor = `hsl(${hue}, 85%, 45%)`;
+    const glowColor = `hsla(${hue}, 85%, 45%, 0.4)`;
+
     // Card de Ventas con Comparativa YoY
     contentHtml += `
-        <div class="card glass shadow-premium" style="border-left: 5px solid var(--blue-primary); margin-bottom: 1.5rem;">
-            <div class="sales-card-grid">
-                <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; height: 150px;">
-                    <p class="card-title-sm" style="margin: 0; font-size: 15px; letter-spacing: 0.5px; color: #64748b;">Ventas del Mes</p>
-                    <h2 class="price-display-lg" style="margin: 0; line-height: 1.1; font-size: 2.7rem;">${formatCurrency(Math.round(monthSales))}</h2>
-                    
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 15px; color: #64748b;">${targetLabel}</span>
-                        <span style="font-size: 15px; font-weight: 700; color: #94a3b8;">(${formatCurrency(Math.round(targetAmount))})</span>
-                    </div>
+        <div class="card glass shadow-premium" style="border-left: 5px solid var(--blue-primary); margin-bottom: 1.5rem; padding: 1.5rem 2rem;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <p class="card-title-sm" style="margin: 0; font-size: 14px; letter-spacing: 1px; color: #94a3b8; font-weight: 900;">VENTAS DEL MES</p>
+                <h2 class="price-display-lg" style="margin: 0; line-height: 1; font-size: 3rem; color: #1e293b;">${formatCurrency(Math.round(monthSales))}</h2>
+                
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 13px; font-weight: 850; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${activeLabel}</span>
+                    <span style="font-size: 13px; font-weight: 900; color: #1e293b;">${formatCurrency(Math.round(activeTarget))}</span>
+                </div>
 
+                <div class="premium-progress-container" onclick="openGoalsModal()" style="cursor: pointer; margin: 0.5rem 0;">
+                    <div class="premium-progress-bar" style="width: ${currentProgressPercent}%; background-color: ${barColor}; box-shadow: 0 0 15px ${glowColor};"></div>
+                    <div class="premium-progress-text">${currentProgressPercent}%</div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
                     ${(() => {
                         const prevYearSales = stats.ventasMes.totalAnterior || 0;
                         const diff = monthSales - prevYearSales;
                         const diffPercent = prevYearSales > 0 ? (diff / prevYearSales) * 100 : (monthSales > 0 ? 100 : 0);
                         const isPositive = diff >= 0;
                         
-                        // Determinar color dinámico (Degradado suave de 0% a 5%)
                         let color, bgColor, borderColor;
                         if (diffPercent < 0) {
-                            color = '#ef4444';
-                            bgColor = '#ef444415';
-                            borderColor = '#ef444430';
+                            color = '#ef4444'; bgColor = '#ef444410'; borderColor = '#ef444420';
                         } else if (diffPercent >= 5) {
-                            color = '#10b981';
-                            bgColor = '#10b98115';
-                            borderColor = '#10b98130';
+                            color = '#10b981'; bgColor = '#10b98110'; borderColor = '#10b98120';
                         } else {
-                            // Escala entre Naranja (0%) y Verde (5%)
-                            // H:38 S:92 L:50 (Naranja) -> H:142 S:71 L:45 (Verde)
                             const ratio = diffPercent / 5;
                             const h = 38 + (142 - 38) * ratio;
-                            const s = 92 + (71 - 92) * ratio;
-                            const l = 50 + (45 - 50) * ratio;
-                            color = `hsl(${h}, ${s}%, ${l}%)`;
-                            bgColor = `hsla(${h}, ${s}%, ${l}%, 0.12)`;
-                            borderColor = `hsla(${h}, ${s}%, ${l}%, 0.25)`;
+                            color = `hsl(${h}, 80%, 45%)`;
+                            bgColor = `hsla(${h}, 80%, 45%, 0.1)`;
+                            borderColor = `hsla(${h}, 80%, 45%, 0.2)`;
                         }
 
                         const icon = isPositive ? 'trending_up' : 'trending_down';
                         return `
-                            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 99px; width: fit-content; background: ${bgColor}; color: ${color}; border: 1px solid ${borderColor};">
-                                <span class="material-icons-round" style="font-size: 18px;">${icon}</span>
-                                <span style="font-size: 14px; font-weight: 700;">${isPositive ? '+' : ''}${diffPercent.toFixed(1)}% vs año ant.</span>
+                            <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: ${bgColor}; color: ${color}; border: 1px solid ${borderColor};">
+                                <span class="material-icons-round" style="font-size: 16px;">${icon}</span>
+                                <span style="font-size: 12px; font-weight: 850;">${isPositive ? '+' : ''}${diffPercent.toFixed(1)}% vs año ant.</span>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 8px; color: #1e293b; font-size: 15px; font-weight: 850; padding-right: 4px;">
+                                <span class="material-icons-round" style="font-size: 20px; color: #009ee3;">event_repeat</span>
+                                <span>Quedan ${getRemainingBusinessDays()} días</span>
                             </div>
                         `;
                     })()}
-                </div>
-
-                <div class="progress-circle-container" onclick="openGoalsModal()" style="cursor: pointer;">
-                    <svg class="progress-circle-svg" viewBox="0 0 100 100">
-                        <defs>
-                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#009ee3" />
-                                <stop offset="100%" stop-color="#006699" />
-                            </linearGradient>
-                        </defs>
-                        <circle class="progress-circle-bg" cx="50" cy="50" r="40" />
-                        <circle class="progress-circle-fill shadow-glow" cx="50" cy="50" r="40" 
-                                style="stroke-dasharray: 251.2; stroke-dashoffset: ${251.2 - (251.2 * Math.min(progressPercent, 100) / 100)};" />
-                    </svg>
-                    <div class="progress-circle-text">${progressPercent}%</div>
                 </div>
             </div>
         </div>

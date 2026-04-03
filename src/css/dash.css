@@ -43,40 +43,45 @@
     align-items: center;
 }
 
-.progress-circle-container {
+/* --- PREMIUM PROGRESS BAR (DASHBOARD) --- */
+.premium-progress-container {
+    width: 100%;
+    height: 26px;
+    background: #f1f5f9;
+    border-radius: 13px;
     position: relative;
-    width: 100px;
-    height: 100px;
+    overflow: hidden;
+    margin: 1.25rem 0;
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.premium-progress-bar {
+    height: 100%;
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 1s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
 }
 
-.progress-circle-svg {
-    transform: rotate(-90deg);
-    width: 100px;
-    height: 100px;
-}
-
-.progress-circle-bg {
-    fill: none;
-    stroke: #f1f5f9;
-    stroke-width: 8;
-}
-
-.progress-circle-fill {
-    fill: none;
-    stroke: url(#progressGradient);
-    stroke-width: 8;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 0.5s ease;
-}
-
-.progress-circle-text {
+.premium-progress-text {
     position: absolute;
-    font-weight: 800;
-    font-size: 1rem;
-    color: var(--primary-blue);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    line-height: 26px;
+    font-size: 14px; /* Un poquito más grande */
+    font-weight: 950;
+    color: #1e293b; /* Color oscuro para legibilidad sobre fondo claro */
+    text-shadow: 0 0 5px white, 0 0 3px white, 0 0 1px white; /* Triple resplandor blanco para ser visible sobre la barra de color */
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 100;
 }
 
 /* Header Specific Styles - PREMIUM CTA */
