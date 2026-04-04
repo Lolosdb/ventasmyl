@@ -34,7 +34,7 @@ async function renderPedidos() {
     });
 
     contentHtml += `
-        <div class="pedidos-table-header" style="padding: 12px 1.5rem;">
+        <div class="pedidos-table-header">
             <div>Nº</div>
             <div>TIENDA</div>
             <div style="text-align: right;">IMPORTE</div>

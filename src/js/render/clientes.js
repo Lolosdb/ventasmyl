@@ -21,13 +21,12 @@ const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1
                     <span>Crear nuevo</span>
                 </button>
             </div>
-            <p class="import-description">Selecciona un archivo Excel (.xlsx) o importa directamente desde Google Drive.</p>
             <div class="import-actions-row">
-                <button class="btn-action-excel" onclick="document.getElementById('clientImportInput').click()">
+                <button class="btn-import-excel" onclick="document.getElementById('clientImportInput').click()">
                     <span class="material-icons-round">upload_file</span>
-                    <span>Excel (.xlsx)</span>
+                    <span>Excel (.XLSX)</span>
                 </button>
-                <button class="btn-drive-premium" onclick="handleDriveImport()">
+                <button class="btn-import-drive" onclick="handleDriveImport()">
                     <span class="material-icons-round">cloud_download</span>
                     <span>Desde Drive</span>
                 </button>
@@ -38,19 +37,18 @@ const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1
 
     // Buscador
     contentHtml += `
-        <!-- BUSCADOR CON ESTILOS INLINE PARA EVITAR CONFLICTOS -->
-        <div style="position: relative; width: 100%; display: block; margin-bottom: 1rem;">
-            <span class="material-icons-round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none;">search</span>
+        <div class="search-container mb-4">
+            <span class="material-icons-round search-icon">search</span>
             <input type="text" id="clientSearchInput" 
+                   class="search-input"
                    placeholder="Buscar por nombre o población..." 
                    onkeyup="filterClients(this.value)" 
                    onkeydown="if(event.key==='Enter') this.blur()"
-                   oninput="toggleClearSearch('clientSearchInput', 'clearSearchBtn')"
-                   style="width: 100% !important; padding: 10px 40px 10px 40px !important; box-sizing: border-box !important; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 13.5px; font-weight: 700; color: #0f172a;">
-            <span id="clearSearchBtn" class="material-icons-round" 
-                  style="position: absolute !important; right: 12px !important; top: 50% !important; transform: translateY(-50%) !important; color: #94a3b8; cursor: pointer; z-index: 10; font-size: 18px; display: none;" 
+                   oninput="toggleClearSearch('clientSearchInput', 'clearSearchBtn')">
+            <span id="clearSearchBtn" class="material-icons-round clear-icon" 
+                  style="display: none;" 
                   onclick="clearClientSearch()">
-                close
+                cancel
             </span>
         </div>
     `;
@@ -69,9 +67,10 @@ const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1
                      data-name="${client.name.toLowerCase()}" 
                      data-location="${(client.location || '').toLowerCase()}">
                     <div class="flex flex-col gap-2 w-full">
-                        <div class="flex items-center gap-2">
-                            <span class="client-code-badge-lite">${client.code}</span>
-                            <span class="font-black text-gray-800 text-sm uppercase">${client.name}</span>
+                        <div class="client-card-main-info">
+                            <span class="client-card-code">${client.code}</span>
+                            <span>-</span>
+                            <span class="client-card-name">${client.name}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <div class="pill-location">
@@ -239,30 +238,36 @@ async function openClientDetailModal(clientCode) {
 
                 <div class="detail-item-row">
                     <div class="info-icon-circle"><span class="material-icons-round" style="color: #25d366;">call_made</span></div>
-                    <div class="flex-1 flex flex-col gap-3" style="background: #eff6ff; padding: 1.25rem; border-radius: 24px; border: 1px solid #dbeafe; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05);">
-                        <div class="field-vertical">
-                            <label class="detail-label" style="color: #1e40af; margin-bottom: 4px;">Teléfono principal</label>
-                            <a href="tel:${(client.phone || '').replace(/\s+/g, '')}" class="detail-value block" style="font-size: 19px !important; color: #1e3a8a !important; font-weight: 900 !important;">${client.phone || '---'}</a>
-                        </div>
-                        <div class="v7-phone-pill-row">
-                            <button class="btn-action-call-pill" onclick="window.location.href='tel:${(client.phone || '').replace(/\s+/g, '')}'">
-                                <span class="material-icons-round">call</span> LLAMAR
-                            </button>
-                            <button class="btn-action-whatsapp-pill" onclick="window.open('https://wa.me/34${(client.phone || '').replace(/[^0-9]/g, '')}', '_blank')">
-                                <span class="material-icons-round">chat</span> WHATSAPP
-                            </button>
+                    <div class="flex-1 v7-phone-container">
+                        <!-- Telefono Principal -->
+                        <div class="v7-phone-entry">
+                            <div class="v7-phone-info">
+                                <label class="detail-label" style="color: #64748b; margin-bottom: 2px;">Teléfono principal</label>
+                                <a href="tel:${(client.phone || '').replace(/\s+/g, '')}" class="detail-value" style="font-size: 18px !important; color: #0f172a !important; font-weight: 900 !important;">${client.phone || '---'}</a>
+                            </div>
+                            <div class="v7-phone-actions">
+                                <button class="btn-action-icon-only btn-call-icon" onclick="window.location.href='tel:${(client.phone || '').replace(/\s+/g, '')}'" title="Llamar">
+                                    <span class="material-icons-round">call</span>
+                                </button>
+                                <button class="btn-action-icon-only btn-wa-icon" onclick="window.open('https://wa.me/34${(client.phone || '').replace(/[^0-9]/g, '')}', '_blank')" title="WhatsApp">
+                                    <span class="material-icons-round">chat</span>
+                                </button>
+                            </div>
                         </div>
 
                         ${client.phone2 && client.phone2.trim() !== '' ? `
-                        <div class="mt-2 pt-4 border-t border-blue-200 field-vertical">
-                            <label class="detail-label" style="color: #1e40af; margin-bottom: 4px;">Teléfono secundario</label>
-                            <a href="tel:${(client.phone2 || '').replace(/\s+/g, '')}" class="detail-value block" style="font-size: 17px !important; color: #1e3a8a !important; font-weight: 850 !important;">${client.phone2}</a>
-                            <div class="v7-phone-pill-row mt-2">
-                                <button class="btn-action-call-pill" onclick="window.location.href='tel:${(client.phone2 || '').replace(/\s+/g, '')}'">
-                                    <span class="material-icons-round">call</span> LLAMAR
+                        <!-- Telefono Secundario -->
+                        <div class="v7-phone-entry" style="margin-top: 8px; padding-top: 8px; border-t: 1px solid #f1f5f9;">
+                            <div class="v7-phone-info">
+                                <label class="detail-label" style="color: #64748b; margin-bottom: 2px;">Teléfono secundario</label>
+                                <a href="tel:${(client.phone2 || '').replace(/\s+/g, '')}" class="detail-value" style="font-size: 17px !important; color: #0f172a !important; font-weight: 850 !important;">${client.phone2}</a>
+                            </div>
+                            <div class="v7-phone-actions">
+                                <button class="btn-action-icon-only btn-call-icon" onclick="window.location.href='tel:${(client.phone2 || '').replace(/\s+/g, '')}'" title="Llamar">
+                                    <span class="material-icons-round">call</span>
                                 </button>
-                                <button class="btn-action-whatsapp-pill" onclick="window.open('https://wa.me/34${(client.phone2 || '').replace(/[^0-9]/g, '')}', '_blank')">
-                                    <span class="material-icons-round">chat</span> WHATSAPP
+                                <button class="btn-action-icon-only btn-wa-icon" onclick="window.open('https://wa.me/34${(client.phone2 || '').replace(/[^0-9]/g, '')}', '_blank')" title="WhatsApp">
+                                    <span class="material-icons-round">chat</span>
                                 </button>
                             </div>
                         </div>

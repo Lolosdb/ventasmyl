@@ -179,26 +179,24 @@ async function renderAlertas() {
         entries.forEach(e => {
             const isDanger = e.days > 35;
             contentHtml += `
-                <div class="alert-card ${isDanger ? 'red-theme' : 'green-theme'} shadow-lg" 
-                     onclick="if('${e.code}' !== 'null') openClientDetailModal('${e.code}')"
-                     style="cursor: pointer;">
-                    <div class="alert-card-header">
-                        <div class="alert-card-info">
-                            <h3 class="alert-card-title">${e.shop}</h3>
-                            <p class="alert-card-location">${e.location || 'SIN UBICACIÓN'}</p>
-                        </div>
-                        <div class="alert-card-badge">Hace ${e.days} días</div>
+                <div class="alert-card ${isDanger ? 'red-theme' : 'green-theme'}" 
+                     onclick="if('${e.code}' !== 'null') openClientDetailModal('${e.code}')">
+                    
+                    <div class="alert-card-info">
+                        <h3 class="alert-card-title">${e.shop}</h3>
+                        <p class="alert-card-location">${e.location || 'SIN UBICACIÓN'}</p>
                     </div>
+
+                    <div class="alert-card-badge">Hace ${e.days} días</div>
+
                     <div class="alert-card-actions">
-                        <button class="btn-action-call shadow-sm"
-                                onclick="event.stopPropagation(); window.location.href='tel:${(e.phone || '').replace(/\s+/g, '')}'">
+                        <button class="btn-alert-v7 call shadow-sm"
+                                onclick="event.stopPropagation(); window.location.href='tel:${(e.phone || '').replace(/\s+/g, '')}'" title="Llamar">
                             <span class="material-icons-round">call</span> 
-                            <span>Llamar</span>
                         </button>
-                        <button class="btn-alert-action whatsapp shadow-sm"
-                                onclick="event.stopPropagation(); window.open('https://wa.me/34${(e.phone || '').replace(/[^0-9]/g, '')}', '_blank')">
+                        <button class="btn-alert-v7 whatsapp shadow-sm"
+                                onclick="event.stopPropagation(); window.open('https://wa.me/34${(e.phone || '').replace(/[^0-9]/g, '')}', '_blank')" title="WhatsApp">
                             <span class="material-icons-round">chat</span> 
-                            <span>WhatsApp</span>
                         </button>
                     </div>
                 </div>

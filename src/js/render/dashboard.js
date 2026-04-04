@@ -4,7 +4,9 @@
 
 function getRemainingBusinessDays() {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    lastDay.setHours(0, 0, 0, 0);
     let count = 0;
     let current = new Date(today);
     while (current <= lastDay) {

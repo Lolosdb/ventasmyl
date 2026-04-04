@@ -1,34 +1,38 @@
-/* Alertas View Styles - Rediseño Premium */
+/* Alertas View Styles - Rediseño V7 Super Compact (Fila Única) */
 
 :root {
-    --alert-green: #22c55e;
+    --alert-green: #10b981;
     --alert-green-bg: #f0fdf4;
-    --alert-green-border: #bbf7d0;
-    --alert-red: #ef4444;
+    --alert-green-border: #d1fae5;
+    
+    --alert-red: #f43f5e;
     --alert-red-bg: #fff1f2;
-    --alert-red-border: #fecaca;
+    --alert-red-border: #fee2e2;
 }
 
 .alert-card {
     background: white;
-    border-radius: 16px;
-    margin-bottom: 1rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border-radius: 18px;
+    margin-bottom: 0.65rem;
+    padding: 10px 14px;
+    border: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(0,0,0,0.05);
-    display: flex;
-    flex-direction: column;
-    cursor: pointer; /* Indicar interactividad */
-    transition: transform 0.1s ease, filter 0.1s ease; /* Transición suave para móvil */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .alert-card:active {
-    transform: scale(0.98); /* Efecto de hundimiento al tocar */
-    filter: brightness(0.95); /* Oscurecimiento sutil */
+    transform: scale(0.98);
+    background: #f8fafc;
 }
 
-/* Barra lateral de color */
+/* Barra lateral sutil integrada */
 .alert-card::before {
     content: '';
     position: absolute;
@@ -43,7 +47,6 @@
     background: var(--alert-red);
 }
 
-/* Temas de fondo sutiles opcionales (si se desea como la imagen) */
 .alert-card.green-theme {
     background: var(--alert-green-bg);
     border-color: var(--alert-green-border);
@@ -54,106 +57,93 @@
     border-color: var(--alert-red-border);
 }
 
-.alert-card-header {
-    padding: 1.25rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-
 .alert-card-info {
     flex: 1;
-    padding-right: 1rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .alert-card-title {
-    font-size: 1rem;
-    font-weight: 900;
-    color: #1e293b;
+    font-size: 14.5px;
+    font-weight: 950;
+    color: #0f172a;
     margin: 0;
     line-height: 1.2;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .alert-card-location {
-    font-size: 0.7rem;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     color: #64748b;
-    margin: 0.25rem 0 0;
+    margin: 1px 0 0;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.02em;
 }
 
-/* El Pill/Badge de días */
+/* Badge de tiempo centrado y compacto */
 .alert-card-badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 9999px;
-    font-size: 0.7rem;
-    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 900;
     background: white;
-    color: var(--alert-green);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.06);
+    color: #475569;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .red-theme .alert-card-badge {
     color: var(--alert-red);
+    border-color: var(--alert-red-border);
 }
 
-/* Contenedor de Botones de Acción */
+.green-theme .alert-card-badge {
+    color: var(--alert-green);
+    border-color: var(--alert-green-border);
+}
+
+/* Acciones en Horizontal a la Derecha */
 .alert-card-actions {
-    padding: 0 1.25rem 1.25rem;
     display: flex;
-    gap: 0.75rem;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
-.btn-alert-action {
-    flex: 1;
+.btn-alert-v7 {
+    width: 48px;
+    height: 42px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.6rem;
-    border-radius: 10px;
-    border: 1.5px solid rgba(0,0,0,0.08);
-    background: white;
+    border: none;
     cursor: pointer;
-    transition: transform 0.1s;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
-.btn-alert-action:active {
-    transform: scale(0.98);
+.btn-alert-v7:active {
+    transform: scale(0.9);
 }
 
-.btn-alert-action .material-icons-round {
-    font-size: 1.1rem;
+.btn-alert-v7 .material-icons-round {
+    font-size: 22px;
 }
 
-.btn-alert-action span:not(.material-icons-round) {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #475569;
+.btn-alert-v7.call {
+    background: #eff6ff;
+    color: #3b82f6;
+    border: 1px solid #dbeafe;
 }
 
-.btn-alert-action.call .material-icons-round {
-    color: #2563eb;
-}
-
-.btn-alert-action.whatsapp {
-    background-color: #25d366 !important;
-    border: none !important;
-    border-radius: 9999px !important;
-    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4) !important;
-    transition: all 0.2s ease !important;
-}
-
-.btn-alert-action.whatsapp:hover {
-    background-color: #128c7e !important;
-    transform: translateY(-2px) scale(1.02) !important;
-    box-shadow: 0 6px 15px rgba(37, 211, 102, 0.5) !important;
-}
-
-.btn-alert-action.whatsapp .material-icons-round,
-.btn-alert-action.whatsapp span {
-    color: #ffffff !important;
+.btn-alert-v7.whatsapp {
+    background: #f0fdf4;
+    color: #10b981;
+    border: 1px solid #d1fae5;
 }
