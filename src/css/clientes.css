@@ -242,9 +242,10 @@
 .detail-value { font-size: 14px; font-weight: 700; color: #1e293b; line-height: 1.4; }
 .btn-whatsapp-pill { background: #dcfce7; color: #166534; border: none; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s ease; }
 .btn-whatsapp-pill:hover { background: #bbf7d0; transform: scale(1.03); }
-.history-badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-.status-facturado { background: #dcfce7; color: #166534; }
-.status-almacen { background: #fef9c3; color: #854d0e; }
+.history-badge { padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+.status-todo { background: #f0fdf4; color: #16a34a; border: 1px solid #d1fae5; }
+.status-tampo { background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; }
+.status-almacen { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 .modal-footer { margin-top: 2rem; border-top: 1px solid #f1f5f9; padding-top: 1.5rem; }
 .btn-footer-close {
     width: 100%;
