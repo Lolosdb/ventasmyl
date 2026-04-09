@@ -636,13 +636,13 @@ class DataManager {
     }
 
     // --- DASHBOARD STATS ---
-    async getDashStats(targetMonth, targetYear) {
+    async getDashStats() {
         const orders = await this.getOrders();
         const clients = await this.getClients();
 
         const now = new Date();
-        const currentMonth = (targetMonth !== undefined) ? targetMonth : now.getMonth();
-        const currentYear = (targetYear !== undefined) ? targetYear : now.getFullYear();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
 
         // Ventas del mes
         const ordersThisMonth = orders.filter(o => {
@@ -661,26 +661,28 @@ class DataManager {
 
         const totalVentasMes = ordersThisMonth.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
         
-        // Obtener ventas del año anterior desde el historial consolidado
+        // CORRECCIÓN: Obtener ventas del año anterior desde el historial consolidado
         const salesHistory = await this.getSalesHistory();
         const prevYear = currentYear - 1;
         const totalVentasMesAnteriorAnio = (salesHistory[prevYear] && salesHistory[prevYear][currentMonth]) || 0;
 
-        // Ventas del año (hasta el mes seleccionado)
+        // Ventas del año
         const ordersThisYear = orders.filter(o => {
             const d = new Date(o.dateISO || o.date);
-            return d.getFullYear() === currentYear && d.getMonth() <= currentMonth;
+            return d.getFullYear() === currentYear;
         });
         const totalVentasAnio = ordersThisYear.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
         const ordersThisYearValued = ordersThisYear.filter(o => (parseFloat(o.amount) || 0) > 0);
 
-        // Clientes activos (MES seleccionado)
+        // Clientes activos (MES en curso)
+        // Se cuentan los clientes únicos que han hecho al menos 1 pedido este MES.
         const activeClientsSet = new Set();
         ordersThisMonth.forEach(o => {
+            // Prioritize code, fallback to shop name
             activeClientsSet.add(o.clientCode || o.shop);
         });
 
-        // Top Clientes del mes seleccionado
+        // Top Clientes (Global o Mes? Asumiremos Mes por ahora para el Dash)
         const clientSales = {};
         ordersThisMonth.forEach(o => {
             if (!clientSales[o.shop]) clientSales[o.shop] = 0;
@@ -693,9 +695,9 @@ class DataManager {
             .slice(0, 5)
             .map((item, index) => ({ ...item, rank: index + 1 }));
 
-        // Objetivos (Dinamizados para el mes seleccionado)
+        // Objetivos (Dinamizados)
         const goals = await this.getDetailedGoals();
-        const monthIdx = currentMonth;
+        const monthIdx = new Date().getMonth();
 
         let targetAmount = goals.data3[monthIdx];
         if (totalVentasMes >= goals.data4[monthIdx]) {
@@ -704,23 +706,24 @@ class DataManager {
             targetAmount = goals.data4[monthIdx];
         }
 
-        // 6-Month Trend Logic (Relativa al mes seleccionado)
+        // 6-Month Trend Logic
         const tendencia = [];
         for (let i = 5; i >= 0; i--) {
-            const d = new Date(currentYear, currentMonth - i, 1);
-            const mIdx = d.getMonth();
-            const yInfo = d.getFullYear();
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthIdx = d.getMonth();
+            const yearInfo = d.getFullYear();
             const monthLabel = d.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
 
             const sum = orders.reduce((acc, o) => {
                 const oDate = new Date(o.dateISO || o.date);
-                if (oDate.getMonth() === mIdx && oDate.getFullYear() === yInfo) {
+                if (oDate.getMonth() === monthIdx && oDate.getFullYear() === yearInfo) {
                     return acc + (parseFloat(o.amount) || 0);
                 }
                 return acc;
             }, 0);
 
-            const sumAnterior = (salesHistory[yInfo - 1] && salesHistory[yInfo - 1][mIdx]) || 0;
+            // Dato del año anterior para la tendencia
+            const sumAnterior = (salesHistory[yearInfo - 1] && salesHistory[yearInfo - 1][monthIdx]) || 0;
 
             tendencia.push({ 
                 mes: monthLabel, 
@@ -730,8 +733,6 @@ class DataManager {
         }
 
         return {
-            currentMonth,
-            currentYear,
             ventasMes: {
                 total: totalVentasMes,
                 totalAnterior: totalVentasMesAnteriorAnio,
@@ -755,8 +756,6 @@ class DataManager {
             tendencia
         };
     }
-
-
     // --- YEARLY RANKING ---
     async getYearlyRanking(year = new Date().getFullYear(), sortBy = 'amount') {
         const orders = await this.getOrders();

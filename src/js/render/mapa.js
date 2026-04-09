@@ -21,13 +21,15 @@ async function renderMapa() {
                        onkeydown="if(event.key==='Enter') searchLocation()" onkeyup="toggleMapClearBtn()">
                 <span id="clearMapSearchBtn" class="material-icons-round clear-icon" style="display: none;" onclick="clearMapSearch()">cancel</span>
             </div>
+            
+        </div>
     `;
 
     contentHtml += '<div id="map-container" style="width: 100%; height: 100%;"></div>';
 
     // FABs (Botones flotantes)
     contentHtml += `
-        <div class="map-fabs">
+        <div class="map-fabs absolute bottom-6 right-6 flex flex-col gap-3">
             <!-- Leyenda Popover -->
             <div id="mapLegendPopover" class="map-legend-popover">
                 <div class="legend-item"><span class="legend-dot dot-active"></span><span class="legend-label">Activos (<=35d)</span></div>
@@ -35,19 +37,13 @@ async function renderMapa() {
                 <div class="legend-item"><span class="legend-dot dot-no-orders"></span><span class="legend-label">Sin compras</span></div>
             </div>
 
-            <button class="fab-btn" style="color: #64748b;" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver Leyenda">
+            <button class="fab-btn bg-white text-slate-600 shadow-xl" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver Leyenda">
                 <span class="material-icons-round">info</span>
             </button>
-            <button class="fab-btn" style="color: #3b82f6;" onclick="toggleRouteMode()" id="btnRouteMode" title="Optimizar Ruta">
+            <button class="fab-btn bg-white text-blue-600 shadow-xl" onclick="toggleRouteMode()" id="btnRouteMode" title="Optimizar Ruta">
                 <span class="material-icons-round">directions</span>
             </button>
-            <button class="fab-btn" style="color: #1e293b;" onclick="window.zoomIn()" title="Aumentar Zoom">
-                <span class="material-icons-round">add</span>
-            </button>
-            <button class="fab-btn" style="color: #1e293b;" onclick="window.zoomOut()" title="Disminuir Zoom">
-                <span class="material-icons-round">remove</span>
-            </button>
-            <button class="fab-btn" style="color: #f59e0b;" onclick="centerMapOnUser()" title="Mi Ubicación">
+            <button class="fab-btn bg-white text-amber-500 shadow-xl" onclick="centerMapOnUser()" title="Mi Ubicación">
                 <span class="material-icons-round">my_location</span>
             </button>
         </div>
@@ -103,7 +99,7 @@ async function initLeafletMap() {
         maxZoom: 20
     }).addTo(map);
 
-    // L.control.zoom({ position: 'bottomleft' }).addTo(map); // Eliminado para usar botones personalizados fab-btn
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     try {
         // Asegurar que las modales existan
@@ -388,14 +384,6 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-function zoomIn() {
-    if (window.currentLeafletMap) window.currentLeafletMap.zoomIn();
-}
-
-function zoomOut() {
-    if (window.currentLeafletMap) window.currentLeafletMap.zoomOut();
-}
-
 // Globales
 window.renderMapa = renderMapa;
 window.toggleRouteMode = toggleRouteMode;
@@ -407,7 +395,5 @@ window.clearMapSearch = clearMapSearch;
 window.toggleMapClearBtn = toggleMapClearBtn;
 window.centerMapOnUser = centerMapOnUser;
 window.toggleMapLegend = toggleMapLegend;
-window.zoomIn = zoomIn;
-window.zoomOut = zoomOut;
 window.showToast = showToast;
 

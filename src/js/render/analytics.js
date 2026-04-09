@@ -184,11 +184,10 @@ async function renderAlertas() {
                     
                     <div class="alert-card-info">
                         <h3 class="alert-card-title">${e.shop}</h3>
-                        <div class="alert-card-details">
-                            <p class="alert-card-location">${e.location || 'SIN UBICACIÓN'}</p>
-                            <div class="alert-card-badge">Hace ${e.days} días</div>
-                        </div>
+                        <p class="alert-card-location">${e.location || 'SIN UBICACIÓN'}</p>
                     </div>
+
+                    <div class="alert-card-badge">Hace ${e.days} días</div>
 
                     <div class="alert-card-actions">
                         <button class="btn-alert-v7 call shadow-sm"
