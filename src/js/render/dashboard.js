@@ -2,13 +2,31 @@
  * Lógica de renderizado del Dashboard Principal
  */
 
-function getRemainingBusinessDays() {
+let currentDashDate = new Date(); // Estado global para el periodo seleccionado
+
+
+function getRemainingBusinessDays(targetDate = new Date()) {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const isPast = targetDate.getFullYear() < today.getFullYear() || 
+                  (targetDate.getFullYear() === today.getFullYear() && targetDate.getMonth() < today.getMonth());
+    const isFuture = targetDate.getFullYear() > today.getFullYear() || 
+                    (targetDate.getFullYear() === today.getFullYear() && targetDate.getMonth() > today.getMonth());
+    
+    if (isPast) return 0;
+    
+    let startCalcDate = new Date(targetDate);
+    if (targetDate.getMonth() === today.getMonth() && targetDate.getFullYear() === today.getFullYear()) {
+        startCalcDate = new Date(today);
+    } else {
+        startCalcDate.setDate(1);
+    }
+    
+    startCalcDate.setHours(0, 0, 0, 0);
+    const lastDay = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
     lastDay.setHours(0, 0, 0, 0);
+    
     let count = 0;
-    let current = new Date(today);
+    let current = new Date(startCalcDate);
     while (current <= lastDay) {
         const d = current.getDay();
         if (d !== 0 && d !== 6) count++;
@@ -19,17 +37,23 @@ function getRemainingBusinessDays() {
 
 async function renderDash() {
     const app = document.getElementById('app');
-    const stats = await dataManager.getDashStats();
+    
+    // Usar el periodo seleccionado
+    const selectedMonth = currentDashDate.getMonth();
+    const selectedYear = currentDashDate.getFullYear();
+    
+    const stats = await dataManager.getDashStats(selectedMonth, selectedYear);
     const goals = await dataManager.getDetailedGoals();
+    
     const monthSales = stats.ventasMes.total;
     const targetAmount = stats.ventasMes.objetivo;
     const progressPercent = stats.ventasMes.porcentaje;
-    const year = new Date().getFullYear();
+    const year = selectedYear;
 
-    const currentMonthIdx = new Date().getMonth();
     let targetLabel = "Objetivo 3% del Mes";
-    if (monthSales >= goals.data4[currentMonthIdx]) targetLabel = "Objetivo 5% del Mes";
-    else if (monthSales >= goals.data3[currentMonthIdx]) targetLabel = "Objetivo 4% del Mes";
+    if (monthSales >= goals.data4[selectedMonth]) targetLabel = "Objetivo 5% del Mes";
+    else if (monthSales >= goals.data3[selectedMonth]) targetLabel = "Objetivo 4% del Mes";
+
 
     const headerHtml = getCommonHeaderHtml('Dash', {
         extraAction: `
@@ -42,24 +66,38 @@ async function renderDash() {
 
     let contentHtml = '<main class="main-content fade-in-up" style="padding-top: 1rem;">';
     
-    // Nueva Cabecera de Sección (Título + Fecha + Botones Acción)
-    const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date()).toUpperCase();
+    // Cabecera de Sección con Selector de Fecha Refinado
+    const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(currentDashDate).toUpperCase();
+    const isToday = currentDashDate.getMonth() === new Date().getMonth() && 
+                    currentDashDate.getFullYear() === new Date().getFullYear();
+
     contentHtml += `
         <div class="dash-section-header mb-6" style="padding: 0 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-                <div>
-                    <h2 style="font-size: 28px; font-weight: 900; color: #1e293b; line-height: 1.1; margin: 0;">Dash</h2>
-                    <p style="font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px;">${monthName} DE ${year}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.8rem;">
+                <div style="display: flex; align-items: baseline; gap: 12px;">
+                    <h1 class="text-3xl font-black text-slate-900 leading-tight" style="margin: 0;">Dash</h1>
+                    <span class="text-sm font-bold text-slate-500 tracking-widest" style="white-space: nowrap;">${monthName} ${year}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <button class="btn-dash-action" onclick="renderDepartamentos()">
-                        <span class="material-icons-round">group</span>
-                        <span>Departamentos</span>
+                <div class="date-selector-container">
+                    <button class="nav-date-btn" onclick="changeDashMonth(-1)" title="Mes anterior">
+                        <span class="material-icons-round">chevron_left</span>
                     </button>
-                    <button class="icon-btn-dash" onclick="openCalendarModal()">
-                        <span class="material-icons-round">calendar_month</span>
+                    <button onclick="resetDashDate()" class="btn-today-selector">HOY</button>
+                    <button class="nav-date-btn" onclick="changeDashMonth(1)" title="Mes siguiente">
+                        <span class="material-icons-round">chevron_right</span>
                     </button>
                 </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 0.5rem;">
+                <button class="action-card-pill" onclick="renderDepartamentos()">
+                    <span class="material-icons-round" style="color: #3b82f6;">groups</span>
+                    <span>Departamentos</span>
+                </button>
+                <button class="action-card-pill" onclick="openCalendarModal()">
+                    <span class="material-icons-round" style="color: #f59e0b;">calendar_month</span>
+                    <span>Calendario</span>
+                </button>
             </div>
         </div>
     `;
@@ -130,12 +168,60 @@ async function renderDash() {
 
                             <div style="display: flex; align-items: center; gap: 8px; color: #1e293b; font-size: 15px; font-weight: 850; padding-right: 4px;">
                                 <span class="material-icons-round" style="font-size: 20px; color: #009ee3;">event_repeat</span>
-                                <span>Quedan ${getRemainingBusinessDays()} días</span>
+                                <span>Quedan ${getRemainingBusinessDays(currentDashDate)} días</span>
                             </div>
                         `;
                     })()}
                 </div>
             </div>
+        </div>
+    `;
+    // --- CÁLCULO DE VENTAS SEMANALES ---
+    const weeksList = [];
+    const firstDay = new Date(year, selectedMonth, 1);
+    const lastDayOfMonth = new Date(year, selectedMonth + 1, 0);
+    const todayDate = new Date();
+    const realTodayDay = todayDate.getDate();
+    const isCurrentRealMonth = todayDate.getMonth() === selectedMonth && todayDate.getFullYear() === selectedYear;
+
+    let sDate = 1;
+    while (sDate <= lastDayOfMonth.getDate()) {
+        const curr = new Date(year, selectedMonth, sDate);
+        let dw = curr.getDay(); // 0 (Sun) to 6 (Sat)
+        if (dw === 0) dw = 7; // Normalize Sun to 7
+        let eDate = sDate + (7 - dw);
+        if (eDate > lastDayOfMonth.getDate()) eDate = lastDayOfMonth.getDate();
+        weeksList.push({ start: sDate, end: eDate });
+        sDate = eDate + 1;
+    }
+
+    const mOrders = await dataManager.getOrders();
+    const curMonthOrders = mOrders.filter(o => {
+        const d = new Date(o.dateISO);
+        return d.getMonth() === selectedMonth && d.getFullYear() === year;
+    });
+
+    const weeklyHtml = weeksList.map((w, i) => {
+        const wTotal = curMonthOrders
+            .filter(o => {
+                const day = new Date(o.dateISO).getDate();
+                return day >= w.start && day <= w.end;
+            })
+            .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+        
+        const isCur = isCurrentRealMonth && realTodayDay >= w.start && realTodayDay <= w.end;
+        
+        return `
+            <div class="weekly-stat-card ${isCur ? 'current-week' : ''}">
+                <span class="weekly-label">Semana ${i + 1}</span>
+                <span class="weekly-amount">${formatCurrency(Math.round(wTotal))}</span>
+            </div>
+        `;
+    }).join('');
+
+    contentHtml += `
+        <div class="weekly-sales-grid">
+            ${weeklyHtml}
         </div>
     `;
 
@@ -269,7 +355,65 @@ async function renderDash() {
     
     if (typeof initDashCharts === 'function') initDashCharts(stats);
     if (window.activeCurrentNav) window.activeCurrentNav('dash');
+
+    // Auto-scroll a la semana actual en el carrusel y habilitar arrastre con ratón
+    setTimeout(() => {
+        const grid = document.querySelector('.weekly-sales-grid');
+        const current = document.querySelector('.weekly-stat-card.current-week');
+        if (grid && current) {
+            const scrollLeft = current.offsetLeft - (grid.offsetWidth / 2) + (current.offsetWidth / 2);
+            grid.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+        }
+        initCarouselDrag('.weekly-sales-grid');
+    }, 500);
 }
+
+// Funciones de control del selector de fecha
+window.changeDashMonth = function(offset) {
+    currentDashDate.setMonth(currentDashDate.getMonth() + offset);
+    renderDash();
+};
+
+window.resetDashDate = function() {
+    currentDashDate = new Date();
+    renderDash();
+};
+
+
+function initCarouselDrag(selector) {
+    const slider = document.querySelector(selector);
+    if (!slider) return;
+
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    slider.addEventListener('mousedown', (e) => {
+        isDown = true;
+        slider.style.cursor = 'grabbing';
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+    });
+
+    slider.addEventListener('mouseleave', () => {
+        isDown = false;
+        slider.style.cursor = 'grab';
+    });
+
+    slider.addEventListener('mouseup', () => {
+        isDown = false;
+        slider.style.cursor = 'grab';
+    });
+
+    slider.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        const walk = (x - startX) * 2; 
+        slider.scrollLeft = scrollLeft - walk;
+    });
+}
+
 
 async function initDashCharts(stats) {
     const canvas = document.getElementById('trendChart');
@@ -533,7 +677,12 @@ async function viewDayOrders(dateKey, dayNumber) {
 
     let html = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; padding: 0 4px;">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest" style="margin: 0;">Pedidos del día ${dayNumber}</p>
+            <p style="margin: 0; font-size: 11px; color: #64748b; letter-spacing: 0.5px; display: flex; align-items: baseline; gap: 5px;">
+                <span style="font-weight: 950; text-transform: uppercase; color: #1e293b;">Pedidos del día ${dayNumber}</span>
+                <span style="font-weight: 400; font-style: italic; text-transform: none; letter-spacing: normal; color: #94a3b8;">
+                    (${dayOrders.length} ${dayOrders.length === 1 ? 'pedido' : 'pedidos'})
+                </span>
+            </p>
             <div style="background: #f0f9ff; color: #0369a1; font-size: 11px; font-weight: 900; padding: 4px 12px; border-radius: 99px; border: 1px solid #bae6fd;">
                 ${formatCurrency(Math.round(dayTotal))}
             </div>

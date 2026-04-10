@@ -384,21 +384,42 @@ async function handleRemoteRestore(fileId, fileName) {
     const url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
     
     try {
+        console.log(`Solicitando descarga de backup ID: ${fileId} (${fileName})...`);
         const response = await fetch(url + (url.includes('?') ? '&' : '?') + `action=get&id=${fileId}`);
         const result = await response.json();
         
         if ((result.status === "success" || result.success) && result.data) {
             let backupData = result.data;
-            if (typeof backupData === 'string') {
+
+            // Si los datos vienen en Base64 (estándar de Drive en este script), los decodificamos
+            if (typeof backupData === 'string' && !backupData.trim().startsWith('{')) {
+                try {
+                    // Decodificar Base64 manejando caracteres especiales (UTF-8)
+                    const binaryString = atob(backupData);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const decodedData = new TextDecoder().decode(bytes);
+                    backupData = JSON.parse(decodedData);
+                } catch (e) {
+                    console.error("Error decodificando Base64:", e);
+                }
+            } else if (typeof backupData === 'string') {
                 try { backupData = JSON.parse(backupData); } catch(e) {}
             }
             
+            if (!backupData || (typeof backupData === 'object' && Object.keys(backupData).length === 0)) {
+                throw new Error("El archivo de copia está vacío o no es válido.");
+            }
+
             await dataManager.restoreFullBackup(backupData);
-            alert("Restauración completada con éxito.");
+            alert("Restauración completada con éxito. La página se recargará para mostrar los datos.");
             window.location.reload();
         } else {
-            throw new Error(result.message || "Error en descarga");
+            throw new Error(result.message || "Error en la descarga desde Drive");
         }
+
     } catch (e) {
         alert("Error al restaurar: " + e.message);
     }

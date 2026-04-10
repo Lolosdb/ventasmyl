@@ -68,8 +68,8 @@ async function renderPedidos() {
     injectPedidoModals();
 
     contentHtml += `
-        <button class="fab-btn shadow-premium" onclick="openNewOrderModal()" style="bottom: 90px; right: 20px;">
-            <span class="material-icons-round">add</span>
+        <button class="fab-btn shadow-premium" onclick="openNewOrderModal()" style="bottom: 90px; right: 20px; background: #009ee3 !important;">
+            <span class="material-icons-round" style="color: #ffffff !important; font-size: 32px;">add</span>
         </button>
     `;
 

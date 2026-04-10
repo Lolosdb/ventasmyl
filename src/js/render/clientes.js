@@ -157,7 +157,7 @@ async function openClientDetailModal(clientCode) {
                             ${formattedAmount}
                         </p>
                     </div>
-                    <div class="history-badge status-facturado">${statusLabel}</div>
+                    <div class="history-badge ${statusClass}">${statusLabel}</div>
                 </div>
             `;
         });
