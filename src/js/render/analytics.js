@@ -215,13 +215,31 @@ async function renderVentas() {
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Ventas Mensuales');
     const history = await dataManager.getSalesHistory();
+    const allOrders = await dataManager.getOrders();
+
+    // Calcular totales de pedidos por año y mes
+    const calculatedTotals = {};
+    allOrders.forEach(o => {
+        const d = new Date(o.dateISO);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        if (!calculatedTotals[y]) calculatedTotals[y] = Array(12).fill(0);
+        calculatedTotals[y][m] += (parseFloat(o.amount) || 0);
+    });
+
     const years = Object.keys(history).map(Number).sort((a,b) => a - b);
     const monthsFull = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-    // Cálculo de Totales por Año
+    // Cálculo de Totales por Año (considerando el mayor entre manual y calculado)
     const totalsByYear = {};
     years.forEach(y => {
-        totalsByYear[y] = (history[y] || []).reduce((a, b) => a + (b || 0), 0);
+        let yearTotal = 0;
+        for (let mIdx = 0; mIdx < 12; mIdx++) {
+            const hVal = (history[y] && history[y][mIdx]) || 0;
+            const cVal = (calculatedTotals[y] && calculatedTotals[y][mIdx]) || 0;
+            yearTotal += Math.max(hVal, cVal);
+        }
+        totalsByYear[y] = yearTotal;
     });
 
     let contentHtml = '<main class="analysis-view-container">';
@@ -245,7 +263,10 @@ async function renderVentas() {
                         <div class="analysis-row">
                             <div class="cell-month-label col-month-fixed">${m}</div>
                             ${years.map(y => {
-                                const val = (history[y] && history[y][mIdx]) || 0;
+                                const storedVal = (history[y] && history[y][mIdx]) || 0;
+                                const calcVal = (calculatedTotals[y] && calculatedTotals[y][mIdx]) || 0;
+                                const val = Math.max(storedVal, calcVal);
+
                                 return `
                                     <div class="cell-data-input col-year-dynamic">
                                         <input type="text" 

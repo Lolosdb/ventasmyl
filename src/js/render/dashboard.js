@@ -177,8 +177,7 @@ async function renderDash() {
         </div>
     `;
     // --- CÁLCULO DE VENTAS SEMANALES ---
-    const weeksList = [];
-    const firstDay = new Date(year, selectedMonth, 1);
+    const rawWeeks = [];
     const lastDayOfMonth = new Date(year, selectedMonth + 1, 0);
     const todayDate = new Date();
     const realTodayDay = todayDate.getDate();
@@ -191,9 +190,19 @@ async function renderDash() {
         if (dw === 0) dw = 7; // Normalize Sun to 7
         let eDate = sDate + (7 - dw);
         if (eDate > lastDayOfMonth.getDate()) eDate = lastDayOfMonth.getDate();
-        weeksList.push({ start: sDate, end: eDate });
+        rawWeeks.push({ start: sDate, end: eDate });
         sDate = eDate + 1;
     }
+
+    // Filtrar solo las semanas que contienen al menos un día laborable (L-V)
+    const weeksList = rawWeeks.filter(w => {
+        for (let d = w.start; d <= w.end; d++) {
+            const date = new Date(year, selectedMonth, d);
+            const dayOfWeek = date.getDay();
+            if (dayOfWeek >= 1 && dayOfWeek <= 5) return true;
+        }
+        return false;
+    });
 
     const mOrders = await dataManager.getOrders();
     const curMonthOrders = mOrders.filter(o => {
@@ -355,6 +364,12 @@ async function renderDash() {
     
     if (typeof initDashCharts === 'function') initDashCharts(stats);
     if (window.activeCurrentNav) window.activeCurrentNav('dash');
+
+    // Ocultar Splash Screen tras un breve retardo para asegurar suavidad
+    setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.classList.add('splash-hidden');
+    }, 800);
 
     // Auto-scroll a la semana actual en el carrusel y habilitar arrastre con ratón
     setTimeout(() => {

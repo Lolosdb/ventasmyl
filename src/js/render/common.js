@@ -144,7 +144,7 @@ function renderNavMenuHTML() {
 
             </div>
             <div class="nav-menu-footer">
-                <p>App Ventas v5.0 marzo 2026</p>
+                <p>App Ventas Lolo Serantes</p>
             </div>
         </div>
     `;
