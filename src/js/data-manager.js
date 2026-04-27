@@ -917,29 +917,19 @@ class DataManager {
     }
 
     async exportFullBackup() {
-        // Collect all data
+        // Recolectar todos los datos de todas las tablas
         const clients = await this.db.getAll('clients');
         const orders = await this.db.getAll('orders');
         const departments = await this.db.getAll('departments');
-
-        // Config: we just get the specific keys we know of. 
-        const goals = await this.db.get('config', 'goals');
-        const history = await this.getSalesHistory(); // Use the method with fallback defaults
-        const invoiceHistory = await this.getInvoiceHistory(); // Use the method with fallback defaults
-
-        const config = {
-            goals: goals // include full goals object (data3, data4, data5)
-        };
+        const config = await this.db.getAll('config'); // Exportamos TODA la tabla de configuración
 
         const backupData = {
             timestamp: new Date().toISOString(),
-            appVersion: '1.0',
+            appVersion: '1.1',
             clients,
             orders,
             departments,
-            config,
-            sales_history: history,
-            invoice_history: invoiceHistory
+            config 
         };
 
         return backupData;
@@ -977,35 +967,21 @@ class DataManager {
             await this.db.bulkPut('departments', data.departments);
         }
 
-        // 4. Restore Config (Goals, Sales History)
+        // 4. Restaurar Configuración (Objetivos, Históricos, Ajustes)
         if (data.config) {
-            // If config is an array (from getAll) or object? 
-            // Usually export is an object representation.
-            // Let's assume data.config contains keys: 'goals', 'sales_history'
-
-            if (data.config.goals) {
-                await this.db.put('config', { key: 'goals', ...data.config.goals });
-                // Note: if data.config.goals was just the value object, we ensure key is there.
-                // Actually, if we export getAll('config'), we get [{key:'goals', ...}, {key:'sales_history', ...}]
-            }
-
-            // Handle if data.config is the raw array from export
             if (Array.isArray(data.config)) {
                 for (const item of data.config) {
-                    await this.db.put('config', item);
+                    if (item && item.key) await this.db.put('config', item);
                 }
+            } else if (data.config.goals) {
+                await this.db.put('config', { key: 'goals', ...data.config.goals });
             }
         }
 
-        // Special case for sales_history if it's separate in the backup JSON structure
-        if (data.sales_history) {
-            await this.db.put('config', { key: 'sales_history', data: data.sales_history });
-        }
-
-        // Special case for invoice_history
-        if (data.invoice_history) {
-            await this.db.put('config', { key: 'invoice_history', data: data.invoice_history });
-        }
+        // Compatibilidad con backups antiguos (claves fuera de config)
+        if (data.sales_history) await this.db.put('config', { key: 'sales_history', data: data.sales_history });
+        if (data.invoice_history) await this.db.put('config', { key: 'invoice_history', data: data.invoice_history });
+        if (data.quarterly_goals) await this.db.put('config', { key: 'quarterly_goals', data: data.quarterly_goals });
 
         return { success: true };
     }
