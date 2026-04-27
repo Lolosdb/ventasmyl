@@ -506,31 +506,37 @@ async function testConnection() {
 // Periódico Automático
 // Periódico Automático
 function startBackupScheduler() {
-    const lastBackupTime = localStorage.getItem('last_auto_backup');
-    const now = new Date();
-    const day = now.getDay(); // 0: Dom, 1: Lun, ..., 6: Sab
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
+    const checkAndRun = () => {
+        const lastBackupTime = localStorage.getItem('last_auto_backup');
+        const now = new Date();
+        const day = now.getDay(); 
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
 
-    // Configuración: Lunes (1) a Viernes (5) después de las 20:30
-    const isWorkDay = (day >= 1 && day <= 5);
-    const isAfterTime = (hours > 20 || (hours === 20 && minutes >= 30));
+        // Configuración: Lunes (1) a Viernes (5) después de las 20:30
+        const isWorkDay = (day >= 1 && day <= 5);
+        const isAfterTime = (hours > 20 || (hours === 20 && minutes >= 30));
 
-    if (isWorkDay && isAfterTime) {
-        // Comprobar si ya se hizo hoy para no repetir cada vez que abra la app por la noche
-        if (lastBackupTime) {
-            const lastDate = new Date(parseInt(lastBackupTime));
-            if (lastDate.toDateString() === now.toDateString()) {
-                console.log("Auto-Backup: Ya se realizó una copia hoy.");
-                return;
+        if (isWorkDay && isAfterTime) {
+            // Comprobar si ya se hizo una copia HOY
+            if (lastBackupTime) {
+                const lastDate = new Date(parseInt(lastBackupTime));
+                if (lastDate.toDateString() === now.toDateString()) {
+                    console.log("Auto-Backup: Ya se realizó la copia correspondiente a hoy.");
+                    return;
+                }
             }
+            
+            console.log("Iniciando única copia automática del día (Rango 20:30 - 00:00)...");
+            performDriveBackup(true); // El true indica modo silencioso (sin alertas)
         }
-        
-        console.log("Iniciando backup automático programado (L-V > 20:30)...");
-        performDriveBackup(true);
-    } else {
-        console.log("Auto-Backup: Fuera de horario programado (L-V > 20:30).");
-    }
+    };
+
+    // Ejecutar inmediatamente al abrir la app
+    checkAndRun();
+
+    // Y dejar un vigilante cada 15 minutos por si la app se queda abierta en segundo plano
+    setInterval(checkAndRun, 15 * 60 * 1000); 
 }
 
 function injectManagementYearsModal() {

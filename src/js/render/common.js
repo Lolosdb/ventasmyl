@@ -196,17 +196,22 @@ window.clearSearchField = clearSearchField;
  * @returns {string} El importe formateado.
  */
 function formatCurrency(amount, decimals = 0) {
-    // Aseguramos que operamos con un número limpio
-    let num = typeof amount === 'string' 
-        ? parseFloat(amount.replace(/\./g, '').replace(',', '.')) 
-        : parseFloat(amount);
-        
+    let num = typeof amount === 'number' ? amount : parseFloat(String(amount).replace(/\./g, '').replace(',', '.'));
     if (isNaN(num)) return '0 €';
     
-    return new Intl.NumberFormat('es-ES', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-    }).format(num) + ' €';
+    // Formateo manual para asegurar puntos de miles (Estilo España)
+    let fixedNum = num.toFixed(decimals);
+    let [integerPart, decimalPart] = fixedNum.split('.');
+    
+    // Añadir puntos de miles
+    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    
+    let result = integerPart;
+    if (decimals > 0 && decimalPart) {
+        result += ',' + decimalPart;
+    }
+    
+    return result + ' €';
 }
 
 /**
