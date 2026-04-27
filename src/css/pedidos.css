@@ -1,5 +1,16 @@
 /* Pedidos View Styles */
 
+.pedidos-fixed-controls {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    z-index: 400;
+    background-color: var(--background-gray);
+}
+
 .pedidos-table-header {
     background-color: #1e293b;
     color: white;
@@ -10,9 +21,6 @@
     display: grid;
     grid-template-columns: 45px 1fr 95px;
     gap: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 30;
     letter-spacing: 1.5px;
 }
 

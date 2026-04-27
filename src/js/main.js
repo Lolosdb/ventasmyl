@@ -4,6 +4,44 @@
 
 // La instancia dataManager ya se crea globalmente en data-manager.js
 // Solo nos aseguramos de que esté disponible para otros scripts
+// Gestión de Navegación y Botón Atrás
+window.currentView = 'dash';
+
+/**
+ * Actualiza el estado del historial del navegador.
+ * @param {string} viewName - Nombre de la vista actual.
+ * @param {boolean} isBack - Si el cambio viene de una acción de retroceso.
+ */
+function updateHistoryState(viewName, isBack = false) {
+    if (isBack) {
+        window.currentView = viewName;
+        return;
+    }
+
+    if (viewName === 'dash') {
+        window.currentView = 'dash';
+        return;
+    }
+
+    // Si pasamos de Dash a una Subvista -> Creamos una nueva entrada en el historial
+    if (window.currentView === 'dash') {
+        history.pushState({ view: viewName }, '', '#' + viewName);
+    } else {
+        // Si ya estamos en una subvista, reemplazamos para que 'atrás' siempre vaya al Dash
+        history.replaceState({ view: viewName }, '', '#' + viewName);
+    }
+    window.currentView = viewName;
+}
+
+// Escuchar el botón de retroceso del sistema
+window.addEventListener('popstate', () => {
+    if (window.currentView !== 'dash') {
+        if (typeof renderDash === 'function') renderDash(true);
+    }
+});
+
+window.updateHistoryState = updateHistoryState;
+
 if (typeof dataManager === 'undefined') {
     console.warn("dataManager no detectado. Re-instanciando...");
     window.dataManager = new DataManager();

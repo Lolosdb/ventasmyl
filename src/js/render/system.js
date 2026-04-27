@@ -4,9 +4,10 @@
 
 // --- AJUSTES Y SISTEMA (REDiseño PREMIUM) ---
 // --- AJUSTES Y SISTEMA (REDiseño PREMIUM) ---
-async function renderAjustes() {
+async function renderAjustes(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('ajustes', isBack);
     const app = document.getElementById('app');
-    const headerHtml = getCommonHeaderHtml('Ajustes', { showBack: true });
+    const headerHtml = getCommonHeaderHtml('Backups', { showBack: true });
 
     const currentUrl = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
     const lastBackup = localStorage.getItem('last_auto_backup_str') || 'Sin registros';
@@ -176,18 +177,10 @@ async function renderAjustes() {
     injectManagementYearsModal();
 }
 
-// --- LOGICA DE DRIVE / BACKUP ---
-async function initiateDriveBackup() {
-    if (!confirm("Se guardará una copia de tus pedidos, clientes y departamentos en Google Drive. ¿Continuar?")) return;
-    
-    const btn = event.currentTarget || document.activeElement;
-    const originalContent = btn.innerHTML;
-    btn.innerHTML = '<span class="material-icons-round animate-spin">sync</span> Procesando...';
-    btn.disabled = true;
-
+// --- LOGICA DE // Función núcleo de backup (puede ser manual o automática)
+async function performDriveBackup(isSilent = false) {
     try {
         const fullData = await dataManager.exportFullBackup();
-        
         const payload = {
             action: 'fullBackup',
             data: {
@@ -196,34 +189,53 @@ async function initiateDriveBackup() {
             }
         };
 
-        const res = await fetch(APPS_SCRIPT_URL, {
+        const url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
+        const res = await fetch(url, {
             method: 'POST',
             body: JSON.stringify(payload)
         });
         const result = await res.json();
 
         if (result.success || result.status === 'success') {
-            alert("Respaldo en la nube finalizado");
             const now = new Date();
             const nowStr = now.toLocaleString();
             localStorage.setItem('last_auto_backup', now.getTime().toString());
             localStorage.setItem('last_auto_backup_str', nowStr);
             
-            // Guardar log local para el historial
             const backups = JSON.parse(localStorage.getItem('app_backups') || '[]');
             backups.unshift({ date: now.toISOString(), status: 'OK' });
             localStorage.setItem('app_backups', JSON.stringify(backups.slice(0, 10)));
             
-            renderAjustes();
+            if (!isSilent) alert("Respaldo en la nube finalizado");
+            if (window.currentView === 'ajustes') renderAjustes();
+            return true;
         } else {
-            alert("Fallo en Drive: " + result.message);
+            if (!isSilent) alert("Fallo en Drive: " + result.message);
+            return false;
         }
     } catch (e) {
         console.error("Backup Error", e);
-        alert("Error de conexión con el script de Google");
-    } finally {
+        if (!isSilent) alert("Error de conexión con el script de Google");
+        return false;
+    }
+}
+
+// Interfaz manual (con botón y confirmación)
+async function initiateDriveBackup() {
+    if (!confirm("Se guardará una copia de tus pedidos, clientes y departamentos en Google Drive. ¿Continuar?")) return;
+    
+    const btn = event.currentTarget || document.activeElement;
+    if (btn && btn.innerHTML) {
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<span class="material-icons-round animate-spin">sync</span> Procesando...';
+        btn.disabled = true;
+        
+        await performDriveBackup(false);
+        
         btn.innerHTML = originalContent;
         btn.disabled = false;
+    } else {
+        await performDriveBackup(false);
     }
 }
 
@@ -492,11 +504,32 @@ async function testConnection() {
 }
 
 // Periódico Automático
+// Periódico Automático
 function startBackupScheduler() {
-    const last = localStorage.getItem('last_auto_backup');
-    const now = Date.now();
-    if (!last || (now - parseInt(last)) > 86400000) {
-        console.log("Iniciando backup automático silencioso...");
+    const lastBackupTime = localStorage.getItem('last_auto_backup');
+    const now = new Date();
+    const day = now.getDay(); // 0: Dom, 1: Lun, ..., 6: Sab
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+
+    // Configuración: Lunes (1) a Viernes (5) después de las 20:30
+    const isWorkDay = (day >= 1 && day <= 5);
+    const isAfterTime = (hours > 20 || (hours === 20 && minutes >= 30));
+
+    if (isWorkDay && isAfterTime) {
+        // Comprobar si ya se hizo hoy para no repetir cada vez que abra la app por la noche
+        if (lastBackupTime) {
+            const lastDate = new Date(parseInt(lastBackupTime));
+            if (lastDate.toDateString() === now.toDateString()) {
+                console.log("Auto-Backup: Ya se realizó una copia hoy.");
+                return;
+            }
+        }
+        
+        console.log("Iniciando backup automático programado (L-V > 20:30)...");
+        performDriveBackup(true);
+    } else {
+        console.log("Auto-Backup: Fuera de horario programado (L-V > 20:30).");
     }
 }
 
@@ -557,6 +590,8 @@ async function handleAddNewYear() {
 // Globales
 window.renderAjustes = renderAjustes;
 window.initiateDriveBackup = initiateDriveBackup;
+window.performDriveBackup = performDriveBackup;
+window.startBackupScheduler = startBackupScheduler;
 window.openBackupsModal = openBackupsModal;
 window.handleExcelExport = handleExcelExport;
 window.handleExcelImport = handleExcelImport;
@@ -566,5 +601,4 @@ window.openManagementYearsModal = openManagementYearsModal;
 window.closeManagementYearsModal = closeManagementYearsModal;
 window.handleAddNewYear = handleAddNewYear;
 
-// Iniciar
-setTimeout(startBackupScheduler, 5000);
+// Iniciar se gestiona desde main.js

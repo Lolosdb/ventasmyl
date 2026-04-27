@@ -2,7 +2,8 @@
  * Lógica de gestión de Clientes
  */
 
-const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1Dq8gKHsy6vutnPh9xylbcFThY1irpehdeQTT9pY7LJAbvNIU0t6ZT0ovD2rMeg/exec';async function renderClientes() {
+const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1Dq8gKHsy6vutnPh9xylbcFThY1irpehdeQTT9pY7LJAbvNIU0t6ZT0ovD2rMeg/exec';async function renderClientes(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('clientes', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Clientes');
 

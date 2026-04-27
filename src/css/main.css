@@ -1,4 +1,4 @@
-:root {
+ï»¿:root {
     /* Colors */
     --primary-blue: #0ea5e9;
     /* Light blue header from screenshot */
@@ -59,6 +59,7 @@ body.no-scroll {
 }
 
 #app {
+    padding-top: 60px;
     width: 100%;
     max-width: 480px;
     /* Mobile width cap */
@@ -501,8 +502,10 @@ body.no-scroll {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    background-color: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 99999;
     display: flex;
     align-items: flex-end;
     /* Mobile sheet style default */
@@ -781,7 +784,7 @@ body.no-scroll {
     transform: scale(0.95);
     background-color: #f1f5f9;
 }
-/* BOTÓN DE CABECERA TIPO PILL (CON TEXTO) */
+/* BOTï¿½N DE CABECERA TIPO PILL (CON TEXTO) */
 .btn-header-pill {
     display: flex;
     align-items: center;
@@ -859,7 +862,7 @@ body.no-scroll {
     color: #ef4444;
 }
 
-/* --- RESTAURACIÓN CABECERA Y NAVEGACIÓN --- */
+/* --- RESTAURACIï¿½N CABECERA Y NAVEGACIï¿½N --- */
 .header {
     background-color: #0ea5e9 !important;
     color: white !important;
@@ -917,10 +920,18 @@ body.no-scroll {
 /* --- CORRECCIONES SOLICITADAS: CABECERA Y BOTONERA AZUL --- */
 .header {
     background-color: #009ee3 !important;
+    position: fixed !important;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
 }
 
 .header-container {
-    padding-left: 20px !important; /* Separar título del borde */
+    padding-left: 20px !important; /* Separar tï¿½tulo del borde */
 }
 
 .header-title {
@@ -952,7 +963,7 @@ body.no-scroll {
 
 
 
-/* --- CORRECCIÓN FINAL: BOTONERA AZUL E ICONOS BLANCO --- */
+/* --- CORRECCIï¿½N FINAL: BOTONERA AZUL E ICONOS BLANCO --- */
 .bottom-nav {
     background-color: #009ee3 !important; /* FONDO AZUL CORPORATIVO */
     border-top: none !important;
@@ -979,7 +990,7 @@ body.no-scroll {
 }
 
 .bottom-nav .nav-item.active {
-    background-color: rgba(255, 255, 255, 0.2) !important; /* RESALTADO SUTIL EN BLANCO TRASLÚCIDO */
+    background-color: rgba(255, 255, 255, 0.2) !important; /* RESALTADO SUTIL EN BLANCO TRASLï¿½CIDO */
     opacity: 1 !important;
     border-radius: 8px !important;
     padding: 5px 10px !important;
@@ -989,7 +1000,7 @@ body.no-scroll {
     color: white !important;
 }
 
-/* --- AJUSTE DE CABECERA: TÍTULOS CON MARGEN --- */
+/* --- AJUSTE DE CABECERA: Tï¿½TULOS CON MARGEN --- */
 .header-title {
     margin-left: 10px !important;
     font-size: 1.6rem !important;
@@ -1206,3 +1217,4 @@ body.no-scroll {
 
 /* --- AJUSTE TITULO REAL --- */
 .header-title { white-space: nowrap !important; overflow: visible !important; max-width: none !important; font-size: 1.25rem !important; }
+

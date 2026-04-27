@@ -2,7 +2,8 @@
  * Lógica de gestión de Pedidos y Exportación
  */
 
-async function renderPedidos() {
+async function renderPedidos(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('pedidos', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Pedidos', {
         extraAction: `
@@ -13,14 +14,23 @@ async function renderPedidos() {
         `
     });
 
-    let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px;">';
+    let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px; margin-top: 125px;">';
 
-    // Buscador
+    // Parte fija: Buscador + Cabecera Tabla
     contentHtml += `
-        <div class="search-container mb-4">
-            <span class="material-icons-round search-icon">search</span>
-            <input type="text" id="searchPedidosInput" class="search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
-            <span id="clearPedidosSearchBtn" class="material-icons-round clear-icon" style="display: none;" onclick="clearPedidosSearch()">cancel</span>
+        <div class="pedidos-fixed-controls">
+            <!-- Buscador -->
+            <div class="search-container mb-4">
+                <span class="material-icons-round search-icon">search</span>
+                <input type="text" id="searchPedidosInput" class="search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
+                <span id="clearPedidosSearchBtn" class="material-icons-round clear-icon" style="display: none;" onclick="clearPedidosSearch()">cancel</span>
+            </div>
+
+            <div class="pedidos-table-header">
+                <div>Nº</div>
+                <div>TIENDA</div>
+                <div style="text-align: right;">IMPORTE</div>
+            </div>
         </div>
     `;
 
@@ -32,14 +42,6 @@ async function renderPedidos() {
         if (yearB !== yearA) return yearB - yearA;
         return (b.displayId || 0) - (a.displayId || 0);
     });
-
-    contentHtml += `
-        <div class="pedidos-table-header">
-            <div>Nº</div>
-            <div>TIENDA</div>
-            <div style="text-align: right;">IMPORTE</div>
-        </div>
-    `;
 
     contentHtml += '<div id="pedidosList" class="pedidos-list" style="background: white;">';
     if (sortedOrders.length === 0) {

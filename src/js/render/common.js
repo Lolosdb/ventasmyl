@@ -196,21 +196,32 @@ window.clearSearchField = clearSearchField;
  * @returns {string} El importe formateado.
  */
 function formatCurrency(amount, decimals = 0) {
-    if (amount === undefined || amount === null || isNaN(amount)) return '0 €';
-    let val = parseFloat(amount).toFixed(decimals);
-    let parts = val.split('.');
-    let num = parts[0];
-    let thousand = "";
-    while (num.length > 3) {
-        thousand = "." + num.slice(-3) + thousand;
-        num = num.slice(0, -3);
-    }
-    let res = num + thousand;
-    if (parts.length > 1) res += "," + parts[1];
-    return res + ' €';
+    // Aseguramos que operamos con un número limpio
+    let num = typeof amount === 'string' 
+        ? parseFloat(amount.replace(/\./g, '').replace(',', '.')) 
+        : parseFloat(amount);
+        
+    if (isNaN(num)) return '0 €';
+    
+    return new Intl.NumberFormat('es-ES', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    }).format(num) + ' €';
+}
+
+/**
+ * Helper para formatear un input al vuelo (onblur)
+ */
+function formatNumericInput(el) {
+    const val = el.value;
+    if (!val) return;
+    const cleanVal = val.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(cleanVal) || 0;
+    el.value = formatCurrency(num).replace(' €', '');
 }
 
 window.formatCurrency = formatCurrency;
+window.formatNumericInput = formatNumericInput;
 
 // Inicializar al cargar
 
@@ -303,7 +314,7 @@ function openInfoModal() {
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">cloud_sync</span>
-                        5. Seguridad y Ajustes
+                        5. Seguridad y Backups
                     </h3>
                     <p>Crucial para no perder información:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">

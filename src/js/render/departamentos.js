@@ -2,7 +2,8 @@
  * Lógica de Directorio de Departamentos
  */
 
-async function renderDepartamentos() {
+async function renderDepartamentos(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('departamentos', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Departamentos', {
         showBack: true,

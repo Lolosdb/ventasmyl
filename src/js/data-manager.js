@@ -88,21 +88,46 @@ class DataManager {
     }
 
     // --- QUARTERLY GOALS (OBJETIVOS TRIMESTRALES) ---
-    async getQuarterlyGoals() {
-        const stored = await this.db.get('config', 'quarterly_goals');
-        if (stored) return stored.data;
+    // --- QUARTERLY GOALS (OBJETIVOS TRIMESTRALES POR AÑO) ---
+    async getQuarterlyGoals(year) {
+        const stored = await this.db.get('config', 'quarterly_goals_v2');
+        const yearStr = String(year || new Date().getFullYear());
+        
+        if (stored && stored.data && stored.data[yearStr]) {
+            return stored.data[yearStr];
+        }
 
-        // Default empty structure
+        // Migración transparente: si no existe v2, buscar en v1 (global)
+        if (!stored) {
+            const old = await this.db.get('config', 'quarterly_goals');
+            if (old && old.data) {
+                // Si es el año actual, devolver lo que había en v1 para no perder datos
+                const currentYear = new Date().getFullYear();
+                if (String(year) === String(currentYear)) {
+                    return old.data;
+                }
+            }
+        }
+
         return {
-            q1: { target: 0, actual: 0 },
-            q2: { target: 0, actual: 0 },
-            q3: { target: 0, actual: 0 },
-            q4: { target: 0, actual: 0 }
+            q1: { target: 0 }, q2: { target: 0 }, q3: { target: 0 }, q4: { target: 0 }
         };
     }
 
-    async saveQuarterlyGoals(goalsData) {
-        await this.db.put('config', { key: 'quarterly_goals', data: goalsData });
+    async saveQuarterlyGoals(year, yearData) {
+        const yearStr = String(year || new Date().getFullYear());
+        let stored = await this.db.get('config', 'quarterly_goals_v2');
+        
+        if (!stored) stored = { key: 'quarterly_goals_v2', data: {} };
+        
+        // Guardar solo el objetivo (target); el facturado (actual) es siempre dinámico
+        const cleanData = {};
+        Object.keys(yearData).forEach(q => {
+            cleanData[q] = { target: parseFloat(yearData[q].target) || 0 };
+        });
+
+        stored.data[yearStr] = cleanData;
+        await this.db.put('config', stored);
     }
 
     // --- DEPARTAMENTOS ---

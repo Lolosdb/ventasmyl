@@ -1,11 +1,11 @@
 {
-  "name": "App Ventas Manuel",
+  "name": "App Ventas Lolo Serantes",
   "short_name": "Ventas",
   "description": "Aplicación de gestión de ventas y clientes",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#7ebc44",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "src/assets/icon.png",

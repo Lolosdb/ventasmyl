@@ -35,7 +35,8 @@ function getRemainingBusinessDays(targetDate = new Date()) {
     return count;
 }
 
-async function renderDash() {
+async function renderDash(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('dash', isBack);
     const app = document.getElementById('app');
     
     // Usar el periodo seleccionado

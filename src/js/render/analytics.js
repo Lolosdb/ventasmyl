@@ -3,7 +3,8 @@
  */
 
 // --- TOTALES ---
-async function renderTotales() {
+async function renderTotales(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('totales', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Totales');
     
@@ -146,7 +147,8 @@ async function renderTotales() {
 }
 
 // --- ALERTAS ---
-async function renderAlertas() {
+async function renderAlertas(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('alertas', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Alertas de Clientes');
     
@@ -211,7 +213,8 @@ async function renderAlertas() {
 }
 
 // --- VENTAS HISTÓRICAS ---
-async function renderVentas() {
+async function renderVentas(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('ventas', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Ventas Mensuales');
     const history = await dataManager.getSalesHistory();
@@ -328,7 +331,8 @@ async function handleSalesUpdate(year, monthIdx, value) {
 }
 
 // --- MEDIAS MENSUALES ---
-async function renderMedias() {
+async function renderMedias(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('medias', isBack);
     const app = document.getElementById('app');
     const history = await dataManager.getSalesHistory();
     const currentYear = new Date().getFullYear();
@@ -439,8 +443,9 @@ async function openRankingModal(sortBy = 'sales', searchTerm = '') {
     }
     
     modal.innerHTML = `
-        <div class="modal-content" style="max-height: 85vh; width: 95%; max-width: 480px; border-radius: 20px;">
-            <div class="modal-header" style="background: #009ee3; color: white; padding: 1.25rem 1.5rem;">
+        <div class="modal-content" style="max-height: 85vh; width: 95%; max-width: 480px; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden;">
+            <!-- CABECERA FIJA AZUL -->
+            <div class="modal-header" style="background: #009ee3; color: white; padding: 1.25rem 1.5rem; border: none; flex-shrink: 0;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="material-icons-round">emoji_events</span>
                     <h2 class="text-lg font-black" style="letter-spacing: 0.5px;">Ranking ${currentYear}</h2>
@@ -450,9 +455,9 @@ async function openRankingModal(sortBy = 'sales', searchTerm = '') {
                 </button>
             </div>
             
-            <div class="modal-body" style="padding: 1.25rem; background: #fff;">
-                <!-- PESTAÑAS -->
-                <div class="ranking-tabs-container">
+            <!-- CONTROLES FIJOS (PESTAÑAS Y BUSCADOR) -->
+            <div style="padding: 1.25rem 1.5rem 0.5rem 1.5rem; background: #fff; flex-shrink: 0; border-bottom: 1px solid #f1f5f9;">
+                <div class="ranking-tabs-container" style="margin-bottom: 1rem;">
                     <button class="ranking-tab-btn ${sortBy === 'sales' ? 'active' : ''}" onclick="openRankingModal('sales', document.getElementById('rankSearch')?.value || '')">
                         Por Ventas
                     </button>
@@ -461,7 +466,6 @@ async function openRankingModal(sortBy = 'sales', searchTerm = '') {
                     </button>
                 </div>
 
-                <!-- BUSCADOR CON ESTILOS INLINE PARA EVITAR CONFLICTOS -->
                 <div style="position: relative; width: 100%; display: block; margin-bottom: 1rem;">
                     <span class="material-icons-round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none;">search</span>
                     <input type="text" id="rankSearch" 
@@ -478,13 +482,14 @@ async function openRankingModal(sortBy = 'sales', searchTerm = '') {
                         </span>
                     ` : ''}
                 </div>
+            </div>
 
-                <!-- LISTA DE CARDS -->
-                <div class="flex flex-col overflow-y-auto" style="max-height: calc(85vh - 240px); padding-right: 4px;">
+            <!-- LISTA DESPLAZABLE -->
+            <div class="modal-body overflow-y-auto" style="padding: 1rem 1.5rem; flex: 1; background: #fff;">
+                <div class="flex flex-col" style="padding-right: 4px;">
                     ${ranking.length > 0 ? ranking.map((r) => {
                         const rankNum = r.originalRank;
                         let badgeClass = '';
-                        // Las medallas Top 3 se mantienen basadas en la posición real
                         if (rankNum === 1) badgeClass = 'rank-badge-1';
                         else if (rankNum === 2) badgeClass = 'rank-badge-2';
                         else if (rankNum === 3) badgeClass = 'rank-badge-3';
@@ -535,7 +540,8 @@ window.renderMedias = renderMedias;
 window.openRankingModal = openRankingModal;
 window.closeRankingModal = closeRankingModal;
 // --- OBJETIVOS VIEW (REDiseño V7 - SINGLE SCREEN) ---
-async function renderObjetivos() {
+async function renderObjetivos(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('objetivos', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Objetivos Mensuales');
     const goals = await dataManager.getDetailedGoals();
@@ -601,7 +607,8 @@ async function handleGoalUpdate(level, monthIdx, value) {
 }
 
 // --- FACTURACIÓN REAL (V7 PREMIUM) ---
-async function renderFactura() {
+async function renderFactura(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('factura', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Facturación Real');
     const history = await dataManager.getInvoiceHistory();
@@ -679,12 +686,13 @@ window.handleGoalUpdate = handleGoalUpdate;
 window.renderFactura = renderFactura;
 window.handleFacturaUpdate = handleFacturaUpdate;
 // --- OBJETIVOS TRIMESTRALES (V7 PREMIUM) ---
-async function renderObjetivosTrimestrales() {
+async function renderObjetivosTrimestrales(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('trimestrales', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Objetivos Trimestrales');
-    const quarterly = await dataManager.getQuarterlyGoals();
-    const invoiceHistory = await dataManager.getInvoiceHistory();
     const currentYear = new Date().getFullYear();
+    const quarterly = await dataManager.getQuarterlyGoals(currentYear);
+    const invoiceHistory = await dataManager.getInvoiceHistory();
     const history2026 = invoiceHistory[String(currentYear)] || Array(12).fill(0);
     
     // Cálculo automático por trimestre (Sincronización Total)
@@ -725,13 +733,15 @@ async function renderObjetivosTrimestrales() {
                             <div class="trim-input-group">
                                 <input type="text" id="target_${key}" class="trim-input" 
                                        value="${formatCurrency(Math.round(data.target)).replace(' €', '')}"
-                                       onfocus="this.select()">
+                                       onfocus="this.select()"
+                                       onblur="formatNumericInput(this)">
                                 <span class="trim-currency">€</span>
                             </div>
                             <div class="trim-input-group">
                                 <input type="text" id="actual_${key}" class="trim-input" 
                                        value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
-                                       onfocus="this.select()">
+                                       onfocus="this.select()"
+                                       onblur="formatNumericInput(this)">
                                 <span class="trim-currency">€</span>
                             </div>
                             <div class="trim-status-col">
@@ -774,7 +784,8 @@ async function handleSaveQuarterly() {
         };
     });
 
-    await dataManager.saveQuarterlyGoals(quarterly);
+    const currentYear = new Date().getFullYear();
+    await dataManager.saveQuarterlyGoals(currentYear, quarterly);
     
     // Feedback visual y recarga
     const btn = document.querySelector('.btn-trim-save');

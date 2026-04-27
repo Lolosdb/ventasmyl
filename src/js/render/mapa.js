@@ -7,7 +7,8 @@ window.isRouteMode = false;
 window.selectedRoutePoints = [];
 window.userLocationMarker = null;
 
-async function renderMapa() {
+async function renderMapa(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('mapa', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Mapa de Clientes');
 
