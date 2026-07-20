@@ -71,11 +71,11 @@ async function renderAjustes(isBack = false) {
             </div>
 
             <div class="btn-grid">
-                <button class="btn-action-excel" onclick="handleExcelExport()">
+                <button class="btn-ajuste btn-local-primary" onclick="handleExcelExport()">
                     <span class="material-icons-round">file_download</span>
                     <span>Exportar</span>
                 </button>
-                <button class="btn-premium-secondary" onclick="document.getElementById('excelBackupInput').click()">
+                <button class="btn-ajuste btn-local-secondary" onclick="document.getElementById('excelBackupInput').click()">
                     <span class="material-icons-round">file_upload</span>
                     <span>Importar</span>
                 </button>
@@ -296,8 +296,8 @@ async function openBackupsModal() {
                         const sizeStr = f.size ? `${(f.size / 1024).toFixed(1)} KB` : "132.4 KB"; 
                         return `
                         <!-- Item Card -->
-                        <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                            <div style="flex: 1; padding-right: 1rem;">
+                        <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                            <div style="flex: 1 1 150px; padding-right: 0.5rem;">
                                 <p style="font-size: 0.875rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2;">${f.name}</p>
                                 <p style="font-size: 0.725rem; color: #64748b; font-weight: 600; margin-top: 6px;">
                                     ${new Date(f.date).toLocaleDateString()} - ${sizeStr}
@@ -340,8 +340,8 @@ async function openBackupsModal() {
                 <p style="font-size: 0.65rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">Copias Locales</p>
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                     ${backups.map(b => `
-                        <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; background-color: #ffffff;">
-                            <div>
+                        <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; background-color: #ffffff;">
+                            <div style="flex: 1 1 150px;">
                                 <p style="font-size: 0.825rem; font-weight: 800; color: #1e293b; margin: 0;">${new Date(b.date).toLocaleString()}</p>
                                 <p style="font-size: 0.65rem; color: #10b981; font-weight: 800; text-transform: uppercase; margin-top: 4px;">Sincronizado localmente</p>
                             </div>

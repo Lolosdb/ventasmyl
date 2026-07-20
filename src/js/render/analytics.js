@@ -748,8 +748,8 @@ async function renderObjetivosTrimestrales(isBack = false) {
                                     <span class="trim-currency" style="right: 8px;">€</span>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                                <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
                                     <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Facturado:</span>
                                     <div class="trim-input-group" style="width: 110px;">
                                         <input type="text" id="actual_${key}" class="trim-input" 
