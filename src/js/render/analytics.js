@@ -723,48 +723,50 @@ async function renderObjetivosTrimestrales(isBack = false) {
         q4: '4T'
     };
 
-    let contentHtml = `<main class="trim-container">
-        <div class="trim-card">
-            <div class="trim-header">
-                <div>TRIMESTRE</div>
-                <div>OBJETIVO</div>
-                <div>FACTURADO</div>
-                <div>ESTADO</div>
-            </div>
-            <div class="trim-body">
-                ${Object.keys(labels).map(key => {
-                    const data = quarterly[key] || { target: 0, actual: 0 };
-                    
-                    // Sincronizar automáticamente con el valor calculado
-                    const actualValue = autoValues[key];
-                    const isMet = actualValue >= data.target && data.target > 0;
-                    
-                    return `
-                        <div class="trim-row">
-                            <div class="trim-label">${labels[key]}</div>
-                            <div class="trim-input-group">
-                                <input type="text" id="target_${key}" class="trim-input" 
-                                       value="${formatCurrency(Math.round(data.target)).replace(' €', '')}"
-                                       onfocus="this.select()"
-                                       onblur="formatNumericInput(this)">
-                                <span class="trim-currency">€</span>
+    let contentHtml = `<main class="trim-container" style="padding: 1rem; overflow-y: auto;">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            ${Object.keys(labels).map(key => {
+                const data = quarterly[key] || { target: 0, actual: 0 };
+                
+                // Sincronizar automáticamente con el valor calculado
+                const actualValue = autoValues[key];
+                const isMet = actualValue >= data.target && data.target > 0;
+                
+                return `
+                    <div style="background: white; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                        <div style="font-weight: 900; font-size: 1.1rem; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
+                            TRIMESTRE ${labels[key]}
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Objetivo:</span>
+                                <div class="trim-input-group" style="width: 130px;">
+                                    <input type="text" id="target_${key}" class="trim-input" 
+                                           style="padding: 8px 25px 8px 8px; font-size: 1rem;"
+                                           value="${formatCurrency(Math.round(data.target)).replace(' €', '')}"
+                                           onfocus="this.select()" onblur="formatNumericInput(this)">
+                                    <span class="trim-currency" style="right: 8px;">€</span>
+                                </div>
                             </div>
-                            <div class="trim-input-group">
-                                <input type="text" id="actual_${key}" class="trim-input" 
-                                       value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
-                                       onfocus="this.select()"
-                                       onblur="formatNumericInput(this)">
-                                <span class="trim-currency">€</span>
-                            </div>
-                            <div class="trim-status-col">
-                                <span class="trim-status ${isMet ? 'status-success' : 'status-danger'}">
-                                    ${isMet ? 'CONSEGUIDO' : 'NO CONSEGUIDO'}
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Facturado:</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="trim-input-group" style="width: 100px;">
+                                        <input type="text" id="actual_${key}" class="trim-input" 
+                                               style="padding: 8px 25px 8px 8px; font-size: 1rem; color: #009ee3;"
+                                               value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
+                                               onfocus="this.select()" onblur="formatNumericInput(this)">
+                                        <span class="trim-currency" style="right: 8px; color: #009ee3;">€</span>
+                                    </div>
+                                    <span class="trim-status ${isMet ? 'status-success' : 'status-danger'}" style="min-width: 80px; font-size: 0.65rem; padding: 6px;">
+                                        ${isMet ? 'CONSEGUIDO' : 'NO CONSEGUIDO'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    `;
-                }).join('')}
-            </div>
+                    </div>
+                `;
+            }).join('')}
         </div>
 
         <div class="trim-save-container">

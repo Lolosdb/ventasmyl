@@ -103,13 +103,13 @@
 /* --- OBJETIVOS V7: TABLE VIEW (SINGLE SCREEN) --- */
 .objetivos-v7-wrapper { height: calc(100vh - 120px); overflow: hidden; padding: 0.5rem 0.3rem !important; background: #f8fafc; }
 .v7-obj-table { background: white; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-.v7-obj-header { background: #1e293b; color: white; display: grid; grid-template-columns: 75px repeat(3, 1fr); align-items: center; padding: 16px 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+.v7-obj-header { background: #1e293b; color: white; display: grid; grid-template-columns: 105px repeat(3, 1fr); align-items: center; padding: 16px 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
 .v7-obj-header .col-label { font-size: 11.5px; padding-left: 12px; opacity: 0.8; }
 .v7-pill { border-radius: 20px; padding: 5px 12px; font-size: 12px; text-align: center; color: white; margin: 0 2px; font-weight: 900; }
 .v7-pill.p3 { background: #2563eb; }
 .v7-pill.p4 { background: #4f46e5; }
 .v7-pill.p5 { background: #7c3aed; }
-.v7-obj-row { display: grid; grid-template-columns: 75px repeat(3, 1fr); align-items: center; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; }
+.v7-obj-row { display: grid; grid-template-columns: 105px repeat(3, 1fr); align-items: center; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; }
 .v7-obj-row:hover { background: #f8fafc; }
 .v7-month-name { font-size: 15px; font-weight: 700; color: #64748b; padding-left: 14px; }
 .v7-input { width: 100%; border: none; background: transparent; text-align: center; font-size: 16px; font-weight: 800; padding: 11px 4px; color: #0f172a; outline: none; }

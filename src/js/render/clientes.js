@@ -67,7 +67,7 @@ const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1
                      onclick="openClientDetailModal('${String(client.code).replace(/'/g, "\\'")}')"
                      data-name="${client.name.toLowerCase()}" 
                      data-location="${(client.location || '').toLowerCase()}">
-                    <div class="flex flex-col gap-2 w-full">
+                    <div class="flex flex-col gap-2 flex-1" style="min-width: 0; padding-right: 8px;">
                         <div class="client-card-main-info">
                             <span class="client-card-code">${client.code}</span>
                             <span>-</span>
