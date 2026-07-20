@@ -244,17 +244,17 @@ function openInfoModal() {
     document.body.style.overflow = 'hidden';
 
     const manualContent = `
-        <div class="modal-content" style="border-radius: 28px; overflow: hidden; padding: 0; box-shadow: 0 25px 60px rgba(0,0,0,0.3); max-width: 600px; width: 95%; background-color: #fff; margin: auto;">
+        <div class="modal-content" style="border-radius: 28px; overflow: hidden; padding: 0; box-shadow: 0 25px 60px rgba(0,0,0,0.3); max-width: 650px; width: 95%; background-color: #fff; margin: auto;">
             <!-- Header -->
             <div style="background-color: #009ee3; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin: 0; font-family: 'Inter', sans-serif;">Manual de Usuario</h2>
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin: 0; font-family: 'Inter', sans-serif;">Manual de Usuario Completo</h2>
                 <button style="background: transparent; border: none; color: #ffffff; cursor: pointer; padding: 4px; display: flex;" onclick="closeInfoModal()">
                     <span class="material-icons-round" style="font-size: 24px;">close</span>
                 </button>
             </div>
             
             <!-- Cuerpo del Manual con Scroll -->
-            <div style="padding: 2rem; max-height: 80vh; overflow-y: auto; background-color: #fff; line-height: 1.6; color: #334155; font-size: 0.9rem;">
+            <div style="padding: 2rem; max-height: 80vh; overflow-y: auto; background-color: #fff; line-height: 1.6; color: #334155; font-size: 0.95rem;">
                 
                 <p style="text-align: center; font-weight: 900; color: #009ee3; text-transform: uppercase; margin-bottom: 2rem; letter-spacing: 0.05em; line-height: 1.4;">
                     Aplicación creada por<br>
@@ -262,82 +262,128 @@ function openInfoModal() {
                 </p>
 
                 <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">dashboard</span>
-                        1. Dashboard (Inicio)
+                        1. Dashboard (Panel Principal)
                     </h3>
-                    <p>El panel principal ofrece una visión rápida del estado comercial:</p>
+                    <p>Es la pantalla de inicio y el centro de control de tu actividad diaria. Aquí encontrarás un resumen visual y rápido de cómo marchan las ventas:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Venta Diaria:</strong> Sumatorio de los pedidos realizados hoy.</li>
-                        <li><strong>Gráficos de Tendencia:</strong> Comparativa visual de ventas por departamento o mes.</li>
-                        <li><strong>Acceso Rápido:</strong> Botones para ir directamente a añadir pedidos o clientes.</li>
+                        <li><strong>Indicadores Clave (KPIs):</strong> Muestra la <em>Venta Diaria</em> (la suma de todos los pedidos registrados en el día de hoy) y el total acumulado en el mes actual.</li>
+                        <li><strong>Accesos Rápidos:</strong> En la parte superior derecha encontrarás botones rápidos para registrar nuevos pedidos o añadir clientes sin tener que navegar por los menús.</li>
+                        <li><strong>Gráficos de Tendencia:</strong> Diferentes gráficos de barras y líneas que te permitirán comparar de un vistazo el rendimiento por meses o visualizar cómo se distribuyen tus ventas entre los diferentes departamentos.</li>
                     </ul>
                 </div>
 
                 <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">shopping_cart</span>
                         2. Gestión de Pedidos
                     </h3>
-                    <p>En esta sección puedes ver y gestionar todas las ventas:</p>
+                    <p>Esta es la sección donde registras y administras todas las ventas que realizas. Está pensada para ser rápida y eficiente:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Estados de Facturación:</strong> 
-                            <span style="color: #2563eb; font-weight: 800;">ALMACÉN</span> (Pendiente), 
-                            <span style="color: #10b981; font-weight: 800;">TODO</span> (Facturado completo) o 
-                            <span style="color: #0d9488; font-weight: 800;">S/ TAMPO</span> (Facturado parcialmente).
+                        <li><strong>Crear Nuevo Pedido:</strong> Usando el botón flotante inferior o el botón superior "+", puedes añadir una venta. Selecciona la fecha, elige el cliente de la lista y teclea el importe total.</li>
+                        <li><strong>Buscador:</strong> Un cajón de búsqueda potente en la parte superior te permite filtrar tus pedidos por nombre de cliente para que encuentres rápidamente lo que buscas.</li>
+                        <li><strong>Estados de Facturación:</strong> Los pedidos cuentan con un sistema de control visual por colores:
+                            <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
+                                <li><span style="color: #2563eb; font-weight: 800;">ALMACÉN</span>: El pedido acaba de ser registrado y está pendiente de procesar o facturar.</li>
+                                <li><span style="color: #10b981; font-weight: 800;">TODO</span>: El pedido ha sido facturado por completo (100%).</li>
+                                <li><span style="color: #0d9488; font-weight: 800;">S/ TAMPO</span>: Ha sido facturado, pero con alguna exclusión (por ejemplo, sin incluir tampografía).</li>
+                            </ul>
                         </li>
-                        <li><strong>Añadir Pedido:</strong> Pulsa el botón "+" para crear un registro nuevo seleccionando cliente, importe y fecha.</li>
-                        <li><strong>Edición:</strong> Haz clic en cualquier pedido para modificar sus datos o cambiar su estado de facturación.</li>
+                        <li><strong>Edición Rápida:</strong> Pulsando sobre cualquier tarjeta de pedido abrirás su ficha, donde puedes corregir la cantidad, cambiar el cliente o actualizar su estado de facturación con un simple click.</li>
                     </ul>
                 </div>
 
                 <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">analytics</span>
-                        3. Ventas y Totales
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">euro</span>
+                        3. Totales y Analítica
                     </h3>
-                    <p>Herramienta de análisis para revisar la facturación acumulada:</p>
+                    <p>El lugar perfecto para la analítica profunda. Aquí puedes ver cómo se desglosan los ingresos:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Filtros Temporales:</strong> Selecciona el año y el mes para ver el desglose detallado de ventas.</li>
-                        <li><strong>Resumen por Departamento:</strong> Visualiza cuánto se ha vendido en cada categoría comercial.</li>
+                        <li><strong>Filtros Temporales:</strong> Arriba dispones de selectores para cambiar el año y el mes. Al seleccionarlos, todos los números y rankings de la pantalla se recalcularán de inmediato.</li>
+                        <li><strong>Desglose por Provincia:</strong> Verás exactamente cuánto dinero y cuántos pedidos ha aportado cada zona geográfica (Asturias, Cantabria, León, Galicia) al total facturado.</li>
+                        <li><strong>Ranking de Tiendas:</strong> Descubre fácilmente qué clientes te están comprando más volumen o haciendo mayor número de pedidos en cada periodo.</li>
                     </ul>
                 </div>
 
                 <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">contact_mail</span>
+                        4. Directorio de Departamentos
+                    </h3>
+                    <p>Accesible desde el menú superior del Dashboard, es una agenda interna de la empresa:</p>
+                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
+                        <li><strong>Contactos Internos:</strong> Puedes dar de alta diferentes departamentos (Dirección, Compras, Administración...) junto con el nombre de la persona responsable.</li>
+                        <li><strong>Comunicación Rápida:</strong> Te permite guardar números de teléfono, correos y WhatsApp corporativos para tener el contacto de tu equipo centralizado.</li>
+                    </ul>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">track_changes</span>
+                        5. Seguimiento de Objetivos
+                    </h3>
+                    <p>Una sección vital para medir el crecimiento, con dos vistas diferentes accesibles desde el menú superior de la app:</p>
+                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
+                        <li><strong>Objetivos Mensuales:</strong> Podrás ver una tabla que calcula automáticamente, sobre tu facturación mensual real, a cuánto ascienden diferentes porcentajes (3%, 4% y 5%). También puedes editar estos valores de forma manual si tienes otras metas pactadas.</li>
+                        <li><strong>Objetivos Trimestrales:</strong> Un sistema de tarjetas que te permite fijar una meta económica ("Objetivo") a cada uno de los 4 trimestres del año. La aplicación calculará sola el total "Facturado" durante los meses de ese trimestre y te mostrará una etiqueta de <span style="color: #10b981; font-weight: 800; background: #ecfdf5; padding: 2px 6px; border-radius: 4px;">CONSEGUIDO</span> o <span style="color: #ef4444; font-weight: 800; background: #fef2f2; padding: 2px 6px; border-radius: 4px;">NO CONSEGUIDO</span> en tiempo real. <em>¡Acuérdate de pulsar en "Guardar Cambios" cuando modifiques las metas!</em></li>
+                    </ul>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">groups</span>
-                        4. Fichero de Clientes
+                        5. Fichero de Clientes
                     </h3>
-                    <p>Administra tu base de datos de comercios y contactos:</p>
+                    <p>Tu agenda comercial avanzada, diseñada para tener todos los contactos y su información a un solo toque:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Buscador Inteligente:</strong> Encuentra clientes por nombre, código o población.</li>
-                        <li><strong>Ficha Detallada:</strong> Consulta el historial de pedidos de cada cliente y su información de contacto.</li>
-                        <li><strong>Mapas:</strong> Visualiza geográficamente la ubicación de tus clientes en el mapa interactivo.</li>
+                        <li><strong>Importación Premium:</strong> Puedes cargar masivamente tus clientes subiendo un archivo Excel (.XLSX) o restaurándolos directamente desde tu base de datos central en la nube.</li>
+                        <li><strong>Buscador Instantáneo:</strong> Encuentra a cualquier cliente tecleando parte de su nombre, o buscando por su código postal o ciudad.</li>
+                        <li><strong>Ficha de Cliente:</strong> Al pulsar en un cliente, verás su Código, Persona de Contacto, Correo y Teléfonos.
+                            <br>- Tienes botones de acceso directo para <strong>llamar por teléfono</strong> al instante o <strong>abrir un chat de WhatsApp</strong> directamente sin tener que guardarlo en tu agenda.
+                        </li>
+                        <li><strong>Historial Integrado:</strong> Al final de la ficha de cada cliente, verás una cronología con absolutamente todos los pedidos que te ha hecho a lo largo de la historia y sus importes.</li>
+                        <li><strong>Geolocalización GPS:</strong> Al crear o editar un cliente, hay un botón especial que capta tu ubicación actual (latitud y longitud). Guardarlo te permitirá usar después la integración con mapas.</li>
                     </ul>
                 </div>
 
                 <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">cloud_sync</span>
-                        5. Seguridad y Backups
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">map</span>
+                        6. Mapa Interactivo
                     </h3>
-                    <p>Crucial para no perder información:</p>
+                    <p>Una vista especial (accesible desde el icono "Mapa" del menú inferior) que pinta tu cartera de clientes sobre el mapa geográfico de Google.</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Copia en la Nube (Drive):</strong> Sincroniza tus datos con Google Drive. El sistema realiza copias automáticas programadas de L-V a las 20:30h.</li>
-                        <li><strong>Historial de Copias:</strong> Puedes ver y restaurar cualquier copia anterior desde la nube.</li>
-                        <li><strong>Archivo Local:</strong> Exporta toda tu base de datos a Excel para guardarla en tu ordenador.</li>
-                        <li><strong>Gestión de Años:</strong> Al iniciar un nuevo año fiscal, usa esta opción para habilitar la facturación de ese año.</li>
+                        <li><strong>Chinchetas:</strong> Cada cliente de tu base de datos que tenga coordenadas guardadas aparecerá marcado en el mapa para que visualices tu cobertura comercial.</li>
+                        <li><strong>Trazar Ruta Directa:</strong> Al pinchar en cualquier cliente del mapa, o usando el botón "Llévame" dentro de la ficha de cliente, se abrirá automáticamente la app de navegación de tu móvil (Google Maps o similar) calculando la ruta en coche para llegar hasta su puerta.</li>
                     </ul>
                 </div>
 
-                <div style="background-color: #f8fafc; padding: 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-top: 1rem;">
-                    <strong style="color: #0f172a; display: block; margin-bottom: 0.5rem;">Nota Importante:</strong>
-                    Recuerda revisar el estado de conexión en la sección de Ajustes para asegurar que los datos se están sincronizando correctamente con la nube.
+                <div style="margin-bottom: 2.5rem;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">settings</span>
+                        7. Ajustes, Seguridad y Backups
+                    </h3>
+                    <p>Accesible pulsando en el icono superior derecho de tres rayitas o perfil. Es el panel técnico y de mantenimiento:</p>
+                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
+                        <li><strong>Guardado en la Nube (Drive):</strong> Para que nunca pierdas datos. La app tiene rutinas automáticas de seguridad que suben toda tu información a Drive de Lunes a Viernes a las 20:30h, salvaguardando tu trabajo diario.</li>
+                        <li><strong>Restauración de Copias:</strong> Si borras un pedido o cliente sin querer, tienes un botón de "Historial Drive" que te permite restaurar la base de datos completa a un momento del pasado.</li>
+                        <li><strong>Archivos Locales (Excel):</strong> Además de la nube, tienes la opción manual de exportar todos tus datos (ventas y clientes) en archivos Excel estándar en tu dispositivo en cualquier momento.</li>
+                        <li><strong>Gestión de Años:</strong> Al comenzar un nuevo año comercial, utiliza este apartado para activarlo de forma que puedas seguir trabajando y conservando la estadística del año anterior intacta.</li>
+                        <li><strong>Limpiar Caché:</strong> Un mantenimiento útil si la app sufre un comportamiento extraño o va lenta. Borrará la memoria temporal de tu teléfono y descargará la base de datos fresca desde la nube.</li>
+                    </ul>
                 </div>
 
-                <p style="text-align: center; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-top: 3rem; letter-spacing: 0.05em; font-size: 0.8rem; line-height: 1.4;">
-                    Aplicación creada por<br>
-                    <span style="font-size: 1.1em;">Manuel F. Serantes Pérez</span>
+                <div style="background-color: #f0fdf4; padding: 1.5rem; border-radius: 16px; border: 1px left solid #10b981; border-left-width: 4px; margin-top: 1rem;">
+                    <strong style="color: #065f46; display: block; margin-bottom: 0.5rem;">Consejo Experto de Uso:</strong>
+                    Si usas la aplicación desde tu smartphone (Android o iOS), instálala o "Añádela a la pantalla de inicio" desde tu navegador web. Se instalará como una App Nativa (PWA), eliminando las barras del navegador, funcionando a pantalla completa y mejorando drásticamente su velocidad y fluidez.
+                </div>
+
+                <p style="text-align: center; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-top: 3.5rem; letter-spacing: 0.05em; font-size: 0.8rem; line-height: 1.4;">
+                    Aplicación diseñada y desarrollada por<br>
+                    <span style="font-size: 1.1em; color: #009ee3;">Manuel F. Serantes Pérez</span><br>
+                    <span style="font-size: 0.8em; opacity: 0.7;">Versión Final (V7)</span>
                 </p>
             </div>
         </div>

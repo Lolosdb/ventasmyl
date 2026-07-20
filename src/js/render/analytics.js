@@ -717,13 +717,13 @@ async function renderObjetivosTrimestrales(isBack = false) {
 
     // Nombres compactos para ahorrar espacio
     const labels = {
-        q1: '1T',
-        q2: '2T',
-        q3: '3T',
-        q4: '4T'
+        q1: '1er trimestre',
+        q2: '2º trimestre',
+        q3: '3er trimestre',
+        q4: '4º trimestre'
     };
 
-    let contentHtml = `<main class="trim-container" style="padding: 1rem; overflow-y: auto;">
+    let contentHtml = `<main class="trim-container" style="padding: 1rem; overflow-y: auto; padding-bottom: 100px;">
         <div style="display: flex; flex-direction: column; gap: 1rem;">
             ${Object.keys(labels).map(key => {
                 const data = quarterly[key] || { target: 0, actual: 0 };
@@ -734,34 +734,34 @@ async function renderObjetivosTrimestrales(isBack = false) {
                 
                 return `
                     <div style="background: white; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-                        <div style="font-weight: 900; font-size: 1.1rem; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
-                            TRIMESTRE ${labels[key]}
+                        <div style="font-weight: 900; font-size: 1.1rem; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; text-transform: uppercase;">
+                            ${labels[key]}
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
                                 <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Objetivo:</span>
-                                <div class="trim-input-group" style="width: 130px;">
+                                <div class="trim-input-group" style="width: 140px;">
                                     <input type="text" id="target_${key}" class="trim-input" 
-                                           style="padding: 8px 25px 8px 8px; font-size: 1rem;"
+                                           style="padding: 8px 25px 8px 8px; font-size: 1.1rem; text-align: center;"
                                            value="${formatCurrency(Math.round(data.target)).replace(' €', '')}"
                                            onfocus="this.select()" onblur="formatNumericInput(this)">
                                     <span class="trim-currency" style="right: 8px;">€</span>
                                 </div>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Facturado:</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <div class="trim-input-group" style="width: 100px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Facturado:</span>
+                                    <div class="trim-input-group" style="width: 110px;">
                                         <input type="text" id="actual_${key}" class="trim-input" 
-                                               style="padding: 8px 25px 8px 8px; font-size: 1rem; color: #009ee3;"
+                                               style="padding: 8px 20px 8px 8px; font-size: 1rem; color: #009ee3; text-align: center;"
                                                value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
                                                onfocus="this.select()" onblur="formatNumericInput(this)">
-                                        <span class="trim-currency" style="right: 8px; color: #009ee3;">€</span>
+                                        <span class="trim-currency" style="right: 6px; color: #009ee3;">€</span>
                                     </div>
-                                    <span class="trim-status ${isMet ? 'status-success' : 'status-danger'}" style="min-width: 80px; font-size: 0.65rem; padding: 6px;">
-                                        ${isMet ? 'CONSEGUIDO' : 'NO CONSEGUIDO'}
-                                    </span>
                                 </div>
+                                <span class="trim-status ${isMet ? 'status-success' : 'status-danger'}" style="font-size: 0.75rem; padding: 6px 10px; white-space: nowrap;">
+                                    ${isMet ? 'CONSEGUIDO' : 'NO CONSEGUIDO'}
+                                </span>
                             </div>
                         </div>
                     </div>
