@@ -416,7 +416,8 @@ async function handleDriveImport() {
     try {
         const res = await dataManager.importFromDrive(APPS_SCRIPT_CLIENTS_URL, 'Clientes_CON_COORDENADAS.xlsx');
         if (res.success) {
-            alert(`Sincronizados ${res.count} clientes.`);
+            const preservedMsg = res.preserved > 0 ? ` (${res.preserved} cliente${res.preserved > 1 ? 's' : ''} local${res.preserved > 1 ? 'es' : ''} conservado${res.preserved > 1 ? 's' : ''})` : '';
+            alert(`Sincronizados ${res.count} clientes desde Drive.${preservedMsg}`);
             renderClientes();
         } else alert("Error: " + res.message);
     } catch (e) {

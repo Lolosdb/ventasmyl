@@ -1,3 +1,42 @@
+/**
+ * Extrae de forma segura el año de una fecha (soporta YYYY-MM-DD, DD/MM/YYYY, ISO completo)
+ * Evitando dependencias de zona horaria del constructor de Date en ciertos formatos.
+ */
+function getYearFromDate(dateStr) {
+    if (!dateStr) return null;
+    const cleanDate = String(dateStr).trim();
+    if (cleanDate.includes('-')) {
+        const parts = cleanDate.split('-');
+        if (parts[0].length === 4) return parseInt(parts[0], 10);
+        if (parts[2] && parts[2].substring(0, 4).length === 4) return parseInt(parts[2].substring(0, 4), 10);
+    }
+    if (cleanDate.includes('/')) {
+        const parts = cleanDate.split('/');
+        if (parts[2] && parts[2].substring(0, 4).length === 4) return parseInt(parts[2].substring(0, 4), 10);
+    }
+    const d = new Date(cleanDate);
+    return isNaN(d.getTime()) ? null : d.getFullYear();
+}
+
+/**
+ * Extrae de forma segura el mes (0-11) de una fecha
+ */
+function getMonthFromDate(dateStr) {
+    if (!dateStr) return null;
+    const cleanDate = String(dateStr).trim();
+    if (cleanDate.includes('-')) {
+        const parts = cleanDate.split('-');
+        if (parts[0].length === 4) return parseInt(parts[1], 10) - 1; // YYYY-MM-DD
+        return parseInt(parts[1], 10) - 1; // Fallback
+    }
+    if (cleanDate.includes('/')) {
+        const parts = cleanDate.split('/');
+        return parseInt(parts[1], 10) - 1; // DD/MM/YYYY
+    }
+    const d = new Date(cleanDate);
+    return isNaN(d.getTime()) ? null : d.getMonth();
+}
+
 class DataManager {
     constructor() {
         this.db = new LocalDB();
@@ -198,9 +237,18 @@ class DataManager {
                     })).filter(c => c.code && c.name);
 
                     if (clients.length > 0) {
+                        // MERGE: los clientes de Drive actualizan/añaden los locales,
+                        // pero NO se borran los clientes creados solo en local.
+                        const existingClients = await this.db.getAll('clients');
+                        const driveCodeSet = new Set(clients.map(c => String(c.code).trim()));
+                        // Clientes locales que NO están en Drive (se conservan)
+                        const localOnlyClients = existingClients.filter(
+                            c => !driveCodeSet.has(String(c.code).trim())
+                        );
+                        // Limpiar y volver a poner: Drive + local-only
                         await this.db.clearStore('clients');
-                        await this.db.bulkPut('clients', clients);
-                        resolve({ success: true, count: clients.length });
+                        await this.db.bulkPut('clients', [...clients, ...localOnlyClients]);
+                        resolve({ success: true, count: clients.length, preserved: localOnlyClients.length });
                     } else {
                         const foundKeys = rawData.length > 0 ? Object.keys(rawData[0]).join(', ') : 'Ninguna';
                         resolve({
@@ -671,14 +719,14 @@ class DataManager {
 
         // Ventas del mes
         const ordersThisMonth = orders.filter(o => {
-            const d = new Date(o.dateISO);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            const dateStr = o.dateISO || o.date;
+            return getMonthFromDate(dateStr) === currentMonth && getYearFromDate(dateStr) === currentYear;
         });
 
         // Ventas mismo mes año anterior (YoY)
         const ordersLastYearMonth = orders.filter(o => {
-            const d = new Date(o.dateISO);
-            return d.getMonth() === currentMonth && d.getFullYear() === (currentYear - 1);
+            const dateStr = o.dateISO || o.date;
+            return getMonthFromDate(dateStr) === currentMonth && getYearFromDate(dateStr) === (currentYear - 1);
         });
 
         // Filtrar solo pedidos con importe > 0 para la estadística de pedidos y media
@@ -693,8 +741,10 @@ class DataManager {
 
         // Ventas del año (hasta el mes seleccionado)
         const ordersThisYear = orders.filter(o => {
-            const d = new Date(o.dateISO || o.date);
-            return d.getFullYear() === currentYear && d.getMonth() <= currentMonth;
+            const dateStr = o.dateISO || o.date;
+            const y = getYearFromDate(dateStr);
+            const m = getMonthFromDate(dateStr);
+            return y === currentYear && m <= currentMonth;
         });
         const totalVentasAnio = ordersThisYear.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
         const ordersThisYearValued = ordersThisYear.filter(o => (parseFloat(o.amount) || 0) > 0);
@@ -738,8 +788,8 @@ class DataManager {
             const monthLabel = d.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
 
             const sum = orders.reduce((acc, o) => {
-                const oDate = new Date(o.dateISO || o.date);
-                if (oDate.getMonth() === mIdx && oDate.getFullYear() === yInfo) {
+                const dateStr = o.dateISO || o.date;
+                if (getMonthFromDate(dateStr) === mIdx && getYearFromDate(dateStr) === yInfo) {
                     return acc + (parseFloat(o.amount) || 0);
                 }
                 return acc;
@@ -1056,10 +1106,48 @@ class DataManager {
                     // 2. Restore Orders
                     if (wb.SheetNames.includes("Pedidos")) {
                         const ws = wb.Sheets["Pedidos"];
-                        const orders = XLSX.utils.sheet_to_json(ws);
-                        if (orders.length > 0) {
+                        const rawOrders = XLSX.utils.sheet_to_json(ws);
+                        if (rawOrders.length > 0) {
+                            const normalizedOrders = rawOrders.map(o => {
+                                const displayId = o["Nº Pedido"] !== undefined ? parseInt(o["Nº Pedido"], 10) : (o["displayId"] !== undefined ? parseInt(o["displayId"], 10) : parseInt(String(o.id || "").split('-').pop(), 10) || 0);
+                                const dateVal = o["Fecha"] || o["dateISO"] || o["date"];
+                                const shopVal = o["Cliente"] || o["shop"] || "";
+                                const amountVal = parseFloat(o["Importe"] !== undefined ? o["Importe"] : o["amount"]) || 0;
+                                const commentsVal = o["Comentarios"] || o["comments"] || "";
+                                
+                                let isNewClient = false;
+                                if (o["Nuevo Cliente?"] !== undefined) {
+                                    isNewClient = o["Nuevo Cliente?"] === "SI" || o["Nuevo Cliente?"] === true;
+                                } else if (o["persistedIsNewClient"] !== undefined) {
+                                    isNewClient = o["persistedIsNewClient"] === true || o["persistedIsNewClient"] === "true";
+                                }
+
+                                let normalizedDate = dateVal;
+                                if (normalizedDate && normalizedDate.includes('/') && !normalizedDate.includes('-')) {
+                                    const [day, month, year] = normalizedDate.split('/');
+                                    normalizedDate = `${year}-${month}-${day}`;
+                                }
+                                if (normalizedDate && normalizedDate.includes('T')) {
+                                    normalizedDate = normalizedDate.split('T')[0];
+                                }
+
+                                const yearVal = getYearFromDate(normalizedDate) || new Date().getFullYear();
+                                const compositeId = `${yearVal}-${displayId}`;
+
+                                return {
+                                    id: compositeId,
+                                    displayId,
+                                    date: normalizedDate,
+                                    dateISO: normalizedDate,
+                                    shop: shopVal,
+                                    amount: amountVal,
+                                    comments: commentsVal,
+                                    year: yearVal,
+                                    persistedIsNewClient: isNewClient
+                                };
+                            });
                             await this.db.clearStore('orders');
-                            await this.db.bulkPut('orders', orders);
+                            await this.db.bulkPut('orders', normalizedOrders);
                         }
                     }
 
@@ -1124,8 +1212,7 @@ class DataManager {
             const clientMap = new Map(clients.map(c => [c.name, c]));
 
             const currentYearOrders = allOrders.filter(o => {
-                const d = new Date(o.dateISO || o.date);
-                return d.getFullYear() === year;
+                return getYearFromDate(o.dateISO || o.date) === year;
             }).sort((a, b) => {
                 const numA = a.displayId || parseInt(String(a.id).split('-').pop());
                 const numB = b.displayId || parseInt(String(b.id).split('-').pop());
@@ -1133,16 +1220,16 @@ class DataManager {
             });
 
             const ordersSheetData = currentYearOrders.map(o => {
-                const client = clientMap.get(o.shop) || {};
+                const client = clientMap.get(o.shop || o["Cliente"]) || {};
                 return {
                     "Nº Pedido": o.displayId || String(o.id).split('-').pop(),
                     "Fecha": o.dateISO || o.date,
-                    "Cliente": o.shop,
-                    "Importe": o.amount,
+                    "Cliente": o.shop || o["Cliente"],
+                    "Importe": o.amount !== undefined ? o.amount : o["Importe"],
                     "Población": client.location || "---",
                     "Provincia": client.province || "---",
-                    "Nuevo Cliente?": o.persistedIsNewClient ? "SI" : "NO",
-                    "Comentarios": o.comments || ""
+                    "Nuevo Cliente?": (o.persistedIsNewClient || o["Nuevo Cliente?"] === "SI") ? "SI" : "NO",
+                    "Comentarios": o.comments || o["Comentarios"] || ""
                 };
             });
 
@@ -1156,8 +1243,9 @@ class DataManager {
 
             let totalVentasYear = 0;
             currentYearOrders.forEach(o => {
-                totalVentasYear += (parseFloat(o.amount) || 0);
-                const client = clientMap.get(o.shop);
+                const amt = parseFloat(o.amount !== undefined ? o.amount : o["Importe"]) || 0;
+                totalVentasYear += amt;
+                const client = clientMap.get(o.shop || o["Cliente"]);
                 if (client && client.province) {
                     let prov = client.province.trim().toUpperCase();
                     if (prov === 'LEON') prov = 'LEÓN';
@@ -1165,7 +1253,7 @@ class DataManager {
                     if (prov === 'PALENCIA') prov = 'LEÓN';
 
                     if (statsByProv[prov]) {
-                        statsByProv[prov]["Ventas Totales"] += (parseFloat(o.amount) || 0);
+                        statsByProv[prov]["Ventas Totales"] += amt;
                         statsByProv[prov]["Nº Pedidos"] += 1;
                     }
                 }
@@ -1182,7 +1270,7 @@ class DataManager {
             resumenData.push({ Provincia: "TOTAL GENERAL", "Ventas Totales": totalVentasYear, "Nº Pedidos": currentYearOrders.length, "Ticket Medio": totalVentasYear / currentYearOrders.length });
 
             // Clientes nuevos en el año
-            const newClientsCount = currentYearOrders.filter(o => o.persistedIsNewClient).length;
+            const newClientsCount = currentYearOrders.filter(o => o.persistedIsNewClient || o["Nuevo Cliente?"] === "SI").length;
             resumenData.push({});
             resumenData.push({ Provincia: "Clientes Nuevos en el Año", "Ventas Totales": newClientsCount });
 

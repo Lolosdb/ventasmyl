@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* Colors */
     --primary-blue: #0ea5e9;
     /* Light blue header from screenshot */
@@ -51,7 +51,9 @@ body {
     /* Darker bg outside app */
     display: flex;
     justify-content: center;
-    min-height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
 }
 
 body.no-scroll {
@@ -61,15 +63,18 @@ body.no-scroll {
 #app {
     padding-top: 60px;
     width: 100%;
-    max-width: 480px;
+    max-width: 100%;
     /* Mobile width cap */
     background-color: var(--background-gray);
-    min-height: 100vh;
+    height: 100dvh;
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
     position: relative;
     overflow-x: hidden;
+    overflow-y: auto;
     padding-bottom: 80px;
     /* Space for bottom nav */
+    display: flex;
+    flex-direction: column;
 }
 
 /* Typography map */
@@ -279,27 +284,15 @@ body.no-scroll {
 .bottom-nav {
     position: fixed;
     bottom: 0;
-    /* We need to restrict fixed bottom nav to the #app width if possible, 
-       but position: fixed is relative to viewport. 
-       Workaround: effectively it will be full width if we don't be careful, 
-       but since #app is centered, we might want it sticky inside? 
-       Actually, standard mobile view on PC usually has fixed nav at bottom of viewport 
-       OR bottom of the container. 
-       Let's try to make it bounded to the max-width if possible, or just accept full width?
-       Better: use sticky on #app or absolute.
-    */
-    /* Simple fix for now: let it render, user didn't complain about nav position yet, just style */
-    /* To stick to the "Phone" view, we ideally want it inside the #app container at bottom */
     width: 100%;
-    max-width: 480px;
+    max-width: 100%;
     background-color: var(--primary-blue);
     display: flex;
     justify-content: space-around;
     padding: var(--spacing-sm) 0;
-    padding-bottom: calc(var(--spacing-sm) + 4px);
+    padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom, 4px));
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     z-index: 50;
-    /* Center it */
     left: 50%;
     transform: translateX(-50%);
 }
@@ -315,10 +308,6 @@ body.no-scroll {
     background: none;
     border: none;
     cursor: pointer;
-}
-
-.nav-item.active {
-    color: white;
 }
 
 .nav-item .material-icons-round {

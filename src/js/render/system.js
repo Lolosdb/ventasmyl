@@ -287,9 +287,12 @@ async function openBackupsModal() {
         const container = document.getElementById('backupsListContainer');
         
         if ((result.status === "success" || result.success) && result.files && result.files.length > 0) {
+            // Filtrar archivos Excel (.xlsx) — no son copias de seguridad restaurables
+            const backupFiles = result.files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
+            if (backupFiles.length === 0) throw new Error("No hay copias.");
             container.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    ${result.files.map(f => {
+                    ${backupFiles.map(f => {
                         const sizeStr = f.size ? `${(f.size / 1024).toFixed(1)} KB` : "132.4 KB"; 
                         return `
                         <!-- Item Card -->
@@ -423,6 +426,14 @@ async function handleRemoteRestore(fileId, fileName) {
             
             if (!backupData || (typeof backupData === 'object' && Object.keys(backupData).length === 0)) {
                 throw new Error("El archivo de copia está vacío o no es válido.");
+            }
+
+            // Validar que tiene estructura de backup real (no es un Excel u otro archivo)
+            const hasBackupStructure = backupData.clients || backupData.orders ||
+                                       backupData.config || backupData.departments ||
+                                       (backupData.data && (backupData.data.clients || backupData.data.orders));
+            if (!hasBackupStructure) {
+                throw new Error("El archivo seleccionado no es una copia de seguridad válida. Solo se pueden restaurar copias generadas por la aplicación.");
             }
 
             await dataManager.restoreFullBackup(backupData);

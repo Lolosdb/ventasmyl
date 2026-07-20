@@ -47,8 +47,8 @@ async function openEditOrderModal(orderId) {
         document.getElementById('orderFacturadoTodo').value = order.facturadoTodo || '';
         document.getElementById('orderComments').value = order.comments || '';
 
-        // Handle Switch? Not stored in order, it's a transient action "Cliente Nuevo?". Reset it.
-        document.getElementById('isNewClientSwitch').checked = false;
+        // Cargar el estado real del switch desde el pedido guardado
+        document.getElementById('isNewClientSwitch').checked = !!order.persistedIsNewClient;
 
         // SHOW DELETE BUTTON for existing orders
         const btnDelete = document.getElementById('btnDeleteOrder');

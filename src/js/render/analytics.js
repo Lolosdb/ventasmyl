@@ -32,20 +32,31 @@ async function renderTotales(isBack = false) {
     const missing = Math.max(0, target - facturacionReal);
 
     // --- CÁLCULOS ESTADÍSTICAS GENERALES ---
-    const ordersThisYear = orders.filter(o => new Date(o.dateISO).getFullYear() === currentYear);
-    const relevantOrders = ordersThisYear.filter(o => (o.amount || 0) > 0);
+    const ordersThisYear = orders.filter(o => getYearFromDate(o.dateISO || o.date) === currentYear);
+    const relevantOrders = ordersThisYear.filter(o => (o.amount !== undefined ? o.amount : o["Importe"] || 0) > 0);
     
     const totalPedidosCount = relevantOrders.length;
-    const clientsWithPurchaseCount = new Set(relevantOrders.map(o => o.shop)).size;
+    const clientsWithPurchaseCount = new Set(relevantOrders.map(o => o.shop || o["Cliente"])).size;
     const averageInvoice = totalPedidosCount > 0 ? (facturacionReal / totalPedidosCount) : 0;
     
     // Clientes Nuevos
+    // Clave de deduplicación: si el pedido tiene nombre de tienda placeholder temporal,
+    // usamos el id del pedido para que cada uno cuente por separado.
+    // Para tiendas con nombre real, deduplicamos por nombre (evita contar 2 pedidos del mismo cliente nuevo).
+    const PLACEHOLDER_NAMES = ['CLIENTE ERROR LOLO ASTURIAS', 'CLIENTE ERROR', 'ERROR CLIENTE'];
     let newClientsCount = 0;
     const countedNewShops = new Set();
     ordersThisYear.forEach(o => {
-        if (o.persistedIsNewClient && !countedNewShops.has(o.shop)) {
+        const isNew = o.persistedIsNewClient || o["Nuevo Cliente?"] === "SI";
+        const shopName = (o.shop || o["Cliente"] || '').trim().toUpperCase();
+        if (!isNew || !shopName) return;
+        // Si el nombre es un placeholder temporal, usar el id del pedido como clave única
+        const dedupeKey = PLACEHOLDER_NAMES.includes(shopName)
+            ? `__placeholder__${o.id}`
+            : shopName;
+        if (!countedNewShops.has(dedupeKey)) {
             newClientsCount++;
-            countedNewShops.add(o.shop);
+            countedNewShops.add(dedupeKey);
         }
     });
 
@@ -55,15 +66,16 @@ async function renderTotales(isBack = false) {
     PROVINCES.forEach(p => statsProv[p] = { amount: 0, orders: 0 });
 
     ordersThisYear.forEach(o => {
-        const c = clientMap.get(o.shop);
+        const c = clientMap.get(o.shop || o["Cliente"]);
         if (c && c.province) {
             let p = c.province.trim().toUpperCase();
             if (p === 'LEON') p = 'LEÓN';
             if (p === 'LUGO') p = 'GALICIA';
             if (p === 'PALENCIA') p = 'LEÓN';
             if (statsProv[p]) {
-                statsProv[p].amount += (o.amount || 0);
-                if ((o.amount || 0) > 0) {
+                const amt = o.amount !== undefined ? o.amount : o["Importe"] || 0;
+                statsProv[p].amount += amt;
+                if (amt > 0) {
                     statsProv[p].orders++;
                 }
             }
