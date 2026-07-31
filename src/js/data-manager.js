@@ -765,7 +765,7 @@ class DataManager {
         const topClientes = Object.entries(clientSales)
             .map(([name, amount]) => ({ name, amount, rank: 0 }))
             .sort((a, b) => b.amount - a.amount)
-            .slice(0, 5)
+            .slice(0, 20)
             .map((item, index) => ({ ...item, rank: index + 1 }));
 
         // Objetivos (Dinamizados para el mes seleccionado)
@@ -779,9 +779,10 @@ class DataManager {
             targetAmount = goals.data4[monthIdx];
         }
 
-        // 6-Month Trend Logic (Relativa al mes seleccionado)
+        // 12-Month Trend Logic (Relativa al mes seleccionado)
         const tendencia = [];
-        for (let i = 5; i >= 0; i--) {
+        const MONTHS_TO_SHOW = 12;
+        for (let i = MONTHS_TO_SHOW - 1; i >= 0; i--) {
             const d = new Date(currentYear, currentMonth - i, 1);
             const mIdx = d.getMonth();
             const yInfo = d.getFullYear();

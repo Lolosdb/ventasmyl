@@ -256,8 +256,15 @@ async function renderDash(isBack = false) {
                     </div>
                 </div>
             </div>
-            <div style="height: 220px; position: relative;">
-                <canvas id="trendChart"></canvas>
+            <div style="display: flex; height: 220px; width: 100%; position: relative;">
+                <div style="width: 70px; height: 100%; flex-shrink: 0; z-index: 10; padding-right: 5px;">
+                    <canvas id="trendChartYAxis"></canvas>
+                </div>
+                <div id="trendChartScroll" style="flex: 1; overflow-x: auto; overflow-y: hidden; position: relative;">
+                    <div style="width: 200%; min-width: 800px; height: 100%; position: relative;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -293,7 +300,7 @@ async function renderDash(isBack = false) {
             <h3 style="margin: 0; font-size: 15px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.8px;">Top Clientes Mensual</h3>
         </div>
 
-        <div class="top-clients-list" style="margin-bottom: 2.5rem; display: flex; flex-direction: column; align-items: center; width: 100%;">
+        <div class="top-clients-list" style="margin-bottom: 2.5rem; display: flex; flex-direction: column; align-items: center; width: 100%; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-bottom: 15px; padding-top: 5px;">
             ${(stats.topClientes || []).map(c => `
                 <div class="card glass shadow-sm" style="padding: 12px 16px; border-radius: 16px; margin-bottom: 0.6rem; display: flex; align-items: center; background: white; border: 1px solid rgba(0,0,0,0.03); width: 90%; max-width: 400px;">
                     <div style="display: flex; align-items: center; gap: 15px;">
@@ -381,6 +388,13 @@ async function renderDash(isBack = false) {
             grid.scrollTo({ left: scrollLeft, behavior: 'smooth' });
         }
         initCarouselDrag('.weekly-sales-grid');
+        initCarouselDrag('#trendChartScroll');
+        
+        // Auto-scroll del gráfico al extremo derecho
+        const trendChartScroll = document.getElementById('trendChartScroll');
+        if (trendChartScroll) {
+            trendChartScroll.scrollLeft = trendChartScroll.scrollWidth;
+        }
     }, 500);
 }
 
@@ -446,18 +460,53 @@ async function initDashCharts(stats) {
     const labels = stats.tendencia.map(t => t.mes);
     const currentData = stats.tendencia.map(t => t.ventas);
     
+    // Obtener datos del año anterior
     const now = new Date();
-    const lastYearData = [];
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const mIdx = d.getMonth();
-        const val = (allHistory[lastYear] && allHistory[lastYear][mIdx]) || 0;
-        lastYearData.push(val);
-    }
+    const lastYearData = stats.tendencia.map(t => t.ventasAnterior);
 
     const isDark = document.body.classList.contains('dark-mode');
     const textColor = isDark ? '#94a3b8' : '#64748b';
     const gridColor = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
+
+    const yAxisCanvas = document.getElementById('trendChartYAxis');
+    if (yAxisCanvas) {
+        if (window.myTrendChartYAxis) window.myTrendChartYAxis.destroy();
+        window.myTrendChartYAxis = new Chart(yAxisCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { data: lastYearData, backgroundColor: 'transparent' },
+                    { data: currentData, backgroundColor: 'transparent' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 10, bottom: 0, left: 0, right: 0 } },
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        border: { display: false },
+                        ticks: { color: 'transparent', font: { size: 10, weight: '800' }, padding: 10 }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { display: false, drawBorder: false },
+                        border: { display: false },
+                        ticks: {
+                            color: textColor,
+                            font: { size: 10, weight: '600' },
+                            callback: (value) => value >= 1000 ? (value/1000) + 'k' : value,
+                            padding: 2
+                        }
+                    }
+                },
+                animation: false
+            }
+        });
+    }
 
     window.myTrendChart = new Chart(ctx, {
         type: 'bar',
@@ -488,7 +537,7 @@ async function initDashCharts(stats) {
             responsive: true,
             maintainAspectRatio: false,
             layout: {
-                padding: { top: 10, bottom: 0, left: -5, right: 5 }
+                padding: { top: 10, bottom: 0, left: 0, right: 5 }
             },
             plugins: {
                 legend: { display: false },
@@ -523,10 +572,7 @@ async function initDashCharts(stats) {
                     grid: { color: gridColor, drawBorder: false },
                     border: { display: false },
                     ticks: {
-                        color: textColor,
-                        font: { size: 10, weight: '600' },
-                        callback: (value) => value >= 1000 ? (value/1000) + 'k' : value,
-                        padding: 8
+                        display: false
                     }
                 },
                 x: {

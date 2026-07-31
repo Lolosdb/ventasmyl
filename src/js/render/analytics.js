@@ -182,18 +182,39 @@ async function renderAlertas(isBack = false) {
         const d = new Date(date);
         const days = Math.ceil(Math.abs(now - d) / (1000 * 60 * 60 * 24));
         const c = clientMap.get(shop);
-        return { shop, days, phone: c ? c.phone : '', location: c ? c.location : '', code: c ? c.code : null };
+        return { shop, days, phone: c ? c.phone : '', location: c ? c.location : '', province: c ? c.province : '', code: c ? c.code : null };
     }).sort((a,b) => b.days - a.days);
 
     let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px;">';
+    
+    contentHtml += `
+        <div style="margin-bottom: 1.5rem;">
+            <div class="glass shadow-sm" style="display: flex; align-items: center; padding: 0.75rem 1.25rem; border-radius: 9999px; background: white; border: 1px solid rgba(0,0,0,0.05);">
+                <span class="material-icons-round text-slate-400" style="margin-right: 0.75rem;">search</span>
+                <input type="text" id="alertSearchInput" placeholder="Buscar por tienda, población o provincia..." 
+                       style="border: none; outline: none; flex: 1; min-width: 0; font-size: 15px; background: transparent; color: #334155; font-weight: 500;"
+                       onkeyup="filterAlerts()"
+                       oninput="toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn')"
+                       onkeydown="if(event.key==='Enter') this.blur()">
+                <span id="clearAlertSearchBtn" class="material-icons-round text-slate-400" 
+                      style="display: none; cursor: pointer; margin-left: 0.5rem;" 
+                      onclick="clearAlertSearch()">
+                    cancel
+                </span>
+            </div>
+        </div>
+        <div id="alertsListContainer">
+    `;
     
     if (entries.length === 0) {
         contentHtml += '<div class="text-center p-12 text-slate-400 italic">Sin actividad de pedidos este año</div>';
     } else {
         entries.forEach(e => {
             const isDanger = e.days > 35;
+            const searchData = `${e.shop} ${e.location} ${e.province}`.toLowerCase().replace(/"/g, '');
             contentHtml += `
                 <div class="alert-card ${isDanger ? 'red-theme' : 'green-theme'}" 
+                     data-search="${searchData}"
                      onclick="if('${e.code}' !== 'null') openClientDetailModal('${e.code}')">
                     
                     <div class="alert-card-info">
@@ -219,10 +240,33 @@ async function renderAlertas(isBack = false) {
         });
     }
 
-    contentHtml += '</main>';
+    contentHtml += '</div></main>';
     contentHtml += renderBottomNav('alertas');
     app.innerHTML = headerHtml + contentHtml;
 }
+
+window.filterAlerts = function() {
+    const input = document.getElementById('alertSearchInput');
+    if (!input) return;
+    
+    toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn');
+    
+    const filter = input.value.toLowerCase().trim();
+    const cards = document.querySelectorAll('#alertsListContainer .alert-card');
+    
+    cards.forEach(card => {
+        const searchData = card.getAttribute('data-search') || '';
+        if (searchData.includes(filter)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+};
+
+window.clearAlertSearch = function() {
+    clearSearchField('alertSearchInput', 'clearAlertSearchBtn', () => filterAlerts());
+};
 
 // --- VENTAS HISTÓRICAS ---
 async function renderVentas(isBack = false) {
