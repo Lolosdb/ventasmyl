@@ -668,10 +668,38 @@ async function renderFactura(isBack = false) {
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Facturación Real');
     const history = await dataManager.getInvoiceHistory();
-    
-    // Definir rango de años (2023 a 2026 según referencia)
+
+    const currentYear = new Date().getFullYear();
     const years = [2023, 2024, 2025, 2026];
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    // Auto-guardar snapshot del año en curso con los objetivos actuales.
+    // Así, cuando el año termine y se acceda desde el año siguiente,
+    // los colores del año pasado quedan congelados con los objetivos que estaban vigentes.
+    const currentGoals = await dataManager.getDetailedGoals();
+    await dataManager.saveGoalsSnapshot(currentYear, currentGoals);
+
+    // Cargar objetivos para cada año:
+    //   - Año actual → objetivos activos (live)
+    //   - Año pasado con snapshot → snapshot congelada
+    //   - Año pasado sin snapshot → null (sin colores)
+    const goalsPerYear = {};
+    for (const y of years) {
+        goalsPerYear[y] = await dataManager.getGoalsForYear(y);
+    }
+
+    // Helper: devuelve el color de fondo según el valor vs los tres objetivos del mes
+    function getCellColor(value, goals, monthIdx) {
+        if (!value || value === 0) return null;   // Celda vacía → sin color
+        if (!goals) return null;                   // Sin snapshot → sin color
+        const g3 = goals.data3[monthIdx] || 0;
+        const g4 = goals.data4[monthIdx] || 0;
+        const g5 = goals.data5[monthIdx] || 0;
+        if (value >= g5) return '#22c55e';  // Verde  ≥ 5%
+        if (value >= g4) return '#3b82f6';  // Azul   ≥ 4%
+        if (value >= g3) return '#9333ea';  // Morado ≥ 3%
+        return '#ef4444';                   // Rojo   < 3%
+    }
 
     // Calcular totales por año
     const annualTotals = years.map(y => {
@@ -696,9 +724,16 @@ async function renderFactura(isBack = false) {
                                 ${years.map(y => {
                                     const yearData = history[String(y)] || Array(12).fill(0);
                                     const val = yearData[mIdx] || 0;
+                                    const color = getCellColor(val, goalsPerYear[y], mIdx);
+                                    const tdStyle = color
+                                        ? `style="background-color:${color}; border-radius:10px; padding:4px 8px;"`
+                                        : '';
+                                    const inputClass = color
+                                        ? 'v7-factura-input v7-factura-input--colored'
+                                        : 'v7-factura-input';
                                     return `
-                                        <td>
-                                            <input type="text" class="v7-factura-input" 
+                                        <td ${tdStyle}>
+                                            <input type="text" class="${inputClass}"
                                                    value="${val === 0 ? '-' : formatCurrency(Math.round(val)).replace(' €', '')}"
                                                    placeholder="0"
                                                    onfocus="this.select()"
@@ -723,7 +758,7 @@ async function renderFactura(isBack = false) {
     contentHtml += renderBottomNav(null);
     app.innerHTML = headerHtml + contentHtml;
 
-    // Auto-scroll al final (año más reciente)
+    // Auto-scroll al año más reciente
     setTimeout(() => {
         const container = document.getElementById('facturaScrollContainer');
         if (container) container.scrollLeft = container.scrollWidth;
@@ -741,6 +776,134 @@ window.renderObjetivos = renderObjetivos;
 window.handleGoalUpdate = handleGoalUpdate;
 window.renderFactura = renderFactura;
 window.handleFacturaUpdate = handleFacturaUpdate;
+
+// --- COMISIONES (V7 PREMIUM) ---
+async function renderComisiones(isBack = false) {
+    if (typeof updateHistoryState === 'function') updateHistoryState('comisiones', isBack);
+    const app = document.getElementById('app');
+    const headerHtml = getCommonHeaderHtml('Comisiones');
+    const history = await dataManager.getInvoiceHistory();
+
+    const currentYear = new Date().getFullYear();
+    // Años dinámicos: desde 2023 hasta el año actual
+    const years = [];
+    for (let y = 2023; y <= currentYear; y++) years.push(y);
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    // Auto-guardar snapshot del año en curso
+    const currentGoals = await dataManager.getDetailedGoals();
+    await dataManager.saveGoalsSnapshot(currentYear, currentGoals);
+
+    // Cargar objetivos por año (snapshot congelada para pasados, null si no existe)
+    const goalsPerYear = {};
+    for (const y of years) {
+        goalsPerYear[y] = await dataManager.getGoalsForYear(y);
+    }
+
+    // Determinar nivel alcanzado y % comisión
+    function getCommissionInfo(value, goals, monthIdx) {
+        if (!value || value === 0) return { pct: 0, amount: 0, color: null };
+        if (!goals) return { pct: 0, amount: 0, color: null }; // Sin snapshot → sin color
+        const g3 = goals.data3[monthIdx] || 0;
+        const g4 = goals.data4[monthIdx] || 0;
+        const g5 = goals.data5[monthIdx] || 0;
+        if (value >= g5) return { pct: 5, amount: Math.round(value * 0.05), color: '#22c55e' };
+        if (value >= g4) return { pct: 4, amount: Math.round(value * 0.04), color: '#3b82f6' };
+        if (value >= g3) return { pct: 3, amount: Math.round(value * 0.03), color: '#9333ea' };
+        return { pct: 2, amount: Math.round(value * 0.02), color: '#ef4444' };
+    }
+
+    // Color para el TOTAL anual: comparar total facturado vs suma de objetivos anuales
+    function getTotalColor(totalFacturado, goals) {
+        if (!totalFacturado || totalFacturado === 0) return null;
+        if (!goals) return null;
+        const sumG3 = (goals.data3 || []).reduce((a, b) => a + (b || 0), 0);
+        const sumG4 = (goals.data4 || []).reduce((a, b) => a + (b || 0), 0);
+        const sumG5 = (goals.data5 || []).reduce((a, b) => a + (b || 0), 0);
+        if (totalFacturado >= sumG5) return '#22c55e';
+        if (totalFacturado >= sumG4) return '#3b82f6';
+        if (totalFacturado >= sumG3) return '#9333ea';
+        return '#ef4444';
+    }
+
+    // Calcular totales anuales de comisiones y facturación
+    const annualCommissions = years.map(y => {
+        const data = history[String(y)] || Array(12).fill(0);
+        let total = 0;
+        for (let m = 0; m < 12; m++) {
+            const val = parseFloat(data[m]) || 0;
+            const info = getCommissionInfo(val, goalsPerYear[y], m);
+            total += info.amount;
+        }
+        return total;
+    });
+
+    const annualFacturado = years.map(y => {
+        const data = history[String(y)] || Array(12).fill(0);
+        return data.reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+    });
+
+    let contentHtml = `<main class="v7-factura-wrapper">
+        <div class="v7-factura-card">
+            <div class="v7-factura-scroll" id="comisionesScrollContainer">
+                <table class="v7-factura-table">
+                    <thead>
+                        <tr>
+                            <th class="sticky-col">MES</th>
+                            ${years.map(y => `<th><span class="v7-year-pill">${y}</span></th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${months.map((m, mIdx) => `
+                            <tr class="v7-factura-row">
+                                <td class="sticky-col">${m}</td>
+                                ${years.map(y => {
+                                    const yearData = history[String(y)] || Array(12).fill(0);
+                                    const val = parseFloat(yearData[mIdx]) || 0;
+                                    const info = getCommissionInfo(val, goalsPerYear[y], mIdx);
+                                    const color = info.color;
+                                    const tdStyle = color
+                                        ? `style="background-color:${color}; border-radius:10px; padding:4px 8px;"`
+                                        : '';
+                                    const textClass = color ? 'v7-comision-val v7-comision-val--colored' : 'v7-comision-val';
+                                    const displayVal = val === 0 ? '-' : formatCurrency(info.amount).replace(' €', '');
+                                    return `
+                                        <td ${tdStyle}>
+                                            <span class="${textClass}">${displayVal}</span>
+                                        </td>
+                                    `;
+                                }).join('')}
+                            </tr>
+                        `).join('')}
+                        <tr class="v7-factura-total-row">
+                            <td class="sticky-col" style="color: #0f172a; font-weight: 900 !important; font-size: 14px;">TOTAL</td>
+                            ${years.map((y, yIdx) => {
+                                const totalColor = getTotalColor(annualFacturado[yIdx], goalsPerYear[y]);
+                                const tdStyle = totalColor
+                                    ? `style="background-color:${totalColor} !important; border-radius:10px; color:#ffffff; font-weight:900;"`
+                                    : '';
+                                const valStr = formatCurrency(Math.round(annualCommissions[yIdx])).replace(' €', '');
+                                return `<td ${tdStyle}>${valStr}</td>`;
+                            }).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>`;
+
+    contentHtml += renderBottomNav(null);
+    app.innerHTML = headerHtml + contentHtml;
+
+    // Auto-scroll al año más reciente
+    setTimeout(() => {
+        const container = document.getElementById('comisionesScrollContainer');
+        if (container) container.scrollLeft = container.scrollWidth;
+    }, 50);
+}
+
+window.renderComisiones = renderComisiones;
+
 // --- OBJETIVOS TRIMESTRALES (V7 PREMIUM) ---
 async function renderObjetivosTrimestrales(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('trimestrales', isBack);

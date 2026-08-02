@@ -274,6 +274,10 @@ async function openBackupsModal() {
     `;
     modal.classList.add('open');
 
+    // Separar error de Drive del caso "no hay copias" para dar feedback claro al usuario
+    let driveError = null;
+    let driveFiles = null;
+
     try {
         const url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
         let response = await fetch(url + (url.includes('?') ? '&' : '?') + "action=list");
@@ -284,74 +288,102 @@ async function openBackupsModal() {
             result = await response.json();
         }
 
-        const container = document.getElementById('backupsListContainer');
-        
-        if ((result.status === "success" || result.success) && result.files && result.files.length > 0) {
+        if ((result.status === "success" || result.success) && result.files) {
             // Filtrar archivos Excel (.xlsx) — no son copias de seguridad restaurables
-            const backupFiles = result.files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
-            if (backupFiles.length === 0) throw new Error("No hay copias.");
-            container.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    ${backupFiles.map(f => {
-                        const sizeStr = f.size ? `${(f.size / 1024).toFixed(1)} KB` : "132.4 KB"; 
-                        return `
-                        <!-- Item Card -->
-                        <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                            <div style="flex: 1 1 150px; padding-right: 0.5rem;">
-                                <p style="font-size: 0.875rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2;">${f.name}</p>
-                                <p style="font-size: 0.725rem; color: #64748b; font-weight: 600; margin-top: 6px;">
-                                    ${new Date(f.date).toLocaleDateString()} - ${sizeStr}
-                                </p>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <button onclick="handleDeleteRemoteFile('${f.id}', '${f.name}')" 
-                                        style="width: 40px; height: 40px; border-radius: 50%; background-color: #fee2e2; border: none; color: #ef4444; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                                    <span class="material-icons-round" style="font-size: 20px;">delete_outline</span>
-                                </button>
-                                <button onclick="handleRemoteRestore('${f.id}', '${f.name}')" 
-                                        style="display: flex; align-items: center; gap: 8px; background-color: #9333ea; color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.3);">
-                                    <span class="material-icons-round" style="font-size: 18px;">cloud_download</span>
-                                    <span>Restaurar</span>
-                                </button>
-                            </div>
-                        </div>
-                        `;
-                    }).join('')}
-                </div>
-                <!-- Final margin for better scroll feeling -->
-                <div style="height: 1.5rem;"></div>
-            `;
+            driveFiles = result.files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
         } else {
-            throw new Error("No hay copias.");
+            driveError = result.message || "El servidor no devolvió copias válidas.";
         }
     } catch (e) {
-        const backups = JSON.parse(localStorage.getItem('app_backups') || '[]');
-        const container = document.getElementById('backupsListContainer');
-
-        if (backups.length === 0) {
-            container.innerHTML = `
-                <div style="text-align: center; padding-top: 4rem; padding-bottom: 4rem; opacity: 0.3;">
-                    <span class="material-icons-round" style="font-size: 64px;">cloud_off</span>
-                    <p style="font-weight: 800; margin-top: 1rem;">No se encontraron copias</p>
-                </div>
-            `;
-        } else {
-            container.innerHTML = `
-                <p style="font-size: 0.65rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">Copias Locales</p>
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    ${backups.map(b => `
-                        <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; background-color: #ffffff;">
-                            <div style="flex: 1 1 150px;">
-                                <p style="font-size: 0.825rem; font-weight: 800; color: #1e293b; margin: 0;">${new Date(b.date).toLocaleString()}</p>
-                                <p style="font-size: 0.65rem; color: #10b981; font-weight: 800; text-transform: uppercase; margin-top: 4px;">Sincronizado localmente</p>
-                            </div>
-                            <button style="background-color: #9333ea; color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">Local</button>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
+        console.error("Error al obtener copias de Drive:", e);
+        driveError = e.message || "Error de conexión con Google Drive.";
     }
+
+    const container = document.getElementById('backupsListContainer');
+    const localBackups = JSON.parse(localStorage.getItem('app_backups') || '[]');
+
+    let html = '';
+
+    // --- SECCIÓN NUBE ---
+    if (driveError) {
+        // Mostrar banner de error informativo en lugar de silenciar el fallo
+        html += `
+            <div style="background-color: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 12px; align-items: flex-start;">
+                <span class="material-icons-round" style="color: #f97316; font-size: 22px; margin-top: 2px; flex-shrink: 0;">cloud_off</span>
+                <div>
+                    <p style="font-size: 0.8rem; font-weight: 800; color: #9a3412; margin: 0 0 4px;">No se pudo conectar con Google Drive</p>
+                    <p style="font-size: 0.72rem; color: #c2410c; font-weight: 500; margin: 0; word-break: break-word;">${driveError}</p>
+                    <p style="font-size: 0.68rem; color: #9a3412; font-weight: 600; margin: 6px 0 0; opacity: 0.75;">Comprueba la URL del script en Ajustes o vuelve a intentarlo.</p>
+                </div>
+            </div>
+        `;
+    } else if (!driveFiles || driveFiles.length === 0) {
+        html += `
+            <div style="text-align: center; padding: 2rem 0 1rem; opacity: 0.4;">
+                <span class="material-icons-round" style="font-size: 48px; color: #94a3b8;">cloud_done</span>
+                <p style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-top: 0.5rem;">No hay copias en Google Drive</p>
+            </div>
+        `;
+    } else {
+        html += `
+            <p style="font-size: 0.65rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">Copias en la Nube</p>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                ${driveFiles.map(f => {
+                    const sizeStr = f.size ? `${(f.size / 1024).toFixed(1)} KB` : "—";
+                    return `
+                    <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                        <div style="flex: 1 1 150px; padding-right: 0.5rem;">
+                            <p style="font-size: 0.875rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2;">${f.name}</p>
+                            <p style="font-size: 0.725rem; color: #64748b; font-weight: 600; margin-top: 6px;">
+                                ${new Date(f.date).toLocaleDateString()} - ${sizeStr}
+                            </p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <button onclick="handleDeleteRemoteFile('${f.id}', '${f.name}')" 
+                                    style="width: 40px; height: 40px; border-radius: 50%; background-color: #fee2e2; border: none; color: #ef4444; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                                <span class="material-icons-round" style="font-size: 20px;">delete_outline</span>
+                            </button>
+                            <button onclick="handleRemoteRestore('${f.id}', '${f.name}')" 
+                                    style="display: flex; align-items: center; gap: 8px; background-color: #9333ea; color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.3);">
+                                <span class="material-icons-round" style="font-size: 18px;">cloud_download</span>
+                                <span>Restaurar</span>
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('')}
+            </div>
+            <div style="height: 1.5rem;"></div>
+        `;
+    }
+
+    // --- SECCIÓN LOCAL (siempre visible si hay copias) ---
+    if (localBackups.length > 0) {
+        html += `
+            <p style="font-size: 0.65rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; ${driveFiles && driveFiles.length > 0 ? 'border-top: 1px solid #f1f5f9; padding-top: 1.5rem;' : ''}">Copias Locales</p>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                ${localBackups.map(b => `
+                    <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; background-color: #ffffff;">
+                        <div style="flex: 1 1 150px;">
+                            <p style="font-size: 0.825rem; font-weight: 800; color: #1e293b; margin: 0;">${new Date(b.date).toLocaleString()}</p>
+                            <p style="font-size: 0.65rem; color: #10b981; font-weight: 800; text-transform: uppercase; margin-top: 4px;">Sincronizado localmente</p>
+                        </div>
+                        <button style="background-color: #9333ea; color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">Local</button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else if (!driveFiles && !driveError) {
+        // Sin nube y sin local
+        html = `
+            <div style="text-align: center; padding-top: 4rem; padding-bottom: 4rem; opacity: 0.3;">
+                <span class="material-icons-round" style="font-size: 64px;">cloud_off</span>
+                <p style="font-weight: 800; margin-top: 1rem;">No se encontraron copias</p>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
 }
 
 function closeBackupsModal() {

@@ -115,6 +115,10 @@ function renderNavMenuHTML() {
                     <span class="material-icons-round">receipt_long</span>
                     <span>Facturación Real</span>
                 </button>
+                <button class="nav-menu-item" onclick="closeNavMenu(); renderComisiones();">
+                    <span class="material-icons-round">euro_symbol</span>
+                    <span>Comisiones</span>
+                </button>
                 <button class="nav-menu-item" onclick="closeNavMenu(); renderMedias();">
                     <span class="material-icons-round">history_toggle_off</span>
                     <span>Medias Mensuales</span>
@@ -333,8 +337,49 @@ function openInfoModal() {
 
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">receipt_long</span>
+                        6. Facturación Real
+                    </h3>
+                    <p>Tabla multi-año con la facturación mensual real, editable para cada mes y año. Incluye un sistema de colores automático según los objetivos:</p>
+                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
+                        <li><strong>Código de Colores:</strong> Cada cifra se colorea automáticamente según el objetivo alcanzado en ese mes:
+                            <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
+                                <li><span style="display: inline-block; background: #ef4444; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Rojo</span> → No se ha alcanzado el objetivo del 3%</li>
+                                <li><span style="display: inline-block; background: #9333ea; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Morado</span> → Alcanzado el 3% pero no el 4%</li>
+                                <li><span style="display: inline-block; background: #3b82f6; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Azul</span> → Alcanzado el 4% pero no el 5%</li>
+                                <li><span style="display: inline-block; background: #22c55e; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Verde</span> → Superado el objetivo del 5%</li>
+                            </ul>
+                        </li>
+                        <li><strong>Persistencia de Colores:</strong> Cuando finaliza un año, los colores quedan congelados tal y como estaban. Aunque modifiques los objetivos para el nuevo año, los años anteriores conservarán sus colores originales.</li>
+                        <li><strong>Editable:</strong> Puedes modificar cualquier cifra pulsando directamente sobre el valor. Los cambios se guardan automáticamente.</li>
+                    </ul>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">euro_symbol</span>
+                        7. Comisiones
+                    </h3>
+                    <p>Vista de solo lectura que calcula automáticamente la comisión generada cada mes, basándose en la facturación real y el porcentaje de objetivo logrado:</p>
+                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
+                        <li><strong>Cálculo Automático:</strong> La comisión de cada mes se calcula multiplicando la facturación real por el porcentaje correspondiente al objetivo alcanzado:
+                            <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
+                                <li><span style="display: inline-block; background: #ef4444; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">2%</span> → Si no se llega al objetivo del 3%</li>
+                                <li><span style="display: inline-block; background: #9333ea; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">3%</span> → Si se alcanza el 3% pero no el 4%</li>
+                                <li><span style="display: inline-block; background: #3b82f6; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">4%</span> → Si se alcanza el 4% pero no el 5%</li>
+                                <li><span style="display: inline-block; background: #22c55e; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">5%</span> → Si se supera el objetivo del 5%</li>
+                            </ul>
+                        </li>
+                        <li><strong>Código de Colores:</strong> Mismo sistema visual que en Facturación Real (rojo, morado, azul, verde), aplicado también a la fila TOTAL según los totales anuales de los objetivos.</li>
+                        <li><strong>Persistencia:</strong> Al igual que en Facturación Real, los colores de años anteriores quedan congelados permanentemente.</li>
+                        <li><strong>Años Dinámicos:</strong> Al iniciar un nuevo año, la columna aparece automáticamente a la derecha. Puedes hacer scroll horizontal para consultar años anteriores.</li>
+                    </ul>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">groups</span>
-                        5. Fichero de Clientes
+                        8. Fichero de Clientes
                     </h3>
                     <p>Tu agenda comercial avanzada, diseñada para tener todos los contactos y su información a un solo toque:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
@@ -351,7 +396,7 @@ function openInfoModal() {
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">map</span>
-                        6. Mapa Interactivo
+                        9. Mapa Interactivo
                     </h3>
                     <p>Una vista especial (accesible desde el icono "Mapa" del menú inferior) que pinta tu cartera de clientes sobre el mapa geográfico de Google.</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
@@ -363,7 +408,7 @@ function openInfoModal() {
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">settings</span>
-                        7. Ajustes, Seguridad y Backups
+                        10. Ajustes, Seguridad y Backups
                     </h3>
                     <p>Accesible pulsando en el icono superior derecho de tres rayitas o perfil. Es el panel técnico y de mantenimiento:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">

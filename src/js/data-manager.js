@@ -126,6 +126,35 @@ class DataManager {
         }
     }
 
+    // --- GOALS HISTORY (SNAPSHOTS POR AÑO para Facturación Real) ---
+    async getGoalsHistory() {
+        const stored = await this.db.get('config', 'goals_history');
+        return (stored && stored.data) ? stored.data : {};
+    }
+
+    async saveGoalsSnapshot(year, goalsData) {
+        const yearStr = String(year);
+        const history = await this.getGoalsHistory();
+        history[yearStr] = {
+            data3: [...(goalsData.data3 || [])],
+            data4: [...(goalsData.data4 || [])],
+            data5: [...(goalsData.data5 || [])]
+        };
+        await this.db.put('config', { key: 'goals_history', data: history });
+    }
+
+    // Devuelve los objetivos para un año concreto:
+    //   - Año actual → objetivos activos (siempre en vivo)
+    //   - Año pasado → snapshot guardada, o null si no existe (sin colores)
+    async getGoalsForYear(year) {
+        const currentYear = new Date().getFullYear();
+        if (parseInt(year) >= currentYear) {
+            return await this.getDetailedGoals();
+        }
+        const history = await this.getGoalsHistory();
+        return history[String(year)] || null;
+    }
+
     // --- QUARTERLY GOALS (OBJETIVOS TRIMESTRALES) ---
     // --- QUARTERLY GOALS (OBJETIVOS TRIMESTRALES POR AÑO) ---
     async getQuarterlyGoals(year) {

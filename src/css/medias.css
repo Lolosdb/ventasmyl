@@ -187,6 +187,14 @@
 .v7-factura-input:focus { background: #f0f9ff; box-shadow: inset 0 0 0 2px #009ee3; color: #0369a1; }
 .v7-factura-input:placeholder-shown { opacity: 0.3; }
 
+/* Input dentro de celda con color de objetivo */
+.v7-factura-input--colored { color: #ffffff !important; background: transparent !important; }
+.v7-factura-input--colored:focus { background: rgba(255,255,255,0.15) !important; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5) !important; color: #ffffff !important; }
+
+/* Valores de solo lectura para vista Comisiones */
+.v7-comision-val { display: block; text-align: center; font-weight: 800; color: #009ee3; font-size: 14px; padding: 6px; }
+.v7-comision-val--colored { color: #ffffff !important; }
+
 .v7-factura-total-row td {
     background: #f8fafc !important;
     border-top: 1px solid #e2e8f0; /* Más suave */
