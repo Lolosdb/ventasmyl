@@ -489,6 +489,249 @@
 .ideas-map-btn:active { background: #009ee3; }
 .ideas-map-btn:active .material-icons-round { color: white; }
 
+/* Separador visual de localidad */
+.ideas-location-divider {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px 4px 8px;
+    margin-top: 6px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+    border-bottom: 1.5px solid #e2e8f0;
+}
+.ideas-location-divider:first-child { margin-top: 0; }
+
+.ideas-location-pill {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Selector de Región / Comunidad */
+.ideas-region-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+.ideas-region-chip {
+    padding: 8px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    background: #f8fafc;
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ideas-region-chip.active {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: white;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+    transform: scale(1.03);
+}
+
+/* Caja de Leyenda de Prioridad */
+.ideas-legend-box {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed #cbd5e1;
+}
+.ideas-legend-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #64748b;
+    display: block;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.ideas-legend-items {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.ideas-legend-item {
+    font-size: 0.75rem;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.ideas-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Contenedor del Score con Tag PRIORIDAD */
+.ideas-score-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.ideas-score-tag {
+    font-size: 0.55rem;
+    font-weight: 900;
+    color: #94a3b8;
+    letter-spacing: 0.4px;
+}
+
+.ideas-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+.ideas-day-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ideas-share-btn {
+    background: #25d366;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+    transition: all 0.15s;
+}
+.ideas-share-btn:active {
+    transform: scale(0.95);
+    background: #1eb857;
+}
+
+.ideas-action-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+}
+.ideas-action-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.15s;
+}
+.ideas-action-icon .material-icons-round { font-size: 15px; }
+.ideas-call-btn { background: #f0fdf4; color: #16a34a; }
+.ideas-call-btn:active { background: #16a34a; color: white; }
+.ideas-wa-btn { background: #f0fdf4; color: #25d366; }
+.ideas-wa-btn:active { background: #25d366; color: white; }
+
+/* ─── CARD ALERTA DE CLIENTES VIP EN RIESGO (DASHBOARD) ──── */
+.dash-vip-card {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+    border: 1.5px solid #fecaca;
+    border-left: 5px solid #ef4444;
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.dash-vip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.dash-vip-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.dash-vip-icon {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 8px;
+    border-radius: 12px;
+}
+.dash-vip-title {
+    font-weight: 900;
+    font-size: 0.95rem;
+    color: #991b1b;
+    margin: 0;
+}
+.dash-vip-subtitle {
+    font-size: 0.72rem;
+    color: #7f1d1d;
+    margin: 2px 0 0;
+    font-weight: 600;
+}
+.dash-vip-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 4px 8px;
+    border-radius: 8px;
+    letter-spacing: 0.4px;
+}
+.dash-vip-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.dash-vip-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #fee2e2;
+}
+.dash-vip-info { flex: 1; min-width: 0; }
+.dash-vip-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dash-vip-name { font-weight: 800; font-size: 0.85rem; color: #0f172a; margin: 0; }
+.dash-vip-loc { font-size: 0.65rem; font-weight: 800; color: #0369a1; background: #e0f2fe; padding: 1px 5px; border-radius: 4px; }
+.dash-vip-desc { font-size: 0.72rem; color: #64748b; margin: 3px 0 0; }
+
+.dash-vip-actions { display: flex; align-items: center; gap: 4px; margin-left: 8px; }
+.dash-vip-act-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+}
+.dash-vip-act-btn .material-icons-round { font-size: 16px; }
+.dash-vip-call { background: #dcfce7; color: #15803d; }
+.dash-vip-call:active { background: #15803d; color: white; }
+.dash-vip-wa { background: #dcfce7; color: #25d366; }
+.dash-vip-wa:active { background: #25d366; color: white; }
+.dash-vip-order { background: #eff6ff; color: #2563eb; }
+.dash-vip-order:active { background: #2563eb; color: white; }
+
 .ideas-footer-stats {
     text-align: center;
     padding: 1.25rem 1rem;
@@ -496,4 +739,3 @@
     color: #94a3b8;
     font-weight: 600;
 }
-

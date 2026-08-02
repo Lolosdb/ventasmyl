@@ -177,6 +177,7 @@ async function renderDash(isBack = false) {
             </div>
         </div>
     `;
+
     // --- CÁLCULO DE VENTAS SEMANALES ---
     const rawWeeks = [];
     const lastDayOfMonth = new Date(year, selectedMonth + 1, 0);

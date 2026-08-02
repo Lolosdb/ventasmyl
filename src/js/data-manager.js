@@ -1352,8 +1352,8 @@ class DataManager {
 
             // Usar la URL constante que está en render.js o definirla aquí si es necesario
             // Como estamos en DataManager, es mejor pasarla o usar la que tengamos guardada en config
-            const scriptUrl = typeof GOOGLE_SCRIPT_URL !== 'undefined' ? GOOGLE_SCRIPT_URL :
-                (window.GOOGLE_SCRIPT_URL || "");
+            const scriptUrl = localStorage.getItem('apps_script_url') || 
+                (typeof DEFAULT_SCRIPT_URL !== 'undefined' ? DEFAULT_SCRIPT_URL : (typeof GOOGLE_SCRIPT_URL !== 'undefined' ? GOOGLE_SCRIPT_URL : ''));
 
             if (!scriptUrl) throw new Error("URL de Google Drive no configurada.");
 
@@ -1374,6 +1374,81 @@ class DataManager {
         } catch (error) {
             console.error("Error generating annual summary:", error);
             return { success: false, message: error.message };
+        }
+    }
+
+    async getVipClientsAtRisk() {
+        try {
+            const clients = await this.getClients();
+            const orders = await this.getOrders();
+            const today = new Date();
+
+            const ordersByShop = {};
+            orders.forEach(o => {
+                const key = (o.shop || '').toLowerCase().trim();
+                if (!ordersByShop[key]) ordersByShop[key] = [];
+                ordersByShop[key].push(o);
+            });
+
+            const vipCandidates = [];
+
+            clients.forEach(client => {
+                const key = (client.name || '').toLowerCase().trim();
+                const clientOrders = (ordersByShop[key] || [])
+                    .filter(o => o.date || o.dateISO)
+                    .map(o => ({
+                        date: new Date(o.dateISO || o.date),
+                        amount: parseFloat(o.amount) || 0
+                    }))
+                    .sort((a, b) => a.date - b.date);
+
+                if (clientOrders.length === 0) return;
+
+                const totalAmount = clientOrders.reduce((s, o) => s + o.amount, 0);
+                const avgAmount = totalAmount / clientOrders.length;
+                const lastOrder = clientOrders[clientOrders.length - 1];
+                const daysSince = Math.floor((today - lastOrder.date) / (1000 * 60 * 60 * 24));
+
+                let avgFreq = 90;
+                if (clientOrders.length >= 2) {
+                    const gaps = [];
+                    for (let i = 1; i < clientOrders.length; i++) {
+                        const diffDays = Math.floor((clientOrders[i].date - clientOrders[i - 1].date) / (1000 * 60 * 60 * 24));
+                        if (diffDays > 0) gaps.push(diffDays);
+                    }
+                    if (gaps.length > 0) {
+                        avgFreq = Math.round(gaps.reduce((s, g) => s + g, 0) / gaps.length);
+                    }
+                }
+
+                // Criterio VIP en riesgo: Alto volumen (avg >= 250€ o total >= 800€) y atrasado >= max(60, freq * 1.6)
+                const isHighVolume = avgAmount >= 250 || totalAmount >= 800 || clientOrders.length >= 3;
+                const minOverdueThreshold = Math.max(60, Math.round(avgFreq * 1.6));
+                const isOverdue = daysSince >= minOverdueThreshold;
+
+                if (isHighVolume && isOverdue) {
+                    vipCandidates.push({
+                        client,
+                        name: client.name,
+                        code: client.code,
+                        phone: client.phone || '',
+                        location: client.location || client.province || '',
+                        avgAmount,
+                        totalAmount,
+                        orderCount: clientOrders.length,
+                        lastOrderDate: lastOrder.date,
+                        daysSince,
+                        avgFreq,
+                        overdueDays: daysSince - avgFreq
+                    });
+                }
+            });
+
+            vipCandidates.sort((a, b) => b.totalAmount - a.totalAmount);
+            return vipCandidates.slice(0, 5);
+        } catch (e) {
+            console.error('Error calculando clientes VIP en riesgo:', e);
+            return [];
         }
     }
 }

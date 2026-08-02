@@ -2,8 +2,9 @@
  * Componentes comunes y utilidades de UI
  */
 
-// URL de Google Script (Prioriza localStorage si existe)
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1Dq8gKHsy6vutnPh9xylbcFThY1irpehdeQTT9pY7LJAbvNIU0t6ZT0ovD2rMeg/exec';
+// URL de Google Script (Prioriza localStorage si existe y es válida)
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqG-wULnEM5VfKuO9xujKVC-3pPcFaTWJLfMymEYhKGiqmCJ1R6MD9Kok8Xvf2SQ0B6w/exec';
+localStorage.setItem('apps_script_url', DEFAULT_SCRIPT_URL);
 const GOOGLE_SCRIPT_URL = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
 const APPS_SCRIPT_URL = GOOGLE_SCRIPT_URL; // Alias para compatibilidad
 
@@ -383,15 +384,21 @@ function openInfoModal() {
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">lightbulb</span>
-                        8. Ideas de Visita
+                        8. Ideas de Visita (Inteligencia Comercial)
                     </h3>
-                    <p>Sistema de inteligencia comercial que analiza los patrones de compra de tus clientes y genera un plan de visitas optimizado por zonas:</p>
+                    <p>Sistema inteligente que analiza continuamente el historial de pedidos de tus clientes para sugerirte planes de trabajo y rutas comerciales optimizadas de 1 día:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Aprendizaje Automático:</strong> El sistema estudia el historial de cada cliente para detectar con qué frecuencia compra, en qué meses del año suele hacer pedidos, y cuánto suele pedir de media. <em>Cuantos más datos tenga, más precisas serán las sugerencias.</em></li>
-                        <li><strong>Puntuación:</strong> Cada cliente recibe una puntuación de urgencia de visita basada en tres factores: si está "atrasado" respecto a su ciclo habitual (50%), si el mes actual coincide con sus meses de compra (30%), y su volumen medio de facturación (20%).</li>
-                        <li><strong>Agrupación por Zona:</strong> Los clientes sugeridos se agrupan por proximidad geográfica (usando las coordenadas GPS) para que no mezcles zonas alejadas en un mismo día.</li>
-                        <li><strong>Planificación:</strong> Selecciona de 1 a 5 días y pulsa "Generar Plan". Obtendrás 4-5 clientes por día organizados por zona, con la razón de cada sugerencia y un botón de navegación GPS.</li>
-                        <li><strong>Prospección:</strong> Los clientes que aún no han hecho pedidos aparecen con puntuación baja y la etiqueta de "Prospección" para que no los pierdas de vista.</li>
+                        <li><strong>Aprendizaje Continuo:</strong> Con cada pedido que registras en la app, el sistema recalcula en tiempo real la frecuencia media de compra de cada cliente, sus meses históricos fuertes y su volumen medio. <em>Cuanto más usas la app, más precisa es la predicción.</em></li>
+                        <li><strong>Cálculo de Prioridad (0 a 100):</strong> El número dentro del círculo de color indica el nivel de urgencia de la visita:
+                            <br>- <strong style="color: #ef4444;">🔴 Alta (>60 pts):</strong> Cliente muy atrasado respecto a su ciclo habitual de compra.
+                            <br>- <strong style="color: #f59e0b;">🟠 Media (40 - 59 pts):</strong> Cliente que se aproxima a su fecha estimada o en su mes fuerte histórico.
+                        </li>
+                        <li><strong>Filtro Inteligente:</strong> La vista muestra exclusivamente clientes con prioridad <strong>Media y Alta (≥ 40 pts)</strong>. Si un cliente ha comprado recientemente (menos de 14 días o menos del 45% de su ciclo habitual), el sistema lo penaliza y lo excluye automáticamente para no forzar visitas innecesarias.</li>
+                        <li><strong>Rutas Comerciales Delimitadas (1 Día):</strong> El motor agrupa a los clientes según las rutas comerciales reales de trabajo delimitadas para <strong>Asturias</strong> (8 zonas), <strong>Cantabria</strong> (7 zonas), <strong>León</strong> (2 zonas) y <strong>Galicia</strong> (Mariña Lucense - Lugo), asegurando que todos los clientes recomendados para un mismo día correspondan a una única zona geográfica realizable.</li>
+                        <li><strong>Agrupación Contigua por Municipio:</strong> Dentro de cada día, los clientes aparecen organizados e identificados por su población (ej: todos los de Luanco juntos, luego Candás, luego Avilés), con cabeceras visuales claras por municipio.</li>
+                        <li><strong>Acciones Rápidas en Tarjeta:</strong> Cada cliente de la lista cuenta con botones directos para <strong>Llamar por teléfono 📞</strong>, <strong>abrir WhatsApp 💬</strong> o <strong>iniciar navegación GPS 📍</strong>.</li>
+                        <li><strong>Enviar Ruta del Día por WhatsApp:</strong> En la cabecera de cada día dispones de un botón <em>"Enviar Ruta"</em> que formatea y prepara el resumen completo del plan del día para enviártelo o compartirlo por WhatsApp con un solo toque.</li>
+                        <li><strong>Filtro por Comunidad:</strong> Puedes usar la botonera superior (<em>Todas, Asturias, Cantabria, León, Galicia</em>) para enfocar tu planificación a una región en particular.</li>
                     </ul>
                 </div>
 

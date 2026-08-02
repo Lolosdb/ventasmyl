@@ -194,7 +194,16 @@ async function performDriveBackup(isSilent = false) {
             method: 'POST',
             body: JSON.stringify(payload)
         });
-        const result = await res.json();
+        const text = await res.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            if (text.trim().startsWith('<')) {
+                throw new Error("El servidor de Google devolvió una respuesta HTML en lugar de JSON. Revisa la URL y permisos del Apps Script.");
+            }
+            throw jsonErr;
+        }
 
         if (result.success || result.status === 'success') {
             const now = new Date();
@@ -279,13 +288,34 @@ async function openBackupsModal() {
     let driveFiles = null;
 
     try {
-        const url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
+        let url = localStorage.getItem('apps_script_url');
+        if (!url || url.includes('/edit')) {
+            url = DEFAULT_SCRIPT_URL;
+            localStorage.setItem('apps_script_url', DEFAULT_SCRIPT_URL);
+        }
         let response = await fetch(url + (url.includes('?') ? '&' : '?') + "action=list");
-        let result = await response.json();
+        let text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            if (text.trim().startsWith('<')) {
+                throw new Error("El servidor de Google devolvió una página HTML en lugar de datos JSON. Esto ocurre cuando la URL es incorrecta o la Aplicación Web en Google Apps Script no está configurada para 'Cualquier persona' (Anyone).");
+            }
+            throw jsonErr;
+        }
 
         if ((result.status !== "success" && !result.success) || !result.files) {
             response = await fetch(url + (url.includes('?') ? '&' : '?') + "action=getBackups");
-            result = await response.json();
+            text = await response.text();
+            try {
+                result = JSON.parse(text);
+            } catch (jsonErr) {
+                if (text.trim().startsWith('<')) {
+                    throw new Error("El servidor de Google devolvió una página HTML en lugar de datos JSON. Verifica la URL y los permisos en Google Apps Script.");
+                }
+                throw jsonErr;
+            }
         }
 
         if ((result.status === "success" || result.success) && result.files) {
@@ -399,7 +429,11 @@ async function handleDeleteRemoteFile(fileId, fileName) {
     if (!confirm(`¿Seguro que quieres eliminar definitivamente la copia "${fileName}" de Google Drive?`)) return;
     
     try {
-        const url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
+        let url = localStorage.getItem('apps_script_url');
+        if (!url || url.includes('/edit')) {
+            url = DEFAULT_SCRIPT_URL;
+            localStorage.setItem('apps_script_url', DEFAULT_SCRIPT_URL);
+        }
         const deleteUrl = `${url}${url.includes('?') ? '&' : '?'}action=delete&id=${fileId}`;
         
         // Mostrar carga temporal
@@ -408,7 +442,16 @@ async function handleDeleteRemoteFile(fileId, fileName) {
         container.innerHTML = `<div class="text-center py-20 text-red-400 font-bold">Eliminando de Drive...</div>`;
 
         const response = await fetch(deleteUrl);
-        const result = await response.json();
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            if (text.trim().startsWith('<')) {
+                throw new Error("Respuesta HTML de Google Apps Script. Revisa la URL y permisos.");
+            }
+            throw jsonErr;
+        }
 
         if (result.status === "success" || result.success) {
             // Cerramos y reabrimos para forzar el listado nuevo (o solo re-abrir)
@@ -433,7 +476,16 @@ async function handleRemoteRestore(fileId, fileName) {
     try {
         console.log(`Solicitando descarga de backup ID: ${fileId} (${fileName})...`);
         const response = await fetch(url + (url.includes('?') ? '&' : '?') + `action=get&id=${fileId}`);
-        const result = await response.json();
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            if (text.trim().startsWith('<')) {
+                throw new Error("Respuesta HTML de Google Apps Script. Revisa la URL y permisos.");
+            }
+            throw jsonErr;
+        }
         
         if ((result.status === "success" || result.success) && result.data) {
             let backupData = result.data;
