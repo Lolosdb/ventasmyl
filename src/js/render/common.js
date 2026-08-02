@@ -119,6 +119,10 @@ function renderNavMenuHTML() {
                     <span class="material-icons-round">euro_symbol</span>
                     <span>Comisiones</span>
                 </button>
+                <button class="nav-menu-item" onclick="closeNavMenu(); renderIdeas();">
+                    <span class="material-icons-round">lightbulb</span>
+                    <span>Ideas de Visita</span>
+                </button>
                 <button class="nav-menu-item" onclick="closeNavMenu(); renderMedias();">
                     <span class="material-icons-round">history_toggle_off</span>
                     <span>Medias Mensuales</span>
@@ -378,8 +382,23 @@ function openInfoModal() {
 
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #009ee3;">lightbulb</span>
+                        8. Ideas de Visita
+                    </h3>
+                    <p>Sistema de inteligencia comercial que analiza los patrones de compra de tus clientes y genera un plan de visitas optimizado por zonas:</p>
+                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
+                        <li><strong>Aprendizaje Automático:</strong> El sistema estudia el historial de cada cliente para detectar con qué frecuencia compra, en qué meses del año suele hacer pedidos, y cuánto suele pedir de media. <em>Cuantos más datos tenga, más precisas serán las sugerencias.</em></li>
+                        <li><strong>Puntuación:</strong> Cada cliente recibe una puntuación de urgencia de visita basada en tres factores: si está "atrasado" respecto a su ciclo habitual (50%), si el mes actual coincide con sus meses de compra (30%), y su volumen medio de facturación (20%).</li>
+                        <li><strong>Agrupación por Zona:</strong> Los clientes sugeridos se agrupan por proximidad geográfica (usando las coordenadas GPS) para que no mezcles zonas alejadas en un mismo día.</li>
+                        <li><strong>Planificación:</strong> Selecciona de 1 a 5 días y pulsa "Generar Plan". Obtendrás 4-5 clientes por día organizados por zona, con la razón de cada sugerencia y un botón de navegación GPS.</li>
+                        <li><strong>Prospección:</strong> Los clientes que aún no han hecho pedidos aparecen con puntuación baja y la etiqueta de "Prospección" para que no los pierdas de vista.</li>
+                    </ul>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">groups</span>
-                        8. Fichero de Clientes
+                        9. Fichero de Clientes
                     </h3>
                     <p>Tu agenda comercial avanzada, diseñada para tener todos los contactos y su información a un solo toque:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
@@ -396,7 +415,7 @@ function openInfoModal() {
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">map</span>
-                        9. Mapa Interactivo
+                        10. Mapa Interactivo
                     </h3>
                     <p>Una vista especial (accesible desde el icono "Mapa" del menú inferior) que pinta tu cartera de clientes sobre el mapa geográfico de Google.</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
@@ -408,7 +427,7 @@ function openInfoModal() {
                 <div style="margin-bottom: 2.5rem;">
                     <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #009ee3;">settings</span>
-                        10. Ajustes, Seguridad y Backups
+                        11. Ajustes, Seguridad y Backups
                     </h3>
                     <p>Accesible pulsando en el icono superior derecho de tres rayitas o perfil. Es el panel técnico y de mantenimiento:</p>
                     <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
