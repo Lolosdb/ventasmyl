@@ -401,17 +401,56 @@ class DataManager {
         return [headerRow, ...dataRows];
     }
 
-    async saveNewClientToDrive(url, filename, newClientData) {
+    async _safeFetchJson(url, options = {}) {
+        const response = await fetch(url, options);
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+            throw new Error("El servidor devolvió una respuesta vacía.");
+        }
+        if (text.trim().startsWith('<') || text.includes('<!DOCTYPE') || text.includes('<html')) {
+            throw new Error("El servidor de Google Apps Script devolvió una página HTML en lugar de JSON. Verifica la URL configurada y los permisos del script.");
+        }
         try {
-            // 1. Download current file
-            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            const json = await response.json();
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error("Respuesta no válida del servidor: " + text.slice(0, 100));
+        }
+    }
 
+    async saveNewClientToDrive(url, filename, newClientData) {
+        // 1. Guardar primero en la BD local (IndexedDB)
+        try {
+            await this.db.put('clients', {
+                code: newClientData.code,
+                name: newClientData.name,
+                nif: newClientData.nif,
+                email: newClientData.email,
+                address: newClientData.address,
+                contact: newClientData.contact,
+                location: newClientData.location,
+                province: newClientData.province,
+                cp: newClientData.cp,
+                phone: newClientData.phone,
+                phone2: newClientData.phone2 || "",
+                schedule: newClientData.schedule || "",
+                lat: newClientData.lat,
+                lng: newClientData.lng,
+                createdAt: new Date().toISOString()
+            });
+        } catch (localErr) {
+            console.error("Error guardando cliente localmente:", localErr);
+            return { success: false, message: "No se pudo guardar en la base de datos local: " + localErr.message };
+        }
+
+        // 2. Intentar guardar en Google Drive
+        try {
+            if (!url) throw new Error("URL de Google Drive no configurada");
+
+            const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
             if (json.status !== 'success' || !json.data) {
-                throw new Error("No se pudo descargar el archivo actual de Drive.");
+                throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
             }
 
-            // 2. Parse Excel
             const binaryString = atob(json.data);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
@@ -421,14 +460,12 @@ class DataManager {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
 
-            // 3. Convert to JSON + Clean Structure
             let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
             rows = this._cleanAndSortRows(rows);
 
             const headerRow = rows[0] || [];
             const colMap = this._getColumnMap(headerRow);
 
-            // Prepare New Row
             const maxIdx = Math.max(...Object.values(colMap), 22);
             const newRow = new Array(maxIdx + 1).fill("");
 
@@ -449,7 +486,6 @@ class DataManager {
 
             rows.push(newRow);
 
-            // 4. Final Re-sort after push
             const header = rows.shift();
             rows.sort((a, b) => {
                 const valA = (a[colMap.location] || "").toString().toLowerCase();
@@ -458,56 +494,67 @@ class DataManager {
             });
             rows.unshift(header);
 
-            // 5. Write back to Sheet
             const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
             workbook.Sheets[firstSheetName] = newWorksheet;
-
             const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
 
-            // 6. Upload
-            const uploadRes = await fetch(url + '?action=save&filename=' + encodeURIComponent(filename), {
+            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
                 method: 'POST',
                 body: wbOut
             });
 
-            const uploadJson = await uploadRes.json();
             if (uploadJson.status === 'success') {
-                // Also save locally
-                await this.db.put('clients', {
-                    code: newClientData.code,
-                    name: newClientData.name,
-                    nif: newClientData.nif,
-                    email: newClientData.email,
-                    address: newClientData.address,
-                    contact: newClientData.contact,
-                    location: newClientData.location,
-                    province: newClientData.province,
-                    cp: newClientData.cp,
-                    phone: newClientData.phone,
-                    phone2: newClientData.phone2 || "",
-                    lat: newClientData.lat,
-                    lng: newClientData.lng,
-                    createdAt: new Date().toISOString()
-                });
-                return { success: true };
+                return { success: true, driveSynced: true };
             } else {
                 throw new Error(uploadJson.message || "Error al subir a Drive");
             }
 
-        } catch (error) {
-            console.error("Save Error", error);
-            return { success: false, message: error.message };
+        } catch (driveErr) {
+            console.warn("Cliente guardado en local, pero no se pudo sincronizar en Drive:", driveErr);
+            return {
+                success: true,
+                driveSynced: false,
+                warning: `Guardado en el dispositivo. No se pudo sincronizar con Google Drive (${driveErr.message})`
+            };
         }
     }
 
     async updateClientInDrive(url, filename, originalCode, updatedData) {
+        // 1. Guardar primero en la BD local (IndexedDB)
         try {
-            // 1. Download
-            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            const json = await response.json();
-            if (json.status !== 'success' || !json.data) throw new Error("No se pudo descargar el archivo.");
+            if (String(originalCode) !== String(updatedData.code)) {
+                await this.db.delete('clients', originalCode);
+            }
 
-            // 2. Parse
+            await this.db.put('clients', {
+                code: updatedData.code,
+                name: updatedData.name,
+                nif: updatedData.nif,
+                email: updatedData.email,
+                address: updatedData.address,
+                contact: updatedData.contact,
+                location: updatedData.location,
+                province: updatedData.province,
+                cp: updatedData.cp,
+                phone: updatedData.phone,
+                phone2: updatedData.phone2 || "",
+                schedule: updatedData.schedule || "",
+                lat: updatedData.lat,
+                lng: updatedData.lng,
+                createdAt: new Date().toISOString()
+            });
+        } catch (localErr) {
+            console.error("Error actualizando cliente localmente:", localErr);
+            return { success: false, message: "No se pudo actualizar en la base de datos local: " + localErr.message };
+        }
+
+        // 2. Intentar actualizar en Google Drive
+        try {
+            if (!url) throw new Error("URL de Google Drive no configurada");
+
+            const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
+            if (json.status !== 'success' || !json.data) throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+
             const binaryString = atob(json.data);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
@@ -516,14 +563,12 @@ class DataManager {
             const workbook = XLSX.read(bytes, { type: 'array' });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            // 3. Convert + Sanitize File
             let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
             rows = this._cleanAndSortRows(rows);
 
             const headerRow = rows[0] || [];
             const colMap = this._getColumnMap(headerRow);
 
-            // 3b. Find and Update
             let rowIndex = -1;
             for (let i = 1; i < rows.length; i++) {
                 if (String(rows[i][colMap.code]).trim() === String(originalCode).trim()) {
@@ -532,7 +577,7 @@ class DataManager {
                 }
             }
 
-            if (rowIndex === -1) throw new Error("Cliente no encontrado en el Excel.");
+            if (rowIndex === -1) throw new Error("Cliente no encontrado en el archivo de Drive.");
 
             const maxIdx = Math.max(...Object.values(colMap), 22);
             if (!Array.isArray(rows[rowIndex])) rows[rowIndex] = new Array(maxIdx + 1).fill("");
@@ -552,7 +597,6 @@ class DataManager {
             rows[rowIndex][colMap.lat] = updatedData.lat;
             rows[rowIndex][colMap.lng] = updatedData.lng;
 
-            // 4. Final Re-sort (in case location changed)
             const header = rows.shift();
             rows.sort((a, b) => {
                 const valA = (a[colMap.location] || "").toString().toLowerCase();
@@ -561,60 +605,47 @@ class DataManager {
             });
             rows.unshift(header);
 
-            // 5. Upload
             const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
             workbook.Sheets[firstSheetName] = newWorksheet;
             const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
 
-            const uploadRes = await fetch(url + '?action=save&filename=' + encodeURIComponent(filename), {
+            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
                 method: 'POST',
                 body: wbOut
             });
-            const uploadJson = await uploadRes.json();
 
             if (uploadJson.status === 'success') {
-                // Update Local
-                // Delete old key if code changed? IndexedDB put overwrites if key same.
-                // If code changed, we need to delete old key.
-                if (String(originalCode) !== String(updatedData.code)) {
-                    await this.db.delete('clients', originalCode);
-                }
-
-                await this.db.put('clients', {
-                    code: updatedData.code,
-                    name: updatedData.name,
-                    nif: updatedData.nif,
-                    email: updatedData.email,
-                    address: updatedData.address,
-                    contact: updatedData.contact,
-                    location: updatedData.location,
-                    province: updatedData.province,
-                    cp: updatedData.cp,
-                    phone: updatedData.phone,
-                    phone2: updatedData.phone2 || "",
-                    lat: updatedData.lat,
-                    lng: updatedData.lng,
-                    createdAt: new Date().toISOString()
-                });
-                return { success: true };
+                return { success: true, driveSynced: true };
             } else {
                 throw new Error(uploadJson.message || "Error al actualizar en Drive");
             }
 
-        } catch (e) {
-            console.error(e);
-            return { success: false, message: e.message };
+        } catch (driveErr) {
+            console.warn("Cliente guardado en local, pero no se pudo sincronizar en Drive:", driveErr);
+            return {
+                success: true,
+                driveSynced: false,
+                warning: `Guardado en el dispositivo. No se pudo sincronizar con Google Drive (${driveErr.message})`
+            };
         }
     }
 
     async deleteClientFromDrive(url, filename, clientCode) {
+        // 1. Eliminar localmente en BD primero
         try {
-            // 1. Download
-            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            const json = await response.json();
-            if (json.status !== 'success' || !json.data) throw new Error("No se pudo descargar el archivo.");
+            await this.db.delete('clients', clientCode);
+        } catch (localErr) {
+            console.error("Error eliminando cliente localmente:", localErr);
+            return { success: false, message: "No se pudo eliminar en el dispositivo: " + localErr.message };
+        }
 
-            // 2. Parse
+        // 2. Eliminar en Google Drive
+        try {
+            if (!url) throw new Error("URL de Google Drive no configurada");
+
+            const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
+            if (json.status !== 'success' || !json.data) throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+
             const binaryString = atob(json.data);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
@@ -625,52 +656,50 @@ class DataManager {
             const worksheet = workbook.Sheets[firstSheetName];
             let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-            // compact & clean
             rows = this._cleanAndSortRows(rows);
             const headerRow = rows[0] || [];
             const colMap = this._getColumnMap(headerRow);
 
-            // 3. Filter
             const header = rows.shift();
             const initialLen = rows.length;
 
             rows = rows.filter(r => String(r[colMap.code]).trim() !== String(clientCode).trim());
 
-            if (rows.length === initialLen) throw new Error("Cliente no encontrado para eliminar.");
+            if (rows.length === initialLen) throw new Error("Cliente no encontrado en el archivo de Drive.");
 
-            // Put header back and final clean/resort
             rows.unshift(header);
             rows = this._cleanAndSortRows(rows);
 
-            // 4. Upload
             const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
             workbook.Sheets[firstSheetName] = newWorksheet;
             const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
 
-            const uploadRes = await fetch(url + '?action=save&filename=' + encodeURIComponent(filename), {
+            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
                 method: 'POST',
                 body: wbOut
             });
-            const uploadJson = await uploadRes.json();
 
             if (uploadJson.status === 'success') {
-                // Local delete
-                await this.db.delete('clients', clientCode);
-                return { success: true };
+                return { success: true, driveSynced: true };
             } else {
                 throw new Error(uploadJson.message || "Error al eliminar de Drive");
             }
 
-        } catch (e) {
-            console.error(e);
-            return { success: false, message: e.message };
+        } catch (driveErr) {
+            console.warn("Cliente eliminado localmente pero falló eliminación en Drive:", driveErr);
+            return {
+                success: true,
+                driveSynced: false,
+                warning: `Eliminado del dispositivo. No se pudo sincronizar la eliminación con Google Drive (${driveErr.message})`
+            };
         }
     }
 
     async importFromDrive(url, filename) {
         try {
-            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            const json = await response.json();
+            if (!url) throw new Error("URL de Google Drive no configurada");
+
+            const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
 
             if (json.status === 'success' && json.data) {
                 const binaryString = atob(json.data);
@@ -681,11 +710,10 @@ class DataManager {
                 }
                 return await this.importClientsFromExcel(bytes);
             } else {
-                throw new Error(json.message || 'Error desconocido al descargar de Drive');
+                throw new Error(json.message || 'Error al descargar el archivo de Drive');
             }
         } catch (error) {
             console.error("Error en importFromDrive", error);
-            // Return object with success:false so UI handles it gracefully
             return { success: false, message: error.message };
         }
     }

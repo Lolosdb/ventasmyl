@@ -2,7 +2,11 @@
  * Lógica de gestión de Clientes
  */
 
-const APPS_SCRIPT_CLIENTS_URL = 'https://script.google.com/macros/s/AKfycbw0oAQ1Dq8gKHsy6vutnPh9xylbcFThY1irpehdeQTT9pY7LJAbvNIU0t6ZT0ovD2rMeg/exec';async function renderClientes(isBack = false) {
+function getClientScriptUrl() {
+    return localStorage.getItem('apps_script_url') || (typeof DEFAULT_SCRIPT_URL !== 'undefined' ? DEFAULT_SCRIPT_URL : (typeof GOOGLE_SCRIPT_URL !== 'undefined' ? GOOGLE_SCRIPT_URL : ''));
+}
+
+async function renderClientes(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('clientes', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Clientes');
@@ -389,18 +393,23 @@ async function saveNewClient() {
 
     try {
         const filename = 'Clientes_CON_COORDENADAS.xlsx';
+        const scriptUrl = getClientScriptUrl();
         let res;
-        if (isEdit) res = await dataManager.updateClientInDrive(APPS_SCRIPT_CLIENTS_URL, filename, originalCode, data);
-        else res = await dataManager.saveNewClientToDrive(APPS_SCRIPT_CLIENTS_URL, filename, data);
+        if (isEdit) res = await dataManager.updateClientInDrive(scriptUrl, filename, originalCode, data);
+        else res = await dataManager.saveNewClientToDrive(scriptUrl, filename, data);
 
         if (res.success) {
-            alert("Cliente guardado correctamente");
+            if (res.warning) {
+                alert("⚠️ " + res.warning);
+            } else {
+                alert("Cliente guardado correctamente");
+            }
             document.getElementById('newClientModal').classList.remove('open');
             closeClientDetailModal();
             renderClientes();
         } else alert("Error: " + res.message);
     } catch (e) {
-        alert("Error de conexión");
+        alert("Error de conexión al guardar el cliente: " + e.message);
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -414,7 +423,8 @@ async function handleDriveImport() {
     btn.disabled = true;
 
     try {
-        const res = await dataManager.importFromDrive(APPS_SCRIPT_CLIENTS_URL, 'Clientes_CON_COORDENADAS.xlsx');
+        const scriptUrl = getClientScriptUrl();
+        const res = await dataManager.importFromDrive(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
         if (res.success) {
             const preservedMsg = res.preserved > 0 ? ` (${res.preserved} cliente${res.preserved > 1 ? 's' : ''} local${res.preserved > 1 ? 'es' : ''} conservado${res.preserved > 1 ? 's' : ''})` : '';
             alert(`Sincronizados ${res.count} clientes desde Drive.${preservedMsg}`);
@@ -429,16 +439,21 @@ async function handleDriveImport() {
 }
 
 async function handleDeleteClient(code) {
-    if (!confirm("¿Deseas eliminar este cliente permanentemente de Google Drive?")) return;
+    if (!confirm("¿Deseas eliminar este cliente permanentemente?")) return;
     try {
-        const res = await dataManager.deleteClientFromDrive(APPS_SCRIPT_CLIENTS_URL, 'Clientes_CON_COORDENADAS.xlsx', code);
+        const scriptUrl = getClientScriptUrl();
+        const res = await dataManager.deleteClientFromDrive(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx', code);
         if (res.success) {
-            alert("Cliente eliminado");
+            if (res.warning) {
+                alert("⚠️ " + res.warning);
+            } else {
+                alert("Cliente eliminado");
+            }
             closeClientDetailModal();
             renderClientes();
         } else alert("Error: " + res.message);
     } catch (e) {
-        alert("Error de conexión");
+        alert("Error de conexión: " + e.message);
     }
 }
 
