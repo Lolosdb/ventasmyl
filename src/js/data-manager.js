@@ -1143,6 +1143,61 @@ class DataManager {
         }
     }
 
+    async exportBackupToExcelDrive(url) {
+        try {
+            if (!url) throw new Error("URL de Google Drive no configurada.");
+            const wb = XLSX.utils.book_new();
+
+            const clients = await this.getClients();
+            if (clients && clients.length > 0) {
+                const wsClients = XLSX.utils.json_to_sheet(clients);
+                XLSX.utils.book_append_sheet(wb, wsClients, "Clientes");
+            }
+
+            const orders = await this.getOrders();
+            if (orders && orders.length > 0) {
+                const wsOrders = XLSX.utils.json_to_sheet(orders);
+                XLSX.utils.book_append_sheet(wb, wsOrders, "Pedidos");
+            }
+
+            const departments = await this.getDepartamentos();
+            if (departments && departments.length > 0) {
+                const wsDepts = XLSX.utils.json_to_sheet(departments);
+                XLSX.utils.book_append_sheet(wb, wsDepts, "Departamentos");
+            }
+
+            const goals = await this.db.get('config', 'goals');
+            const salesHistory = await this.db.get('config', 'sales_history');
+            const invoiceHistory = await this.db.get('config', 'invoice_history');
+
+            const configData = [
+                { key: 'goals', value: JSON.stringify(goals || {}) },
+                { key: 'sales_history', value: JSON.stringify(salesHistory || {}) },
+                { key: 'invoice_history', value: JSON.stringify(invoiceHistory || {}) }
+            ];
+            const wsConfig = XLSX.utils.json_to_sheet(configData);
+            XLSX.utils.book_append_sheet(wb, wsConfig, "Config");
+
+            const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+            const filename = `Backup_Ventas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
+                method: 'POST',
+                body: wbOut
+            });
+
+            if (uploadJson.status === 'success' || uploadJson.success) {
+                return { success: true, filename };
+            } else {
+                throw new Error(uploadJson.message || "Error al guardar el archivo Excel en Drive");
+            }
+
+        } catch (error) {
+            console.error("Export Excel to Drive Error", error);
+            return { success: false, message: error.message };
+        }
+    }
+
     async importBackupFromExcel(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();

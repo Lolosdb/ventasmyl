@@ -73,7 +73,11 @@ async function renderAjustes(isBack = false) {
             <div class="btn-grid">
                 <button class="btn-ajuste btn-local-primary" onclick="handleExcelExport()">
                     <span class="material-icons-round">file_download</span>
-                    <span>Exportar</span>
+                    <span>Descargar Excel</span>
+                </button>
+                <button class="btn-ajuste btn-nube-primary" onclick="handleExcelDriveExport()">
+                    <span class="material-icons-round">cloud_upload</span>
+                    <span>Excel a Drive</span>
                 </button>
                 <button class="btn-ajuste btn-local-secondary" onclick="document.getElementById('excelBackupInput').click()">
                     <span class="material-icons-round">file_upload</span>
@@ -175,12 +179,19 @@ async function renderAjustes(isBack = false) {
     app.innerHTML = headerHtml + contentHtml;
     
     injectManagementYearsModal();
+
+    // Verificación automática de la conexión al abrir los ajustes
+    setTimeout(() => {
+        if (typeof checkConnectionStatus === 'function') checkConnectionStatus(true);
+    }, 100);
 }
 
 // --- LOGICA DE // Función núcleo de backup (puede ser manual o automática)
 async function performDriveBackup(isSilent = false) {
     try {
         const fullData = await dataManager.exportFullBackup();
+        console.log(`[Backup] Exportando ${fullData.orders.length} pedidos, ${fullData.clients.length} clientes...`);
+
         const payload = {
             action: 'fullBackup',
             data: {
@@ -189,9 +200,15 @@ async function performDriveBackup(isSilent = false) {
             }
         };
 
-        const url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
+        let url = localStorage.getItem('apps_script_url');
+        if (!url || url.includes('/edit')) {
+            url = DEFAULT_SCRIPT_URL;
+            localStorage.setItem('apps_script_url', DEFAULT_SCRIPT_URL);
+        }
+
         const res = await fetch(url, {
             method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         });
         const text = await res.text();
@@ -200,7 +217,7 @@ async function performDriveBackup(isSilent = false) {
             result = JSON.parse(text);
         } catch (jsonErr) {
             if (text.trim().startsWith('<')) {
-                throw new Error("El servidor de Google devolvió una respuesta HTML en lugar de JSON. Revisa la URL y permisos del Apps Script.");
+                throw new Error("El servidor de Google devolvió una respuesta HTML en lugar de JSON. Revisa la URL y los permisos del Apps Script.");
             }
             throw jsonErr;
         }
@@ -212,19 +229,19 @@ async function performDriveBackup(isSilent = false) {
             localStorage.setItem('last_auto_backup_str', nowStr);
             
             const backups = JSON.parse(localStorage.getItem('app_backups') || '[]');
-            backups.unshift({ date: now.toISOString(), status: 'OK' });
+            backups.unshift({ date: now.toISOString(), status: 'OK', count: fullData.orders.length });
             localStorage.setItem('app_backups', JSON.stringify(backups.slice(0, 10)));
             
-            if (!isSilent) alert("Respaldo en la nube finalizado");
+            if (!isSilent) alert(`Copia de seguridad en la nube completada (${fullData.orders.length} pedidos, ${fullData.clients.length} clientes).`);
             if (window.currentView === 'ajustes') renderAjustes();
             return true;
         } else {
-            if (!isSilent) alert("Fallo en Drive: " + result.message);
+            if (!isSilent) alert("Fallo en Drive: " + (result.message || "Error al guardar la copia."));
             return false;
         }
     } catch (e) {
         console.error("Backup Error", e);
-        if (!isSilent) alert("Error de conexión con el script de Google");
+        if (!isSilent) alert("Error al realizar la copia de seguridad: " + e.message);
         return false;
     }
 }
@@ -538,6 +555,34 @@ async function handleExcelExport() {
     if (res.success) alert("Excel generado con éxito");
 }
 
+async function handleExcelDriveExport() {
+    if (!confirm("Se guardará una copia completa en formato Excel (con todos los pedidos, clientes y departamentos) directamente en Google Drive. ¿Continuar?")) return;
+    const btn = event ? (event.currentTarget || event.target) : null;
+    let orig = '';
+    if (btn) {
+        orig = btn.innerHTML;
+        btn.innerHTML = '<span class="material-icons-round animate-spin">sync</span> Subiendo Excel...';
+        btn.disabled = true;
+    }
+
+    try {
+        const url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
+        const res = await dataManager.exportBackupToExcelDrive(url);
+        if (res.success) {
+            alert(`Copia completa en Excel (${res.filename}) guardada con éxito en Google Drive.`);
+        } else {
+            alert("Error al guardar Excel en Drive: " + res.message);
+        }
+    } catch (e) {
+        alert("Error de conexión: " + e.message);
+    } finally {
+        if (btn) {
+            btn.innerHTML = orig;
+            btn.disabled = false;
+        }
+    }
+}
+
 async function handleExcelImport(input) {
     if (!input.files || input.files.length === 0) return;
     if (!confirm("Se reemplazarán todos los datos actuales por los del archivo. ¿Confirmar?")) return;
@@ -556,45 +601,82 @@ function updateScriptUrl(url) {
     if (!url) return;
     localStorage.setItem('apps_script_url', url.trim());
     console.log("Script URL updated:", url);
+    checkConnectionStatus(true);
+}
+
+async function checkConnectionStatus(isSilent = true) {
+    const statusEl = document.getElementById('syncStatus');
+    const urlInput = document.getElementById('scriptUrlInput');
+    let url = urlInput ? urlInput.value.trim() : '';
+    if (!url) url = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
+
+    if (!url) {
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <span class="material-icons-round" style="color: #ef4444; font-size: 18px;">error</span>
+                <span style="color: #ef4444; font-weight: 700;">Estado: URL no configurada</span>
+            `;
+        }
+        return false;
+    }
+
+    if (statusEl) {
+        statusEl.innerHTML = `
+            <span class="material-icons-round animate-spin" style="color: #009ee3; font-size: 18px;">sync</span>
+            <span style="color: #64748b;">Comprobando conexión...</span>
+        `;
+    }
+
+    try {
+        const testUrl = url + (url.includes('?') ? '&' : '?') + "action=ping";
+        const response = await fetch(testUrl, { method: 'GET', cache: 'no-cache' });
+        const text = await response.text();
+
+        let isOk = response.ok;
+        if (text && text.trim().startsWith('{')) {
+            try {
+                const json = JSON.parse(text);
+                if (json.status === 'success' || json.success || json.pong) isOk = true;
+            } catch (e) {}
+        }
+
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <span class="material-icons-round" style="color: #10b981; font-size: 18px;">check_circle</span>
+                <span style="color: #10b981; font-weight: 700;">Estado: Sincronización activa</span>
+            `;
+        }
+        if (!isSilent) alert("Conexión activa. La URL es válida y el servidor responde correctamente.");
+        return true;
+    } catch (e) {
+        console.warn("Connection Status Check Error:", e);
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <span class="material-icons-round" style="color: #ef4444; font-size: 18px;">error</span>
+                <span style="color: #ef4444; font-weight: 700;">Estado: Error de conexión</span>
+            `;
+        }
+        if (!isSilent) alert("No se pudo alcanzar el script. Verifica la conexión o la URL.");
+        return false;
+    }
 }
 
 async function testConnection() {
-    const btn = event.currentTarget;
-    const urlInput = document.getElementById('scriptUrlInput');
-    const url = urlInput.value.trim();
-    if (!url) return alert("Por favor, introduce una URL válida.");
-    
-    const originalContent = btn.innerHTML;
-    btn.innerHTML = '<span class="material-icons-round animate-spin">sync</span>';
-    btn.disabled = true;
+    const btn = event ? (event.currentTarget || event.target) : null;
+    let originalContent = '';
+    if (btn) {
+        originalContent = btn.innerHTML;
+        btn.innerHTML = '<span class="material-icons-round animate-spin">sync</span>';
+        btn.disabled = true;
+    }
 
     try {
-        await fetch(url, {
-            method: 'GET',
-            mode: 'no-cors',
-            cache: 'no-cache'
-        });
-
-        document.getElementById('syncStatus').innerHTML = `
-            <span class="material-icons-round">check_circle</span>
-            <span>Sincronización activa</span>
-        `;
-        document.getElementById('syncStatus').style.color = '#10b981';
-        alert("Conexión detectada. La URL es válida y alcanzable.");
-        
-        localStorage.setItem('apps_script_url', url);
-        
-    } catch (e) {
-        console.error("Connection Debug Error:", e);
-        document.getElementById('syncStatus').innerHTML = `
-            <span class="material-icons-round">error</span>
-            <span>Error de conexión</span>
-        `;
-        document.getElementById('syncStatus').style.color = '#ef4444';
-        alert("No se pudo alcanzar el script. Verifica que la URL sea la correcta.");
+        await checkConnectionStatus(false);
     } finally {
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        }
     }
 }
 
@@ -695,8 +777,10 @@ window.performDriveBackup = performDriveBackup;
 window.startBackupScheduler = startBackupScheduler;
 window.openBackupsModal = openBackupsModal;
 window.handleExcelExport = handleExcelExport;
+window.handleExcelDriveExport = handleExcelDriveExport;
 window.handleExcelImport = handleExcelImport;
 window.updateScriptUrl = updateScriptUrl;
+window.checkConnectionStatus = checkConnectionStatus;
 window.testConnection = testConnection;
 window.openManagementYearsModal = openManagementYearsModal;
 window.closeManagementYearsModal = closeManagementYearsModal;

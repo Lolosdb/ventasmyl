@@ -58,7 +58,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.startBackupScheduler();
         }
 
-        // 3. Renderizar vista inicial (Dashboard)
+        // 3. Activar y verificar automáticamente la conexión con Google Script al iniciar
+        if (typeof window.checkConnectionStatus === 'function') {
+            window.checkConnectionStatus(true);
+        }
+
+        // 4. Renderizar vista inicial (Dashboard)
         if (typeof renderDash === 'function') {
             renderDash().catch(err => {
                 console.error("Error al renderizar el Dashboard:", err);
