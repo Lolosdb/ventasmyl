@@ -322,7 +322,14 @@ async function openBackupsModal() {
             throw jsonErr;
         }
 
-        if ((result.status !== "success" && !result.success) || !result.files) {
+        const isSuccess = result.status === "success" || result.success;
+
+        if (isSuccess) {
+            // Respuesta válida del servidor: puede tener lista vacía (p.ej. tras borrar la última copia)
+            const files = Array.isArray(result.files) ? result.files : [];
+            driveFiles = files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
+        } else if (!result.files) {
+            // El primer endpoint no reconoció la acción: intentar endpoint alternativo
             response = await fetch(url + (url.includes('?') ? '&' : '?') + "action=getBackups");
             text = await response.text();
             try {
@@ -333,11 +340,13 @@ async function openBackupsModal() {
                 }
                 throw jsonErr;
             }
-        }
 
-        if ((result.status === "success" || result.success) && result.files) {
-            // Filtrar archivos Excel (.xlsx) — no son copias de seguridad restaurables
-            driveFiles = result.files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
+            if (result.status === "success" || result.success) {
+                const files = Array.isArray(result.files) ? result.files : [];
+                driveFiles = files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
+            } else {
+                driveError = result.message || "El servidor no devolvió copias válidas.";
+            }
         } else {
             driveError = result.message || "El servidor no devolvió copias válidas.";
         }
@@ -357,10 +366,13 @@ async function openBackupsModal() {
         html += `
             <div style="background-color: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 12px; align-items: flex-start;">
                 <span class="material-icons-round" style="color: #f97316; font-size: 22px; margin-top: 2px; flex-shrink: 0;">cloud_off</span>
-                <div>
+                <div style="flex: 1;">
                     <p style="font-size: 0.8rem; font-weight: 800; color: #9a3412; margin: 0 0 4px;">No se pudo conectar con Google Drive</p>
                     <p style="font-size: 0.72rem; color: #c2410c; font-weight: 500; margin: 0; word-break: break-word;">${driveError}</p>
                     <p style="font-size: 0.68rem; color: #9a3412; font-weight: 600; margin: 6px 0 0; opacity: 0.75;">Comprueba la URL del script en Ajustes o vuelve a intentarlo.</p>
+                    <button onclick="openBackupsModal()" style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; background-color: #f97316; color: #fff; border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.72rem; font-weight: 800; cursor: pointer;">
+                        <span class="material-icons-round" style="font-size: 15px;">refresh</span> Reintentar
+                    </button>
                 </div>
             </div>
         `;
@@ -456,7 +468,7 @@ async function handleDeleteRemoteFile(fileId, fileName) {
         // Mostrar carga temporal
         const container = document.getElementById('backupsListContainer');
         const originalHtml = container.innerHTML;
-        container.innerHTML = `<div class="text-center py-20 text-red-400 font-bold">Eliminando de Drive...</div>`;
+        container.innerHTML = `<div style="text-align:center; padding: 4rem 0; color: #ef4444; font-weight: 700;">Eliminando de Drive...</div>`;
 
         const response = await fetch(deleteUrl);
         const text = await response.text();
@@ -471,8 +483,11 @@ async function handleDeleteRemoteFile(fileId, fileName) {
         }
 
         if (result.status === "success" || result.success) {
-            // Cerramos y reabrimos para forzar el listado nuevo (o solo re-abrir)
-            openBackupsModal(); 
+            // Esperar a que Apps Script cierre su ejecución antes de pedir la lista nueva,
+            // de lo contrario puede devolver HTML en lugar de JSON.
+            container.innerHTML = `<div style="text-align:center; padding: 4rem 0; color: #64748b; font-weight: 700;">Actualizando lista...</div>`;
+            await new Promise(resolve => setTimeout(resolve, 900));
+            openBackupsModal();
         } else {
             throw new Error(result.message || "Fallo al borrar");
         }
