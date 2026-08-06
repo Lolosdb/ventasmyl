@@ -571,13 +571,56 @@ class DataManager {
 
             let rowIndex = -1;
             for (let i = 1; i < rows.length; i++) {
-                if (String(rows[i][colMap.code]).trim() === String(originalCode).trim()) {
+                // Comparar como strings ignorando espacios y diferencias de tipo (número vs string)
+                if (String(rows[i][colMap.code]).trim().toLowerCase() === String(originalCode).trim().toLowerCase()) {
                     rowIndex = i;
                     break;
                 }
             }
 
-            if (rowIndex === -1) throw new Error("Cliente no encontrado en el archivo de Drive.");
+            // Si no se encuentra en Drive, el cliente solo existía en local (sync fallido anterior).
+            // Lo tratamos como inserción nueva para que quede sincronizado.
+            if (rowIndex === -1) {
+                const maxIdxNew = Math.max(...Object.values(colMap), 22);
+                const newRow = new Array(maxIdxNew + 1).fill("");
+                newRow[colMap.code]     = updatedData.code;
+                newRow[colMap.name]     = updatedData.name;
+                newRow[colMap.nif]      = updatedData.nif;
+                newRow[colMap.email]    = updatedData.email;
+                newRow[colMap.address]  = updatedData.address;
+                newRow[colMap.contact]  = updatedData.contact;
+                newRow[colMap.location] = updatedData.location;
+                newRow[colMap.province] = updatedData.province;
+                newRow[colMap.cp]       = updatedData.cp;
+                newRow[colMap.phone]    = updatedData.phone;
+                if (colMap.phone2 !== undefined) newRow[colMap.phone2] = updatedData.phone2 || "";
+                newRow[colMap.schedule] = updatedData.schedule;
+                newRow[colMap.lat]      = updatedData.lat;
+                newRow[colMap.lng]      = updatedData.lng;
+                rows.push(newRow);
+
+                // Ordenar (sin cabecera) y recomponer
+                const hdr = rows.shift();
+                rows.sort((a, b) => {
+                    const valA = (a[colMap.location] || "").toString().toLowerCase();
+                    const valB = (b[colMap.location] || "").toString().toLowerCase();
+                    return valA.localeCompare(valB);
+                });
+                rows.unshift(hdr);
+
+                const wsNew = XLSX.utils.aoa_to_sheet(rows);
+                workbook.Sheets[firstSheetName] = wsNew;
+                const wbOutNew = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+                const uploadNew = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
+                    method: 'POST',
+                    body: wbOutNew
+                });
+                if (uploadNew.status === 'success') {
+                    return { success: true, driveSynced: true };
+                } else {
+                    throw new Error(uploadNew.message || "Error al subir a Drive");
+                }
+            }
 
             const maxIdx = Math.max(...Object.values(colMap), 22);
             if (!Array.isArray(rows[rowIndex])) rows[rowIndex] = new Array(maxIdx + 1).fill("");
