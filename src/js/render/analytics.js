@@ -696,9 +696,9 @@ async function renderFactura(isBack = false) {
         const g4 = goals.data4[monthIdx] || 0;
         const g5 = goals.data5[monthIdx] || 0;
         if (value >= g5) return '#22c55e';  // Verde  ≥ 5%
-        if (value >= g4) return '#3b82f6';  // Azul   ≥ 4%
-        if (value >= g3) return '#9333ea';  // Morado ≥ 3%
-        return '#ef4444';                   // Rojo   < 3%
+        if (value >= g4) return '#007BFF';  // Azul   ≥ 4%
+        if (value >= g3) return '#eab308';  // Morado ≥ 3%
+        return '#dc2626';                   // Rojo   < 3%
     }
 
     // Calcular totales por año
@@ -757,15 +757,15 @@ async function renderFactura(isBack = false) {
         <!-- Leyenda de colores -->
         <div style="display: flex; justify-content: space-around; align-items: center; padding: 14px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -5px;">
             <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #dc2626;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #9333ea;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #eab308;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">3%</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #3b82f6;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #007BFF;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">4%</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
@@ -828,9 +828,9 @@ async function renderComisiones(isBack = false) {
         const g4 = goals.data4[monthIdx] || 0;
         const g5 = goals.data5[monthIdx] || 0;
         if (value >= g5) return { pct: 5, amount: Math.round(value * 0.05), color: '#22c55e' };
-        if (value >= g4) return { pct: 4, amount: Math.round(value * 0.04), color: '#3b82f6' };
-        if (value >= g3) return { pct: 3, amount: Math.round(value * 0.03), color: '#9333ea' };
-        return { pct: 2, amount: Math.round(value * 0.02), color: '#ef4444' };
+        if (value >= g4) return { pct: 4, amount: Math.round(value * 0.04), color: '#007BFF' };
+        if (value >= g3) return { pct: 3, amount: Math.round(value * 0.03), color: '#eab308' };
+        return { pct: 2, amount: Math.round(value * 0.02), color: '#dc2626' };
     }
 
     // Color para el TOTAL anual: comparar total facturado vs suma de objetivos anuales
@@ -841,9 +841,9 @@ async function renderComisiones(isBack = false) {
         const sumG4 = (goals.data4 || []).reduce((a, b) => a + (b || 0), 0);
         const sumG5 = (goals.data5 || []).reduce((a, b) => a + (b || 0), 0);
         if (totalFacturado >= sumG5) return '#22c55e';
-        if (totalFacturado >= sumG4) return '#3b82f6';
-        if (totalFacturado >= sumG3) return '#9333ea';
-        return '#ef4444';
+        if (totalFacturado >= sumG4) return '#007BFF';
+        if (totalFacturado >= sumG3) return '#eab308';
+        return '#dc2626';
     }
 
     // Calcular totales anuales de comisiones y facturación
@@ -914,15 +914,15 @@ async function renderComisiones(isBack = false) {
         <!-- Leyenda de colores -->
         <div style="display: flex; justify-content: space-around; align-items: center; padding: 14px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -5px;">
             <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #dc2626;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #9333ea;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #eab308;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">3%</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #3b82f6;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #007BFF;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">4%</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
@@ -1061,6 +1061,12 @@ async function handleSaveQuarterly() {
 
 window.renderObjetivosTrimestrales = renderObjetivosTrimestrales;
 window.handleSaveQuarterly = handleSaveQuarterly;
+
+
+
+
+
+
 
 
 
