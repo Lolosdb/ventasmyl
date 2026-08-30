@@ -369,7 +369,7 @@ async function renderDash(isBack = false) {
     contentHtml += '</main>';
     contentHtml += renderBottomNav('dash');
 
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
     
     if (typeof initDashCharts === 'function') initDashCharts(stats);
     if (window.activeCurrentNav) window.activeCurrentNav('dash');
@@ -1068,3 +1068,4 @@ async function generateStrategicReport() {
 
 window.previewReport = previewReport;
 window.generateStrategicReport = generateStrategicReport;
+

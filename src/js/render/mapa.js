@@ -85,7 +85,7 @@ async function renderMapa(isBack = false) {
 
     contentHtml += '</main>';
     contentHtml += renderBottomNav('mapa');
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 
     initLeafletMap();
     if (window.activeCurrentNav) window.activeCurrentNav('mapa');
@@ -411,4 +411,5 @@ window.toggleMapLegend = toggleMapLegend;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
 window.showToast = showToast;
+
 

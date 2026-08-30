@@ -564,7 +564,7 @@ async function renderIdeas(isBack = false) {
     </main>`;
 
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 }
 
 let _ideasSelectedDays = 3;
@@ -803,3 +803,4 @@ window.selectIdeasDays = selectIdeasDays;
 window.selectIdeasRegion = selectIdeasRegion;
 window.generateIdeasPlan = generateIdeasPlan;
 window.shareIdeasDayRoute = shareIdeasDayRoute;
+

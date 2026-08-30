@@ -77,7 +77,7 @@ async function renderPedidos(isBack = false) {
 
     contentHtml += '</main>';
     contentHtml += renderBottomNav('pedidos');
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
     
     if (window.activeCurrentNav) window.activeCurrentNav('pedidos');
 }
@@ -601,3 +601,4 @@ window.closeExportPedidosModal = closeExportPedidosModal;
 window.executeExportXlsx = executeExportXlsx;
 window.previewPedidosReport = previewPedidosReport;
 window.clearPedidosSearch = clearPedidosSearch;
+

@@ -155,7 +155,7 @@ async function renderTotales(isBack = false) {
 
     contentHtml += '</main>';
     contentHtml += renderBottomNav('totales');
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 }
 
 // --- ALERTAS ---
@@ -242,7 +242,7 @@ async function renderAlertas(isBack = false) {
 
     contentHtml += '</div></main>';
     contentHtml += renderBottomNav('alertas');
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 }
 
 window.filterAlerts = function() {
@@ -371,7 +371,7 @@ async function renderVentas(isBack = false) {
     </main>`;
 
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 
     // Autoscroll al final (año actual)
     setTimeout(() => {
@@ -440,7 +440,7 @@ async function renderMedias(isBack = false) {
 
     contentHtml += '</main>';
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 }
 
 // --- RANKING ---
@@ -647,7 +647,7 @@ async function renderObjetivos(isBack = false) {
     </main>`;
     
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 }
 
 async function handleGoalUpdate(level, monthIdx, value) {
@@ -753,10 +753,30 @@ async function renderFactura(isBack = false) {
                 </table>
             </div>
         </div>
+
+        <!-- Leyenda de colores -->
+        <div style="display: flex; justify-content: space-around; align-items: center; padding: 14px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -5px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #9333ea;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">3%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #3b82f6;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">4%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #22c55e;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">5%</span>
+            </div>
+        </div>
     </main>`;
 
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 
     // Auto-scroll al año más reciente
     setTimeout(() => {
@@ -890,10 +910,30 @@ async function renderComisiones(isBack = false) {
                 </table>
             </div>
         </div>
+        
+        <!-- Leyenda de colores -->
+        <div style="display: flex; justify-content: space-around; align-items: center; padding: 14px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -5px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #9333ea;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">3%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #3b82f6;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">4%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #22c55e;"></div>
+                <span style="font-size: 12px; font-weight: 800; color: #64748b;">5%</span>
+            </div>
+        </div>
     </main>`;
 
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 
     // Auto-scroll al año más reciente
     setTimeout(() => {
@@ -944,9 +984,9 @@ async function renderObjetivosTrimestrales(isBack = false) {
                         <div style="font-weight: 900; font-size: 1.1rem; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; text-transform: uppercase;">
                             ${labels[key]}
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 16px;">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Objetivo:</span>
+                        <div style="display: flex; flex-direction: column; gap: 16px; align-items: center;">
+                            <div style="display: flex; align-items: center; justify-content: center; width: 100%; gap: 15px;">
+                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase; width: 90px; text-align: right;">Objetivo:</span>
                                 <div class="trim-input-group" style="width: 140px;">
                                     <input type="text" id="target_${key}" class="trim-input" 
                                            style="padding: 8px 25px 8px 8px; font-size: 1.1rem; text-align: center;"
@@ -955,18 +995,18 @@ async function renderObjetivosTrimestrales(isBack = false) {
                                     <span class="trim-currency" style="right: 8px;">€</span>
                                 </div>
                             </div>
-                            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Facturado:</span>
-                                    <div class="trim-input-group" style="width: 110px;">
-                                        <input type="text" id="actual_${key}" class="trim-input" 
-                                               style="padding: 8px 20px 8px 8px; font-size: 1rem; color: #009ee3; text-align: center;"
-                                               value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
-                                               onfocus="this.select()" onblur="formatNumericInput(this)">
-                                        <span class="trim-currency" style="right: 6px; color: #009ee3;">€</span>
-                                    </div>
+                            <div style="display: flex; align-items: center; justify-content: center; width: 100%; gap: 15px;">
+                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase; width: 90px; text-align: right;">Facturado:</span>
+                                <div class="trim-input-group" style="width: 140px;">
+                                    <input type="text" id="actual_${key}" class="trim-input" 
+                                           style="padding: 8px 25px 8px 8px; font-size: 1.1rem; color: #009ee3; text-align: center;"
+                                           value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
+                                           onfocus="this.select()" onblur="formatNumericInput(this)">
+                                    <span class="trim-currency" style="right: 8px; color: #009ee3;">€</span>
                                 </div>
-                                <span class="trim-status ${isMet ? 'status-success' : 'status-danger'}" style="font-size: 0.75rem; padding: 6px 10px; white-space: nowrap;">
+                            </div>
+                            <div style="display: flex; justify-content: center; width: 100%; margin-top: 4px;">
+                                <span class="trim-status ${isMet ? 'status-success' : 'status-danger'}" style="font-size: 0.8rem; padding: 6px 16px; white-space: nowrap; border-radius: 999px;">
                                     ${isMet ? 'CONSEGUIDO' : 'NO CONSEGUIDO'}
                                 </span>
                             </div>
@@ -985,7 +1025,7 @@ async function renderObjetivosTrimestrales(isBack = false) {
     </main>`;
 
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 }
 
 async function handleSaveQuarterly() {
@@ -1021,3 +1061,6 @@ async function handleSaveQuarterly() {
 
 window.renderObjetivosTrimestrales = renderObjetivosTrimestrales;
 window.handleSaveQuarterly = handleSaveQuarterly;
+
+
+

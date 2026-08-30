@@ -6,6 +6,21 @@
 // Solo nos aseguramos de que esté disponible para otros scripts
 // Gestión de Navegación y Botón Atrás
 window.currentView = 'dash';
+window.viewScrollPositions = {};
+
+window.restoreScroll = function() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    // Pequeño timeout para permitir que el DOM se repinte después del innerHTML
+    setTimeout(() => {
+        const targetView = window.currentView;
+        if (window.viewScrollPositions[targetView] !== undefined) {
+            app.scrollTop = window.viewScrollPositions[targetView];
+        } else {
+            app.scrollTop = 0;
+        }
+    }, 10);
+};
 
 /**
  * Actualiza el estado del historial del navegador.
@@ -13,6 +28,11 @@ window.currentView = 'dash';
  * @param {boolean} isBack - Si el cambio viene de una acción de retroceso.
  */
 function updateHistoryState(viewName, isBack = false) {
+    const app = document.getElementById('app');
+    if (app && window.currentView && window.currentView !== viewName) {
+        window.viewScrollPositions[window.currentView] = app.scrollTop;
+    }
+
     if (isBack) {
         window.currentView = viewName;
         return;
@@ -49,6 +69,14 @@ if (typeof dataManager === 'undefined') {
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Iniciando Aplicación...");
+
+    // Intentar bloquear la orientación en vertical
+    if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('portrait').catch(err => {
+            console.log("El bloqueo de orientación no es soportado o requiere interacción previa:", err);
+        });
+    }
+
     try {
         // 1. Inicializar Base de Datos Local
         await dataManager.init();

@@ -101,7 +101,7 @@ async function renderClientes(isBack = false) {
 
     contentHtml += '</main>';
     contentHtml += renderBottomNav('clientes');
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
     
     if (window.activeCurrentNav) window.activeCurrentNav('clientes');
 }
@@ -631,3 +631,4 @@ window.handleDeleteClient = handleDeleteClient;
 window.getCurrentCoordinates = getCurrentCoordinates;
 window.handleFormNavigation = handleFormNavigation;
 window.injectClientModals = injectClientModals;
+

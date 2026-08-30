@@ -60,7 +60,7 @@ async function renderDepartamentos(isBack = false) {
 
     contentHtml += '</main>';
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
 }
 
 function injectDeptModals() {
@@ -263,3 +263,4 @@ window.openDeptModal = openDeptModal;
 window.closeDeptModal = closeDeptModal;
 window.saveNewDepartment = saveNewDepartment;
 window.handleDeleteDept = handleDeleteDept;
+

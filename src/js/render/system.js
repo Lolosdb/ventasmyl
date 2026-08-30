@@ -70,18 +70,20 @@ async function renderAjustes(isBack = false) {
                 </div>
             </div>
 
-            <div class="btn-grid">
+            <div class="btn-grid" style="margin-bottom: 12px;">
                 <button class="btn-ajuste btn-local-primary" onclick="handleExcelExport()">
                     <span class="material-icons-round">file_download</span>
-                    <span>Descargar Excel</span>
-                </button>
-                <button class="btn-ajuste btn-nube-primary" onclick="handleExcelDriveExport()">
-                    <span class="material-icons-round">cloud_upload</span>
-                    <span>Excel a Drive</span>
+                    <span>Descargar</span>
                 </button>
                 <button class="btn-ajuste btn-local-secondary" onclick="document.getElementById('excelBackupInput').click()">
                     <span class="material-icons-round">file_upload</span>
                     <span>Importar</span>
+                </button>
+            </div>
+            <div class="btn-grid">
+                <button class="btn-ajuste btn-nube-primary" onclick="handleExcelDriveExport()">
+                    <span class="material-icons-round">cloud_upload</span>
+                    <span>Subir Excel a Drive</span>
                 </button>
                 <input type="file" id="excelBackupInput" style="display:none;" onchange="handleExcelImport(this)">
             </div>
@@ -176,7 +178,7 @@ async function renderAjustes(isBack = false) {
 
     contentHtml += `</main>`;
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml;
+    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
     
     injectManagementYearsModal();
 
@@ -802,3 +804,4 @@ window.closeManagementYearsModal = closeManagementYearsModal;
 window.handleAddNewYear = handleAddNewYear;
 
 // Iniciar se gestiona desde main.js
+
