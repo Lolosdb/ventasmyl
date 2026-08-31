@@ -301,6 +301,7 @@ async function renderVentas(isBack = false) {
         totalsByYear[y] = yearTotal;
     });
 
+        const currentYear = new Date().getFullYear();
     let contentHtml = '<main class="analysis-view-container">';
     
     contentHtml += `
@@ -310,8 +311,8 @@ async function renderVentas(isBack = false) {
                 <div class="analysis-header">
                     <div class="analysis-header-cell col-month-fixed">MES</div>
                     ${years.map(y => `
-                        <div class="analysis-header-cell col-year-dynamic">
-                            <span class="year-capsule">${y}</span>
+                        <div class="analysis-header-cell col-year-dynamic ${y === currentYear ? 'current-year-col' : ''}">
+                            <span class="year-capsule ${y === currentYear ? 'year-capsule-current' : ''}">${y}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -321,16 +322,31 @@ async function renderVentas(isBack = false) {
                     ${monthsFull.map((m, mIdx) => `
                         <div class="analysis-row">
                             <div class="cell-month-label col-month-fixed">${m}</div>
-                            ${years.map(y => {
+                            ${years.map((y, yIdx) => {
                                 const storedVal = (history[y] && history[y][mIdx]) || 0;
                                 const calcVal = (calculatedTotals[y] && calculatedTotals[y][mIdx]) || 0;
                                 const val = Math.max(storedVal, calcVal);
 
+                                let growthClass = '';
+                                if (yIdx > 0 && val > 0) {
+                                    const prevY = years[yIdx - 1];
+                                    const prevStored = (history[prevY] && history[prevY][mIdx]) || 0;
+                                    const prevCalc = (calculatedTotals[prevY] && calculatedTotals[prevY][mIdx]) || 0;
+                                    const prevVal = Math.max(prevStored, prevCalc);
+                                    
+                                    if (prevVal > 0) {
+                                        if (val > prevVal) growthClass = 'v-val-up';
+                                        else if (val < prevVal) growthClass = 'v-val-down';
+                                    }
+                                }
+
+                                const isCurrent = y === currentYear ? 'current-year-col' : '';
+
                                 return `
-                                    <div class="cell-data-input col-year-dynamic">
+                                    <div class="cell-data-input col-year-dynamic ${isCurrent}">
                                         <input type="text" 
-                                               class="v-input-premium" 
-                                               value="${val === 0 ? '-' : formatCurrency(Math.round(val)).replace(' €', '')}"
+                                               class="v-input-premium ${growthClass} ${y === currentYear ? 'v-input-current' : ''}" 
+                                               value="${val === 0 ? '-' : formatCurrency(Math.round(val)).replace(' \u20ac', '')}"
                                                onchange="handleSalesUpdate(${y}, ${mIdx}, this.value)">
                                     </div>
                                 `;
@@ -357,10 +373,12 @@ async function renderVentas(isBack = false) {
                                 </span>`;
                             }
                         }
+                        
+                        const isCurrent = y === currentYear ? 'current-year-col' : '';
 
                         return `
-                            <div class="cell-year-total-complex col-year-dynamic">
-                                <span class="total-value-main">${formatCurrency(Math.round(total))}</span>
+                            <div class="cell-year-total-complex col-year-dynamic ${isCurrent}">
+                                <span class="total-value-main ${y === currentYear ? 'v-input-current' : ''}">${formatCurrency(Math.round(total)).replace(' \u20ac', '')}</span>
                                 ${variationHtml}
                             </div>
                         `;
@@ -1061,6 +1079,7 @@ async function handleSaveQuarterly() {
 
 window.renderObjetivosTrimestrales = renderObjetivosTrimestrales;
 window.handleSaveQuarterly = handleSaveQuarterly;
+
 
 
 
