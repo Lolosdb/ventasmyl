@@ -755,7 +755,7 @@ async function renderFactura(isBack = false) {
         </div>
 
         <!-- Leyenda de colores -->
-        <div style="display: flex; justify-content: space-around; align-items: center; padding: 14px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -5px;">
+        <div style="display: flex; justify-content: space-around; align-items: center; padding: 6px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #dc2626;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
@@ -912,7 +912,7 @@ async function renderComisiones(isBack = false) {
         </div>
         
         <!-- Leyenda de colores -->
-        <div style="display: flex; justify-content: space-around; align-items: center; padding: 14px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -5px;">
+        <div style="display: flex; justify-content: space-around; align-items: center; padding: 6px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #dc2626;"></div>
                 <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
@@ -1061,6 +1061,7 @@ async function handleSaveQuarterly() {
 
 window.renderObjetivosTrimestrales = renderObjetivosTrimestrales;
 window.handleSaveQuarterly = handleSaveQuarterly;
+
 
 
 
