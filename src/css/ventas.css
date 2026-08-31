@@ -4,7 +4,7 @@
     height: calc(100vh - 120px);
     display: flex;
     flex-direction: column;
-    padding: 1rem 1.5rem;
+    padding: 0.25rem 0.5rem;
     overflow: hidden;
 }
 
@@ -41,7 +41,7 @@
 }
 
 .analysis-header-cell {
-    padding: 14px 10px;
+    padding: 6px 10px;
     font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;
@@ -71,8 +71,7 @@
 .year-capsule {
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 4px 16px;
-    border-radius: 10px;
+    padding: 2px 16px; border-radius: 10px;
     font-weight: 800;
     color: white;
     font-size: 12px;
@@ -120,8 +119,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 8px;
-}
+    padding: 0px 4px; }
 
 .v-input-premium {
     width: 100%;
@@ -132,8 +130,7 @@
     font-weight: 800;
     color: #334155;
     font-family: inherit;
-    padding: 6px;
-}
+    padding: 2px; }
 
 .v-input-premium:focus {
     outline: none;
@@ -147,8 +144,7 @@
     border-top: 2px solid #e2e8f0;
     min-width: max-content;
     width: 100%;
-    padding: 10px 0;
-}
+    padding: 4px 0; }
 
 .cell-total-label {
     width: 90px;
