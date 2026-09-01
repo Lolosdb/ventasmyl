@@ -75,10 +75,10 @@ async function renderDash(isBack = false) {
     contentHtml += `
         <div class="dash-section-header mb-6" style="padding: 0 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.8rem;">
-                <div style="display: flex; align-items: baseline; gap: 12px;">
-                    <h1 class="text-3xl font-black text-slate-900 leading-tight" style="margin: 0;">Dash</h1>
-                    <span class="text-sm font-bold text-slate-500 tracking-widest" style="white-space: nowrap;">${monthName} ${year}</span>
-                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px; margin-top: -4px;">
+                      <h1 class="text-3xl font-black text-slate-900 leading-tight" style="margin: 0;">Dash</h1>
+                      <span class="font-bold text-slate-500 tracking-widest" style="white-space: nowrap; font-size: 11px;">${monthName} ${year}</span>
+                  </div>
                 <div class="date-selector-container">
                     <button class="nav-date-btn" onclick="changeDashMonth(-1)" title="Mes anterior">
                         <span class="material-icons-round">chevron_left</span>
@@ -1068,4 +1068,6 @@ async function generateStrategicReport() {
 
 window.previewReport = previewReport;
 window.generateStrategicReport = generateStrategicReport;
+
+
 
