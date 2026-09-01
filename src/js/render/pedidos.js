@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Lógica de gestión de Pedidos y Exportación
  */
 
@@ -104,11 +104,11 @@ function injectPedidoModals() {
     if (document.getElementById('newOrderModal')) return;
     
     const modalsHtml = `
-    <!-- Modal Nuevo/Editar Pedido -->
+    <!-- Modal ¿NUEVO?/Editar Pedido -->
     <div id="newOrderModal" class="modal-overlay new-order-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="text-xl font-bold">Nuevo Pedido</h2>
+                <h2 class="text-xl font-bold">¿NUEVO? Pedido</h2>
                 <button class="icon-btn text-white" onclick="closeNewOrderModal()"><span class="material-icons-round">close</span></button>
             </div>
             <div class="modal-body">
@@ -127,8 +127,17 @@ function injectPedidoModals() {
                         </div>
                     </div>
 
-                    <div class="order-form-group">
-                        <label class="order-form-label">TIENDA / CLIENTE</label>
+                    <div class="order-form-group" style="margin-bottom: 0.75rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
+                            <label class="order-form-label" style="margin: 0;">TIENDA / CLIENTE</label>
+                            <div class="flex items-center gap-2" style="transform: translateY(4px);">
+                                <span class="toggle-label" style="font-size: 10.5px; font-weight: 900; color: #64748b; letter-spacing: 0.5px;">¿NUEVO?</span>
+                                <label class="switch" style="transform: scale(0.7); margin: 0; transform-origin: right center;">
+                                    <input type="checkbox" id="isNewClientSwitch">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
                         <div class="client-search-wrapper">
                             <span class="material-icons-round client-search-icon">search</span>
                             <input type="text" id="orderClient" class="order-input client-search-input" list="clientsListDatalist" placeholder="Buscar cliente..." required onkeydown="handleOrderFormEnter(event, 'orderAmount')" onkeyup="toggleClearSearch('orderClient', 'clearOrderClientBtn')" oninput="handleClientInputJump(this.value)">
@@ -137,7 +146,7 @@ function injectPedidoModals() {
                         </div>
                     </div>
 
-                    <div class="order-form-group">
+                    <div class="order-form-group" style="margin-bottom: 0.75rem;">
                         <label class="order-form-label">IMPORTE (€)</label>
                         <input type="number" step="0.01" id="orderAmount" class="order-input" placeholder="0" required onkeydown="handleOrderFormEnter(event, 'orderNoTampo')">
                     </div>
@@ -153,32 +162,23 @@ function injectPedidoModals() {
                         </div>
                     </div>
 
-                    <div class="order-form-group">
+                    <div class="order-form-group" style="margin-bottom: 0.75rem;">
                         <label class="order-form-label">COMENTARIOS</label>
                         <textarea id="orderComments" class="order-input" rows="2" placeholder="Notas sobre el pedido..." onkeydown="handleOrderFormEnter(event, 'isNewClientSwitch')"></textarea>
                     </div>
 
-                    <div class="toggle-container">
-                        <button type="button" class="btn-link-cancel" onclick="closeNewOrderModal()">
-                            <span class="material-icons-round">close</span>
+                    <!-- PREMIUM FOOTER -->
+                    <div style="display: flex; gap: 10px; margin-top: 1.25rem;">
+                        <div id="btnDeleteOrder" style="display: none; flex: 0.45 !important; width: auto !important;">
+                            <button type="button" style="width: 100%; height: 48px; background: #ffffff !important; border: 2px solid #fee2e2 !important; color: #ef4444 !important; border-radius: 14px !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important;" onclick="deleteCurrentOrder()">
+                                <span class="material-icons-round" style="font-size: 22px;">delete_outline</span>
+                            </button>
+                        </div>
+                        <button type="button" style="flex: 1 !important; height: 48px; background: #f1f5f9 !important; border: none !important; color: #64748b !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 14.5px !important; cursor: pointer !important; width: auto !important;" onclick="closeNewOrderModal()">
                             Cancelar
                         </button>
-                        <div class="flex items-center gap-2">
-                            <span class="toggle-label">¿Cliente Nuevo?</span>
-                            <label class="switch">
-                                <input type="checkbox" id="isNewClientSwitch">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer-custom">
-                        <button type="button" id="btnDeleteOrder" class="btn-action-delete" style="display:none;" onclick="deleteCurrentOrder()">
-                            <span class="material-icons-round">delete</span>
-                            Eliminar
-                        </button>
-                        <button type="submit" class="btn-save-custom">
-                            <span class="material-icons-round">check</span>
+                        <button type="submit" style="flex: 1.2 !important; height: 48px; background: #009ee3 !important; border: none !important; color: #ffffff !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 14.5px !important; cursor: pointer !important; box-shadow: 0 6px 16px rgba(0, 158, 227, 0.25) !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; width: auto !important;">
+                            <span class="material-icons-round" style="font-size: 20px;">check</span>
                             Guardar
                         </button>
                     </div>
@@ -276,7 +276,7 @@ function openNewOrderModal() {
     if (btnDelete) btnDelete.style.display = 'none';
     
     const title = modal.querySelector('h2');
-    if (title) title.textContent = 'Nuevo Pedido';
+    if (title) title.textContent = '¿NUEVO? Pedido';
     
     document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
     delete document.getElementById('orderId').dataset.originalId;
@@ -601,4 +601,9 @@ window.closeExportPedidosModal = closeExportPedidosModal;
 window.executeExportXlsx = executeExportXlsx;
 window.previewPedidosReport = previewPedidosReport;
 window.clearPedidosSearch = clearPedidosSearch;
+
+
+
+
+
 

@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* Colors */
     --primary-blue: #0ea5e9;
     /* Light blue header from screenshot */
@@ -494,10 +494,9 @@ body.no-scroll {
     background-color: rgba(15, 23, 42, 0.85);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    z-index: 99999;
+    z-index: 999999;
     display: flex;
-    align-items: flex-end;
-    /* Mobile sheet style default */
+    align-items: center; /* Centered style */
     justify-content: center;
     opacity: 0;
     pointer-events: none;
