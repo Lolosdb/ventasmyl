@@ -819,6 +819,8 @@ window.handleAddNewYear = handleAddNewYear;
 
 
 
+
+
 window.toggleBulkDeleteBtn = function() {
     const checkboxes = document.querySelectorAll('.backup-checkbox:checked');
     const btn = document.getElementById('btnBulkDelete');
@@ -834,7 +836,7 @@ window.toggleBulkDeleteBtn = function() {
 window.handleDeleteMultipleRemoteFiles = async function() {
     const checkboxes = Array.from(document.querySelectorAll('.backup-checkbox:checked'));
     if (checkboxes.length === 0) return;
-    if (!confirm(¿Seguro que quieres eliminar definitivamente  + checkboxes.length +  copias de Google Drive?)) return;
+    if (!confirm(`¿Seguro que quieres eliminar definitivamente ${checkboxes.length} copias de Google Drive?`)) return;
     
     try {
         let url = localStorage.getItem('apps_script_url');
@@ -844,15 +846,15 @@ window.handleDeleteMultipleRemoteFiles = async function() {
         }
         
         const container = document.getElementById('backupsListContainer');
-        container.innerHTML = <div style="text-align:center; padding: 4rem 0; color: #ef4444; font-weight: 700;">Eliminando  + checkboxes.length +  copias...</div>;
+        container.innerHTML = `<div style="text-align:center; padding: 4rem 0; color: #ef4444; font-weight: 700;">Eliminando ${checkboxes.length} copias...</div>`;
 
         for (let i = 0; i < checkboxes.length; i++) {
             const fileId = checkboxes[i].value;
-            const deleteUrl = ${url}action=delete&id=;
+            const deleteUrl = `${url}${url.includes('?') ? '&' : '?'}action=delete&id=${fileId}`;
             await fetch(deleteUrl);
         }
 
-        container.innerHTML = <div style="text-align:center; padding: 4rem 0; color: #64748b; font-weight: 700;">Actualizando lista...</div>;
+        container.innerHTML = `<div style="text-align:center; padding: 4rem 0; color: #64748b; font-weight: 700;">Actualizando lista...</div>`;
         await new Promise(resolve => setTimeout(resolve, 900));
         
         const modal = document.getElementById('backupsModal');
@@ -867,5 +869,3 @@ window.handleDeleteMultipleRemoteFiles = async function() {
     }
 };
 
-window.toggleBulkDeleteBtn = window.toggleBulkDeleteBtn;
-window.handleDeleteMultipleRemoteFiles = window.handleDeleteMultipleRemoteFiles;
