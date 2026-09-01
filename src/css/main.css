@@ -1207,3 +1207,27 @@ body.no-scroll {
 /* --- AJUSTE TITULO REAL --- */
 .header-title { white-space: nowrap !important; overflow: visible !important; max-width: none !important; font-size: 1.25rem !important; }
 
+
+/* --- MENU LATERAL ELASTICO (NO SCROLL) --- */
+.nav-menu-content {
+    display: flex !important;
+    flex-direction: column !important;
+}
+.nav-menu-body {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-evenly !important;
+    flex: 1 !important;
+    overflow: hidden !important; 
+    padding: 0 0 10px 0 !important;
+}
+.nav-menu-section {
+    margin: 8px 24px 4px 24px !important;
+    flex-shrink: 0 !important;
+}
+.nav-menu-item {
+    flex: 1 !important;
+    min-height: 0 !important; 
+    margin: 3px 24px !important;
+    padding: 0 18px !important;
+}

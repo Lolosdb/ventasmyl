@@ -59,23 +59,23 @@ async function renderClientes(isBack = false) {
     `;
 
     const clients = await dataManager.getClients();
-    clients.sort((a, b) => (a.location || '').localeCompare(b.location || ''));
+    clients.sort((a, b) => { const lA = (a && a.location) ? String(a.location) : ""; const lB = (b && b.location) ? String(b.location) : ""; return lA.localeCompare(lB); });
 
     contentHtml += '<div id="clientsList" class="clients-list">';
     if (clients.length === 0) {
         contentHtml += '<div class="text-center p-8 text-secondary">No hay clientes registrados</div>';
     } else {
-        clients.forEach(client => {
+        clients.forEach(client => { if(!client) return;
             contentHtml += `
                 <div class="client-card card glass mb-3 p-3 flex justify-between items-center shadow-sm" 
-                     onclick="openClientDetailModal('${String(client.code).replace(/'/g, "\\'")}')"
-                     data-name="${client.name.toLowerCase()}" 
+                     onclick="openClientDetailModal('${String(client.code || '').replace(/'/g, "\\'")}')"
+                     data-name="${(client.name || '').toLowerCase()}" 
                      data-location="${(client.location || '').toLowerCase()}">
                     <div class="flex flex-col gap-2 flex-1" style="min-width: 0; padding-right: 8px;">
                         <div class="client-card-main-info">
-                            <span class="client-card-code">${client.code}</span>
+                            <span class="client-card-code">${client.code || '- '}</span>
                             <span>-</span>
-                            <span class="client-card-name">${client.name}</span>
+                            <span class="client-card-name">${client.name || 'Sin Nombre'}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <div class="pill-location">
@@ -631,4 +631,6 @@ window.handleDeleteClient = handleDeleteClient;
 window.getCurrentCoordinates = getCurrentCoordinates;
 window.handleFormNavigation = handleFormNavigation;
 window.injectClientModals = injectClientModals;
+
+
 

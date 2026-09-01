@@ -193,9 +193,10 @@
 }
 
 /* --- PRO REDESIGN --- */
-.current-year-col { background-color: #f0f9ff !important; }
-.year-capsule-current { background-color: #0284c7 !important; border-color: #0369a1 !important; box-shadow: 0 0 10px rgba(2, 132, 199, 0.4); font-size: 13px !important; padding: 4px 18px !important; }
+/* Removed background highlight */
+/* Removed header highlight */
 .v-input-current { font-size: 14.5px !important; font-weight: 950 !important; }
 .v-val-up { color: #10b981 !important; }
 .v-val-down { color: #ef4444 !important; }
+
 
