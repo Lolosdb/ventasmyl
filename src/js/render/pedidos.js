@@ -14,7 +14,7 @@ async function renderPedidos(isBack = false) {
         `
     });
 
-    let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px; margin-top: 125px;">';
+    let contentHtml = '<main style="padding: 1rem 0; padding-bottom: 100px; margin-top: 125px;">';
 
     // Parte fija: Buscador + Cabecera Tabla
     contentHtml += `

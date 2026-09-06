@@ -1,4 +1,4 @@
-/* Pedidos View Styles */
+﻿/* Pedidos View Styles */
 
 .pedidos-fixed-controls {
     position: fixed;
@@ -14,7 +14,7 @@
 .pedidos-table-header {
     background-color: #1e293b;
     color: white;
-    padding: 12px 44px;
+    padding: 12px 20px;
     font-size: 13px;
     font-weight: 900;
     text-transform: uppercase;
