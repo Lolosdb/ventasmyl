@@ -6,38 +6,91 @@
     z-index: 1;
 }
 
-/* Contenedor de FABs (Botones Flotantes) */
+/* Contenedor de FABs (Botones Flotantes Compactos y Organizados) */
 .map-fabs {
     position: absolute;
     bottom: 24px;
-    right: 24px;
+    right: 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    gap: 10px;
     z-index: 1000;
 }
 
-.fab-btn {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
-    background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+.map-fab-btn {
+    position: relative !important;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.94) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12) !important;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0;
 }
 
-.fab-btn .material-icons-round {
-    font-size: 24px;
-    color: #009ee3;
+.map-fab-btn .material-icons-round {
+    font-size: 22px;
 }
 
-.fab-btn:active {
-    transform: scale(0.9);
+.map-fab-btn:active {
+    transform: scale(0.92);
+}
+
+/* Cápsula compacta de Zoom (+ / -) */
+.map-zoom-group {
+    width: 44px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.map-zoom-btn {
+    width: 100%;
+    height: 38px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1e293b;
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.map-zoom-btn .material-icons-round {
+    font-size: 20px;
+}
+
+.map-zoom-btn:active {
+    background: #f1f5f9;
+    transform: scale(0.92);
+}
+
+.map-zoom-divider {
+    height: 1px;
+    width: 70%;
+    margin: 0 auto;
+    background: #e2e8f0;
+}
+
+.user-location-marker {
+    background: transparent !important;
+    border: none !important;
 }
 
 /* Leyenda Desplegable */

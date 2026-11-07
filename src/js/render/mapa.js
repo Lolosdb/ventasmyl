@@ -26,7 +26,7 @@ async function renderMapa(isBack = false) {
 
     contentHtml += '<div id="map-container" style="width: 100%; height: 100%;"></div>';
 
-    // FABs (Botones flotantes)
+    // FABs (Botones flotantes compactos y organizados)
     contentHtml += `
         <div class="map-fabs">
             <!-- Leyenda Popover -->
@@ -36,20 +36,26 @@ async function renderMapa(isBack = false) {
                 <div class="legend-item"><span class="legend-dot dot-no-orders"></span><span class="legend-label">Sin compras</span></div>
             </div>
 
-            <button class="fab-btn" style="color: #64748b;" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver Leyenda">
-                <span class="material-icons-round">info</span>
+            <button class="map-fab-btn" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver Leyenda">
+                <span class="material-icons-round" style="color: #64748b;">info</span>
             </button>
-            <button class="fab-btn" style="color: #3b82f6;" onclick="toggleRouteMode()" id="btnRouteMode" title="Optimizar Ruta">
-                <span class="material-icons-round">directions</span>
+            <button class="map-fab-btn" onclick="toggleRouteMode()" id="btnRouteMode" title="Optimizar Ruta">
+                <span class="material-icons-round" style="color: #0284c7;">directions</span>
             </button>
-            <button class="fab-btn" style="color: #1e293b;" onclick="window.zoomIn()" title="Aumentar Zoom">
-                <span class="material-icons-round">add</span>
-            </button>
-            <button class="fab-btn" style="color: #1e293b;" onclick="window.zoomOut()" title="Disminuir Zoom">
-                <span class="material-icons-round">remove</span>
-            </button>
-            <button class="fab-btn" style="color: #f59e0b;" onclick="centerMapOnUser()" title="Mi Ubicación">
-                <span class="material-icons-round">my_location</span>
+
+            <!-- Grupo compacto de Zoom (+ / -) -->
+            <div class="map-zoom-group">
+                <button class="map-zoom-btn" onclick="window.zoomIn()" title="Acercar">
+                    <span class="material-icons-round">add</span>
+                </button>
+                <div class="map-zoom-divider"></div>
+                <button class="map-zoom-btn" onclick="window.zoomOut()" title="Alejar">
+                    <span class="material-icons-round">remove</span>
+                </button>
+            </div>
+
+            <button class="map-fab-btn map-fab-location" onclick="centerMapOnUser(true)" title="Mi Ubicación">
+                <span class="material-icons-round" style="color: #f59e0b;">my_location</span>
             </button>
         </div>
     `;
@@ -99,6 +105,11 @@ async function initLeafletMap() {
 
     const map = L.map('map-container', { zoomControl: false }).setView([43.36, -5.85], 9);
     window.currentLeafletMap = map;
+    window.userLocationMarker = null;
+
+    if (window.lastUserCoords) {
+        updateUserMarker(window.lastUserCoords.lat, window.lastUserCoords.lng);
+    }
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -211,18 +222,19 @@ async function initLeafletMap() {
  */
 function updateUserMarker(lat, lng) {
     if (!window.currentLeafletMap) return;
+    window.lastUserCoords = { lat, lng };
 
     const goldPulseIcon = L.divIcon({
         className: 'user-location-marker',
         html: `
-            <div style="position: relative; width: 16px; height: 16px;">
-                <div style="position: absolute; width: 100%; height: 100%; background: #fbbf24; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 2;"></div>
-                <div style="position: absolute; width: 100%; height: 100%; background: #fbbf24; border-radius: 50%; opacity: 0.6; animation: goldPulse 2s infinite ease-out; z-index: 1;"></div>
+            <div style="position: relative; width: 18px; height: 18px;">
+                <div style="position: absolute; width: 100%; height: 100%; background: #fbbf24; border: 2.5px solid white; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.35); z-index: 2;"></div>
+                <div style="position: absolute; width: 100%; height: 100%; background: #fbbf24; border-radius: 50%; opacity: 0.65; animation: goldPulse 2s infinite ease-out; z-index: 1;"></div>
             </div>
             <style>
                 @keyframes goldPulse {
-                    0% { transform: scale(1); opacity: 0.6; }
-                    100% { transform: scale(3); opacity: 0; }
+                    0% { transform: scale(1); opacity: 0.65; }
+                    100% { transform: scale(3.2); opacity: 0; }
                 }
             </style>
         `,
@@ -230,7 +242,7 @@ function updateUserMarker(lat, lng) {
         iconAnchor: [10, 10]
     });
 
-    if (window.userLocationMarker) {
+    if (window.userLocationMarker && window.currentLeafletMap.hasLayer(window.userLocationMarker)) {
         window.userLocationMarker.setLatLng([lat, lng]);
     } else {
         window.userLocationMarker = L.marker([lat, lng], { 
@@ -352,16 +364,37 @@ function clearMapSearch() {
 
 function centerMapOnUser(doFly = true) {
     if (!navigator.geolocation) return alert("GPS no disponible");
-    
-    navigator.geolocation.getCurrentPosition(p => {
+
+    if (doFly && window.lastUserCoords && window.currentLeafletMap) {
+        updateUserMarker(window.lastUserCoords.lat, window.lastUserCoords.lng);
+        window.currentLeafletMap.flyTo([window.lastUserCoords.lat, window.lastUserCoords.lng], 15);
+    }
+
+    const onPosSuccess = (p) => {
         const { latitude, longitude } = p.coords;
         updateUserMarker(latitude, longitude);
         if (doFly && window.currentLeafletMap) {
             window.currentLeafletMap.flyTo([latitude, longitude], 15);
         }
-    }, (err) => {
-        console.warn("Geolocation error:", err);
-    }, { enableHighAccuracy: true });
+    };
+
+    navigator.geolocation.getCurrentPosition(
+        onPosSuccess,
+        () => {
+            // Fallback sin alta precisión (más rápido en interiores / redes móviles)
+            navigator.geolocation.getCurrentPosition(
+                onPosSuccess,
+                (err) => {
+                    console.warn("Geolocation error:", err);
+                    if (doFly && !window.lastUserCoords) {
+                        alert("No se pudo obtener la ubicación actual. Comprueba que el GPS esté activado.");
+                    }
+                },
+                { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+            );
+        },
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+    );
 }
 
 function toggleMapLegend() {
