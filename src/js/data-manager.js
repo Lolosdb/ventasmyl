@@ -269,15 +269,16 @@ class DataManager {
                         // MERGE: los clientes de Drive actualizan/añaden los locales,
                         // pero NO se borran los clientes creados solo en local.
                         const existingClients = await this.db.getAll('clients');
-                        const driveCodeSet = new Set(clients.map(c => String(c.code).trim()));
-                        // Clientes locales que NO están en Drive (se conservan)
-                        const localOnlyClients = existingClients.filter(
-                            c => !driveCodeSet.has(String(c.code).trim())
-                        );
-                        // Limpiar y volver a poner: Drive + local-only
+                        if (existingClients.length > 50 && clients.length < 20) {
+                            const ok = confirm(`Atención: El Excel de Drive solo contiene ${clients.length} clientes, mientras que en tu app tienes ${existingClients.length}.\n\n¿Estás seguro de que quieres reemplazar tus ${existingClients.length} clientes por solo ${clients.length}?`);
+                            if (!ok) {
+                                resolve({ success: false, message: 'Importación cancelada por seguridad para no perder tus clientes locales.' });
+                                return;
+                            }
+                        }
                         await this.db.clearStore('clients');
-                        await this.db.bulkPut('clients', [...clients, ...localOnlyClients]);
-                        resolve({ success: true, count: clients.length, preserved: localOnlyClients.length });
+                        await this.db.bulkPut('clients', clients);
+                        resolve({ success: true, count: clients.length, preserved: 0 });
                     } else {
                         const foundKeys = rawData.length > 0 ? Object.keys(rawData[0]).join(', ') : 'Ninguna';
                         resolve({
@@ -417,6 +418,65 @@ class DataManager {
         }
     }
 
+    async syncAllClientsToDriveExcel(url, filename = 'Clientes_CON_COORDENADAS.xlsx') {
+        try {
+            if (!url) throw new Error("URL de Google Drive no configurada");
+            const clients = await this.getClients();
+            clients.sort((a, b) => {
+                const locA = (a.location || "").toString().toLowerCase().trim();
+                const locB = (b.location || "").toString().toLowerCase().trim();
+                if (locA === locB) return (a.name || "").toString().toLowerCase().localeCompare((b.name || "").toString().toLowerCase());
+                return locA.localeCompare(locB);
+            });
+
+            const header = [
+                "CODIGO", "TIENDA", "NIF", "MAIL", "DIRECCION", "CONTACTO",
+                "POBLACION", "PROVINCIA", "CP", "TELEFONO", "HORARIO",
+                "", "", "", "", "", "", "", "", "", "",
+                "LATITUD", "LONGITUD", "TELEFONO 2"
+            ];
+
+            const rows = [header];
+            clients.forEach(c => {
+                const r = new Array(24).fill("");
+                r[0] = c.code || "";
+                r[1] = c.name || "";
+                r[2] = c.nif || "";
+                r[3] = c.email || "";
+                r[4] = c.address || "";
+                r[5] = c.contact || "";
+                r[6] = c.location || "";
+                r[7] = c.province || "";
+                r[8] = c.cp || "";
+                r[9] = c.phone || "";
+                r[10] = c.schedule || "";
+                r[21] = c.lat !== undefined && c.lat !== null ? c.lat : "";
+                r[22] = c.lng !== undefined && c.lng !== null ? c.lng : "";
+                r[23] = c.phone2 || "";
+                rows.push(r);
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+            const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
+                method: 'POST',
+                body: wbOut
+            });
+
+            if (uploadJson.status === 'success' || uploadJson.success) {
+                return { success: true, driveSynced: true, count: clients.length };
+            } else {
+                throw new Error(uploadJson.message || "Error al subir el Excel de clientes a Drive");
+            }
+        } catch (err) {
+            console.error("Error en syncAllClientsToDriveExcel:", err);
+            return { success: false, message: err.message };
+        }
+    }
+
     async saveNewClientToDrive(url, filename, newClientData) {
         // 1. Guardar primero en la BD local (IndexedDB)
         try {
@@ -448,7 +508,7 @@ class DataManager {
 
             const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
             if (json.status !== 'success' || !json.data) {
-                throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+                const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename); if (fallbackSync.success) return { success: true, driveSynced: true }; throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
             }
 
             const binaryString = atob(json.data);
@@ -553,7 +613,7 @@ class DataManager {
             if (!url) throw new Error("URL de Google Drive no configurada");
 
             const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            if (json.status !== 'success' || !json.data) throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            if (json.status !== 'success' || !json.data) const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename); if (fallbackSync.success) return { success: true, driveSynced: true }; throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
 
             const binaryString = atob(json.data);
             const len = binaryString.length;
@@ -687,7 +747,7 @@ class DataManager {
             if (!url) throw new Error("URL de Google Drive no configurada");
 
             const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            if (json.status !== 'success' || !json.data) throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            if (json.status !== 'success' || !json.data) const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename); if (fallbackSync.success) return { success: true, driveSynced: true }; throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
 
             const binaryString = atob(json.data);
             const len = binaryString.length;

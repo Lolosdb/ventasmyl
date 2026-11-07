@@ -35,6 +35,10 @@ async function renderClientes(isBack = false) {
                     <span class="material-icons-round">cloud_download</span>
                     <span>Desde Drive</span>
                 </button>
+                <button class="btn-import-drive" style="background: #10b981; color: #fff; border-color: #10b981;" onclick="handleDriveExportClients()">
+                    <span class="material-icons-round">cloud_upload</span>
+                    <span>Subir a Drive</span>
+                </button>
             </div>
             <input type="file" id="clientImportInput" accept=".xlsx, .xls" style="display: none;" onchange="handleClientImport(this)">
         </div>
@@ -416,6 +420,27 @@ async function saveNewClient() {
     }
 }
 
+async function handleClientImport(input) {
+    if (!input.files || input.files.length === 0) return;
+    try {
+        const res = await dataManager.importClientsFromExcel(input.files[0]);
+        if (res.success) {
+            const scriptUrl = getClientScriptUrl();
+            if (scriptUrl) {
+                await dataManager.syncAllClientsToDriveExcel(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
+            }
+            alert(`Importados ${res.count} clientes y sincronizados con la carpeta "Copias seguridad App Gestión" en Drive.`);
+            renderClientes();
+        } else {
+            alert("Error: " + res.message);
+        }
+    } catch (e) {
+        alert("Error al importar el archivo Excel: " + e.message);
+    } finally {
+        input.value = '';
+    }
+}
+
 async function handleDriveImport() {
     const btn = event.target.closest('button');
     const originalText = btn.innerHTML;
@@ -426,12 +451,53 @@ async function handleDriveImport() {
         const scriptUrl = getClientScriptUrl();
         const res = await dataManager.importFromDrive(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
         if (res.success) {
-            const preservedMsg = res.preserved > 0 ? ` (${res.preserved} cliente${res.preserved > 1 ? 's' : ''} local${res.preserved > 1 ? 'es' : ''} conservado${res.preserved > 1 ? 's' : ''})` : '';
-            alert(`Sincronizados ${res.count} clientes desde Drive.${preservedMsg}`);
+            alert(`Sincronizados ${res.count} clientes desde la carpeta "Copias seguridad App Gestión" en Drive.`);
             renderClientes();
-        } else alert("Error: " + res.message);
+        } else {
+            const currentClients = await dataManager.getClients();
+            if (currentClients.length > 0 && confirm(`No se encontró el archivo de clientes en la carpeta "Copias seguridad App Gestión" (${res.message}).\n\n¿Quieres subir ahora tus ${currentClients.length} clientes actuales de la app para crear el Excel en esa carpeta de Drive?`)) {
+                const syncRes = await dataManager.syncAllClientsToDriveExcel(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
+                if (syncRes.success) {
+                    alert(`¡Listo! Se ha creado "Clientes_CON_COORDENADAS.xlsx" con ${syncRes.count} clientes dentro de la carpeta "Copias seguridad App Gestión".`);
+                } else {
+                    alert("Error al subir el Excel a Drive: " + syncRes.message);
+                }
+            } else {
+                alert("Error: " + res.message);
+            }
+        }
     } catch (e) {
         alert("Error de conexión");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function handleDriveExportClients() {
+    const currentClients = await dataManager.getClients();
+    if (currentClients.length === 0) {
+        return alert("No tienes clientes en la aplicación para subir a Drive.");
+    }
+    if (!confirm(`Se guardarán tus ${currentClients.length} clientes actuales de la app en el archivo "Clientes_CON_COORDENADAS.xlsx" dentro de la carpeta "Copias seguridad App Gestión" de Google Drive.\n\n¿Continuar?`)) {
+        return;
+    }
+
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="material-icons-round animate-spin">sync</span>';
+    btn.disabled = true;
+
+    try {
+        const scriptUrl = getClientScriptUrl();
+        const res = await dataManager.syncAllClientsToDriveExcel(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
+        if (res.success) {
+            alert(`¡Perfecto! Se han guardado ${res.count} clientes en "Clientes_CON_COORDENADAS.xlsx" dentro de la carpeta "Copias seguridad App Gestión".`);
+        } else {
+            alert("Error al subir a Drive: " + res.message);
+        }
+    } catch (e) {
+        alert("Error de conexión: " + e.message);
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -626,7 +692,9 @@ window.openClientDetailModal = openClientDetailModal;
 window.closeClientDetailModal = closeClientDetailModal;
 window.openNewClientModal = openNewClientModal;
 window.saveNewClient = saveNewClient;
+window.handleClientImport = handleClientImport;
 window.handleDriveImport = handleDriveImport;
+window.handleDriveExportClients = handleDriveExportClients;
 window.handleDeleteClient = handleDeleteClient;
 window.getCurrentCoordinates = getCurrentCoordinates;
 window.handleFormNavigation = handleFormNavigation;
