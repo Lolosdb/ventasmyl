@@ -613,7 +613,11 @@ class DataManager {
             if (!url) throw new Error("URL de Google Drive no configurada");
 
             const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            if (json.status !== 'success' || !json.data) const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename); if (fallbackSync.success) return { success: true, driveSynced: true }; throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            if (json.status !== 'success' || !json.data) {
+                const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename);
+                if (fallbackSync.success) return { success: true, driveSynced: true };
+                throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            }
 
             const binaryString = atob(json.data);
             const len = binaryString.length;
@@ -747,7 +751,11 @@ class DataManager {
             if (!url) throw new Error("URL de Google Drive no configurada");
 
             const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            if (json.status !== 'success' || !json.data) const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename); if (fallbackSync.success) return { success: true, driveSynced: true }; throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            if (json.status !== 'success' || !json.data) {
+                const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename);
+                if (fallbackSync.success) return { success: true, driveSynced: true };
+                throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            }
 
             const binaryString = atob(json.data);
             const len = binaryString.length;
