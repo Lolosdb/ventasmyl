@@ -35,9 +35,11 @@ async function renderClientes(isBack = false) {
                     <span class="material-icons-round">cloud_download</span>
                     <span>Desde Drive</span>
                 </button>
-                <button class="btn-import-drive" style="background: #10b981; color: #fff; border-color: #10b981;" onclick="handleDriveExportClients()">
+            </div>
+            <div class="import-actions-row" style="margin-top: 10px;">
+                <button class="btn-import-drive" style="width: 100%; background: #f0fdf4; color: #10b981; border: 1px solid #dcfce7;" onclick="handleDriveExportClients()">
                     <span class="material-icons-round">cloud_upload</span>
-                    <span>Subir a Drive</span>
+                    <span>Guardar Clientes en Drive</span>
                 </button>
             </div>
             <input type="file" id="clientImportInput" accept=".xlsx, .xls" style="display: none;" onchange="handleClientImport(this)">
