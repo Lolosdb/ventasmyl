@@ -10,7 +10,7 @@ async function renderTotales(isBack = false) {
     
     const orders = await dataManager.getOrders();
     const clients = await dataManager.getClients();
-    const clientMap = new Map(clients.map(c => [c.name, c]));
+    const lookup = dataManager.buildClientLookup(clients);
     
     // Facturación Real (del año actual)
     const history = await dataManager.getInvoiceHistory();
@@ -36,13 +36,16 @@ async function renderTotales(isBack = false) {
     const relevantOrders = ordersThisYear.filter(o => (o.amount !== undefined ? o.amount : o["Importe"] || 0) > 0);
     
     const totalPedidosCount = relevantOrders.length;
-    const clientsWithPurchaseCount = new Set(relevantOrders.map(o => o.shop || o["Cliente"])).size;
+    const clientsWithPurchaseCount = new Set(relevantOrders.map(o => {
+        const c = dataManager.resolveClientForOrder(o, lookup);
+        return c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop || o["Cliente"])}`;
+    })).size;
     const averageInvoice = totalPedidosCount > 0 ? (facturacionReal / totalPedidosCount) : 0;
     
     // Clientes Nuevos
     // Clave de deduplicación: si el pedido tiene nombre de tienda placeholder temporal,
     // usamos el id del pedido para que cada uno cuente por separado.
-    // Para tiendas con nombre real, deduplicamos por nombre (evita contar 2 pedidos del mismo cliente nuevo).
+    // Para tiendas reales, deduplicamos por su código único (o nombre normalizado si no tiene ficha).
     const PLACEHOLDER_NAMES = ['CLIENTE ERROR LOLO ASTURIAS', 'CLIENTE ERROR', 'ERROR CLIENTE'];
     let newClientsCount = 0;
     const countedNewShops = new Set();
@@ -50,10 +53,10 @@ async function renderTotales(isBack = false) {
         const isNew = o.persistedIsNewClient || o["Nuevo Cliente?"] === "SI";
         const shopName = (o.shop || o["Cliente"] || '').trim().toUpperCase();
         if (!isNew || !shopName) return;
-        // Si el nombre es un placeholder temporal, usar el id del pedido como clave única
+        const c = dataManager.resolveClientForOrder(o, lookup);
         const dedupeKey = PLACEHOLDER_NAMES.includes(shopName)
             ? `__placeholder__${o.id}`
-            : shopName;
+            : (c ? `code_${c.code}` : normalizeTextKey(shopName));
         if (!countedNewShops.has(dedupeKey)) {
             newClientsCount++;
             countedNewShops.add(dedupeKey);
@@ -66,7 +69,7 @@ async function renderTotales(isBack = false) {
     PROVINCES.forEach(p => statsProv[p] = { amount: 0, orders: 0 });
 
     ordersThisYear.forEach(o => {
-        const c = clientMap.get(o.shop || o["Cliente"]);
+        const c = dataManager.resolveClientForOrder(o, lookup);
         if (c && c.province) {
             let p = c.province.trim().toUpperCase();
             if (p === 'LEON') p = 'LEÓN';
@@ -166,23 +169,36 @@ async function renderAlertas(isBack = false) {
     
     const orders = await dataManager.getOrders();
     const clients = await dataManager.getClients();
-    const clientMap = new Map(clients.map(c => [c.name, c]));
+    const lookup = dataManager.buildClientLookup(clients);
     const currentYear = new Date().getFullYear();
     
     const lastPurchase = {};
     orders.forEach(o => {
         if (new Date(o.dateISO).getFullYear() !== currentYear) return;
-        if (!lastPurchase[o.shop] || o.dateISO > lastPurchase[o.shop]) {
-            lastPurchase[o.shop] = o.dateISO;
+        const c = dataManager.resolveClientForOrder(o, lookup);
+        const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
+        if (!lastPurchase[key] || o.dateISO > lastPurchase[key].dateISO) {
+            lastPurchase[key] = {
+                dateISO: o.dateISO,
+                client: c,
+                fallbackShop: o.shop
+            };
         }
     });
 
     const now = new Date();
-    const entries = Object.entries(lastPurchase).map(([shop, date]) => {
-        const d = new Date(date);
+    const entries = Object.values(lastPurchase).map(item => {
+        const d = new Date(item.dateISO);
         const days = Math.ceil(Math.abs(now - d) / (1000 * 60 * 60 * 24));
-        const c = clientMap.get(shop);
-        return { shop, days, phone: c ? c.phone : '', location: c ? c.location : '', province: c ? c.province : '', code: c ? c.code : null };
+        const c = item.client;
+        return {
+            shop: c ? c.name : item.fallbackShop,
+            days,
+            phone: c ? c.phone : '',
+            location: c ? c.location : '',
+            province: c ? c.province : '',
+            code: c ? c.code : null
+        };
     }).sort((a,b) => b.days - a.days);
 
     let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px;">';
@@ -473,30 +489,30 @@ async function openRankingModal(sortBy = 'sales', searchTerm = '') {
 
     const orders = await dataManager.getOrders();
     const clientsData = await dataManager.getClients();
-    const nameToCodeMap = {};
-    clientsData.forEach(c => { 
-        if (c.name) nameToCodeMap[c.name.trim().toLowerCase()] = c.code; 
-    });
+    const lookup = dataManager.buildClientLookup(clientsData);
 
     const currentYear = new Date().getFullYear();
     const yearOrders = orders.filter(o => o.year === currentYear);
     
     const stats = {};
     yearOrders.forEach(o => {
-        const shopLower = (o.shop || "").trim().toLowerCase();
-        if (!stats[o.shop]) {
-            stats[o.shop] = { 
+        const c = dataManager.resolveClientForOrder(o, lookup);
+        const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
+        const displayName = c ? c.name : o.shop;
+        if (!stats[key]) {
+            stats[key] = { 
+                name: displayName,
                 sales: 0, 
                 orders: 0, 
-                code: nameToCodeMap[shopLower] || null 
+                code: c ? c.code : (o.clientCode || null)
             };
         }
-        stats[o.shop].sales += (o.amount || 0);
-        stats[o.shop].orders++;
+        stats[key].sales += (o.amount || 0);
+        stats[key].orders++;
     });
 
     // Lógica de Ordenación COMPLETA para obtener posiciones reales
-    let ranking = Object.entries(stats).map(([name, s]) => ({ name, ...s }));
+    let ranking = Object.values(stats).map(s => ({ ...s }));
     
     if (sortBy === 'sales') {
         ranking.sort((a, b) => b.sales - a.sales);

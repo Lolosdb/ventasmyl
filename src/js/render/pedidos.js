@@ -1,6 +1,8 @@
-﻿/**
+/**
  * Lógica de gestión de Pedidos y Exportación
  */
+
+window.currentPedidosStatusFilter = window.currentPedidosStatusFilter || 'all';
 
 async function renderPedidos(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('pedidos', isBack);
@@ -14,16 +16,54 @@ async function renderPedidos(isBack = false) {
         `
     });
 
-    let contentHtml = '<main style="padding: 1rem 0; padding-bottom: 100px; margin-top: 125px;">';
+    const orders = await dataManager.getOrders();
+    // Ordenar por año descendente y luego por ID descendente
+    const sortedOrders = orders.sort((a, b) => {
+        const yearA = parseInt(String(a.id).split('-')[0]) || 0;
+        const yearB = parseInt(String(b.id).split('-')[0]) || 0;
+        if (yearB !== yearA) return yearB - yearA;
+        return (b.displayId || 0) - (a.displayId || 0);
+    });
 
-    // Parte fija: Buscador + Cabecera Tabla
+    let countAlmacen = 0, countTampo = 0, countServido = 0;
+    sortedOrders.forEach(o => {
+        if (o.facturadoTodo) countServido++;
+        else if (o.noTampo) countTampo++;
+        else countAlmacen++;
+    });
+
+    const activeFilter = window.currentPedidosStatusFilter || 'all';
+
+    let contentHtml = '<main style="padding: 1rem 0; padding-bottom: 100px; margin-top: 168px;">';
+
+    // Parte fija: Buscador + Pestañas de Estado + Cabecera Tabla
     contentHtml += `
         <div class="pedidos-fixed-controls">
             <!-- Buscador -->
-            <div class="search-container mb-4">
+            <div class="search-container mb-2" style="margin-bottom: 8px !important;">
                 <span class="material-icons-round search-icon">search</span>
                 <input type="text" id="searchPedidosInput" class="search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
                 <span id="clearPedidosSearchBtn" class="material-icons-round clear-icon" style="display: none;" onclick="clearPedidosSearch()">cancel</span>
+            </div>
+
+            <!-- Pestañas de Filtro Rápido por Estado -->
+            <div id="pedidosStatusTabs" style="display: flex; gap: 6px; padding: 0 12px 10px 12px; overflow-x: auto; scrollbar-width: none;">
+                <button type="button" data-status-tab="all" onclick="setPedidosStatusFilter('all')"
+                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'all' ? '#0f172a' : '#e2e8f0'}; background: ${activeFilter === 'all' ? '#0f172a' : '#ffffff'}; color: ${activeFilter === 'all' ? '#ffffff' : '#475569'}; transition: all 0.15s;">
+                    Todos (${sortedOrders.length})
+                </button>
+                <button type="button" data-status-tab="almacen" onclick="setPedidosStatusFilter('almacen')"
+                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'almacen' ? '#f59e0b' : '#fde68a'}; background: ${activeFilter === 'almacen' ? '#f59e0b' : '#fffbeb'}; color: ${activeFilter === 'almacen' ? '#ffffff' : '#b45309'}; transition: all 0.15s;">
+                    🟡 Almacén (${countAlmacen})
+                </button>
+                <button type="button" data-status-tab="tampo" onclick="setPedidosStatusFilter('tampo')"
+                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'tampo' ? '#2563eb' : '#bfdbfe'}; background: ${activeFilter === 'tampo' ? '#2563eb' : '#eff6ff'}; color: ${activeFilter === 'tampo' ? '#ffffff' : '#1d4ed8'}; transition: all 0.15s;">
+                    🔵 Falta Tampo (${countTampo})
+                </button>
+                <button type="button" data-status-tab="servido" onclick="setPedidosStatusFilter('servido')"
+                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'servido' ? '#16a34a' : '#bbf7d0'}; background: ${activeFilter === 'servido' ? '#16a34a' : '#f0fdf4'}; color: ${activeFilter === 'servido' ? '#ffffff' : '#15803d'}; transition: all 0.15s;">
+                    🟢 Servidos (${countServido})
+                </button>
             </div>
 
             <div class="pedidos-table-header">
@@ -34,29 +74,28 @@ async function renderPedidos(isBack = false) {
         </div>
     `;
 
-    const orders = await dataManager.getOrders();
-    // Ordenar por año descendente y luego por ID descendente
-    const sortedOrders = orders.sort((a, b) => {
-        const yearA = parseInt(String(a.id).split('-')[0]) || 0;
-        const yearB = parseInt(String(b.id).split('-')[0]) || 0;
-        if (yearB !== yearA) return yearB - yearA;
-        return (b.displayId || 0) - (a.displayId || 0);
-    });
-
+    contentHtml += '<div id="pedidosFilterSummaryBar" style="display: none; background: #f8fafc; padding: 8px 20px; border-bottom: 1px solid #e2e8f0; font-size: 11.5px; font-weight: 800; color: #334155; justify-content: space-between; align-items: center;"></div>';
     contentHtml += '<div id="pedidosList" class="pedidos-list" style="background: white;">';
     if (sortedOrders.length === 0) {
         contentHtml += '<div class="text-center p-8 text-gray-400">No hay pedidos registrados</div>';
     } else {
         sortedOrders.forEach(order => {
-            const amount = formatCurrency(Math.round(order.amount || 0));
+            const rawAmount = Math.round(parseFloat(order.amount) || 0);
+            const amount = formatCurrency(rawAmount);
             
-            // Reglas de negocio de colores
+            // Reglas de negocio de colores y estados
             let rowClass = '';
-            if (order.facturadoTodo) rowClass = 'row-green';
-            else if (order.noTampo) rowClass = 'row-blue';
+            let statusType = 'almacen';
+            if (order.facturadoTodo) {
+                rowClass = 'row-green';
+                statusType = 'servido';
+            } else if (order.noTampo) {
+                rowClass = 'row-blue';
+                statusType = 'tampo';
+            }
 
             contentHtml += `
-                <div class="pedido-row ${rowClass}" onclick="openEditOrderModal('${order.id}')">
+                <div class="pedido-row ${rowClass}" data-status="${statusType}" data-amount="${rawAmount}" onclick="openEditOrderModal('${order.id}')">
                     <div class="p-id">${order.displayId}</div>
                     <div class="p-shop">${order.shop}</div>
                     <div class="p-amount">${amount}</div>
@@ -79,21 +118,82 @@ async function renderPedidos(isBack = false) {
     contentHtml += renderBottomNav('pedidos');
     app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
     
+    if (activeFilter !== 'all') {
+        filterPedidos();
+    }
     if (window.activeCurrentNav) window.activeCurrentNav('pedidos');
+}
+
+function setPedidosStatusFilter(status) {
+    window.currentPedidosStatusFilter = status || 'all';
+    const tabs = document.querySelectorAll('#pedidosStatusTabs [data-status-tab]');
+    tabs.forEach(btn => {
+        const tab = btn.getAttribute('data-status-tab');
+        const isActive = tab === window.currentPedidosStatusFilter;
+        if (tab === 'all') {
+            btn.style.background = isActive ? '#0f172a' : '#ffffff';
+            btn.style.color = isActive ? '#ffffff' : '#475569';
+            btn.style.borderColor = isActive ? '#0f172a' : '#e2e8f0';
+        } else if (tab === 'almacen') {
+            btn.style.background = isActive ? '#f59e0b' : '#fffbeb';
+            btn.style.color = isActive ? '#ffffff' : '#b45309';
+            btn.style.borderColor = isActive ? '#f59e0b' : '#fde68a';
+        } else if (tab === 'tampo') {
+            btn.style.background = isActive ? '#2563eb' : '#eff6ff';
+            btn.style.color = isActive ? '#ffffff' : '#1d4ed8';
+            btn.style.borderColor = isActive ? '#2563eb' : '#bfdbfe';
+        } else if (tab === 'servido') {
+            btn.style.background = isActive ? '#16a34a' : '#f0fdf4';
+            btn.style.color = isActive ? '#ffffff' : '#15803d';
+            btn.style.borderColor = isActive ? '#16a34a' : '#bbf7d0';
+        }
+    });
+    filterPedidos();
 }
 
 function filterPedidos() {
     const input = document.getElementById('searchPedidosInput');
-    const filter = input.value.toLowerCase();
+    const filter = (input ? input.value : '').toLowerCase();
+    const activeStatus = window.currentPedidosStatusFilter || 'all';
     
     // Usar utilidad global para el botón X
     toggleClearSearch('searchPedidosInput', 'clearPedidosSearchBtn');
 
+    let visibleCount = 0;
+    let visibleAmount = 0;
+
     const rows = document.querySelectorAll('.pedido-row');
     rows.forEach(row => {
         const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(filter) ? '' : 'none';
+        const rowStatus = row.getAttribute('data-status') || 'almacen';
+        const matchText = !filter || text.includes(filter);
+        const matchStatus = activeStatus === 'all' || rowStatus === activeStatus;
+        const show = matchText && matchStatus;
+        row.style.display = show ? '' : 'none';
+        if (show) {
+            visibleCount++;
+            visibleAmount += parseFloat(row.getAttribute('data-amount')) || 0;
+        }
     });
+
+    const summaryBar = document.getElementById('pedidosFilterSummaryBar');
+    if (summaryBar) {
+        if (activeStatus !== 'all' || filter) {
+            const labels = {
+                all: 'Filtrados',
+                almacen: '🟡 En Almacén (Pendientes de servir)',
+                tampo: '🔵 Servidos parcial (Falta Tampo)',
+                servido: '🟢 Servidos completos'
+            };
+            summaryBar.style.display = 'flex';
+            summaryBar.innerHTML = `
+                <span>${labels[activeStatus] || 'Pedidos'}: <strong>${visibleCount}</strong></span>
+                <span>Total: <strong style="color: #0284c7;">${formatCurrency(Math.round(visibleAmount))}</strong></span>
+            `;
+        } else {
+            summaryBar.style.display = 'none';
+        }
+    }
 }
 
 function clearPedidosSearch() {
@@ -140,8 +240,9 @@ function injectPedidoModals() {
                         </div>
                         <div class="client-search-wrapper">
                             <span class="material-icons-round client-search-icon">search</span>
-                            <input type="text" id="orderClient" class="order-input client-search-input" list="clientsListDatalist" placeholder="Buscar cliente..." required onkeydown="handleOrderFormEnter(event, 'orderAmount')" onkeyup="toggleClearSearch('orderClient', 'clearOrderClientBtn')" oninput="handleClientInputJump(this.value)">
-                            <span id="clearOrderClientBtn" class="material-icons-round clear-icon" style="display: none; top: 50%; transform: translateY(-50%);" onclick="clearSearchField('orderClient', 'clearOrderClientBtn'); document.getElementById('orderClient').focus();">cancel</span>
+                            <input type="text" id="orderClient" class="order-input client-search-input" list="clientsListDatalist" placeholder="Buscar cliente o código..." required onkeydown="handleOrderFormEnter(event, 'orderAmount')" onkeyup="toggleClearSearch('orderClient', 'clearOrderClientBtn')" oninput="handleClientInputJump(this.value)">
+                            <input type="hidden" id="orderClientCode" value="">
+                            <span id="clearOrderClientBtn" class="material-icons-round clear-icon" style="display: none; top: 50%; transform: translateY(-50%);" onclick="clearSearchField('orderClient', 'clearOrderClientBtn'); document.getElementById('orderClientCode').value = ''; document.getElementById('orderClient').focus();">cancel</span>
                             <datalist id="clientsListDatalist"></datalist>
                         </div>
                     </div>
@@ -163,8 +264,14 @@ function injectPedidoModals() {
                     </div>
 
                     <div class="order-form-group" style="margin-bottom: 0.75rem;">
-                        <label class="order-form-label">COMENTARIOS</label>
-                        <textarea id="orderComments" class="order-input" rows="2" placeholder="Notas sobre el pedido..." onkeydown="handleOrderFormEnter(event, 'isNewClientSwitch')"></textarea>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="order-form-label" style="margin: 0;">COMENTARIOS</label>
+                            <button type="button" onclick="window.toggleVoiceDictation('orderComments', this)" style="display: inline-flex; align-items: center; gap: 4px; background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
+                                <span class="material-icons-round" style="font-size: 15px;">mic</span>
+                                <span>Dictar</span>
+                            </button>
+                        </div>
+                        <textarea id="orderComments" class="order-input" rows="2" placeholder="Pulsa 'Dictar' o escribe notas sobre el pedido..." onkeydown="handleOrderFormEnter(event, 'isNewClientSwitch')"></textarea>
                     </div>
 
                     <!-- PREMIUM FOOTER -->
@@ -260,17 +367,27 @@ function injectPedidoModals() {
     document.body.insertAdjacentHTML('beforeend', modalsHtml);
     
     // Poblar datalist de clientes
-    dataManager.getClients().then(clients => {
-        const dl = document.getElementById('clientsListDatalist');
-        if (dl) dl.innerHTML = clients.map(c => `<option value="${c.name}">`).join('');
-    });
+    refreshOrderClientsDatalist();
+}
+
+async function refreshOrderClientsDatalist() {
+    const clients = await dataManager.getClients();
+    window._cachedOrderClients = clients;
+    const dl = document.getElementById('clientsListDatalist');
+    if (dl) {
+        dl.innerHTML = clients.map(c => `<option value="${(c.name || '').replace(/"/g, '&quot;')}" data-code="${c.code}">${c.code ? c.code + ' - ' + (c.location || '') : (c.location || '')}</option>`).join('');
+    }
 }
 
 function openNewOrderModal() {
     injectPedidoModals();
+    refreshOrderClientsDatalist();
     const modal = document.getElementById('newOrderModal');
+    modal.style.zIndex = '1250';
     const form = document.getElementById('newOrderForm');
     form.reset();
+    const codeInput = document.getElementById('orderClientCode');
+    if (codeInput) codeInput.value = '';
     
     const btnDelete = document.getElementById('btnDeleteOrder');
     if (btnDelete) btnDelete.style.display = 'none';
@@ -287,6 +404,34 @@ function openNewOrderModal() {
     if (clearBtn) clearBtn.style.display = 'none';
 }
 
+async function openNewOrderForClient(clientCode) {
+    injectPedidoModals();
+    await refreshOrderClientsDatalist();
+    const client = await dataManager.getClientByCode(clientCode);
+    if (!client) return alert('Cliente no encontrado');
+
+    if (typeof closeClientDetailModal === 'function') {
+        closeClientDetailModal();
+    }
+
+    openNewOrderModal();
+
+    const clientInput = document.getElementById('orderClient');
+    const codeInput = document.getElementById('orderClientCode');
+    const clearBtn = document.getElementById('clearOrderClientBtn');
+    if (clientInput) clientInput.value = client.name || '';
+    if (codeInput) codeInput.value = client.code || '';
+    if (clearBtn) clearBtn.style.display = 'block';
+
+    // Calcular automáticamente el siguiente Nº de pedido de este año
+    await autoIncrementOrderNumber();
+
+    setTimeout(() => {
+        const amountInput = document.getElementById('orderAmount');
+        if (amountInput) amountInput.focus();
+    }, 150);
+}
+
 function closeNewOrderModal() {
     const modal = document.getElementById('newOrderModal');
     if (modal) modal.classList.remove('open');
@@ -294,7 +439,13 @@ function closeNewOrderModal() {
 
 async function autoIncrementOrderNumber() {
     const orders = await dataManager.getOrders();
-    const ids = orders.map(o => o.displayId || 0);
+    const dateVal = document.getElementById('orderDate')?.value;
+    const selectedYear = getYearFromDate(dateVal) || new Date().getFullYear();
+    const ordersInYear = orders.filter(o => {
+        const y = o.year || getYearFromDate(o.dateISO || o.date);
+        return parseInt(y, 10) === selectedYear;
+    });
+    const ids = ordersInYear.map(o => parseInt(o.displayId, 10) || 0);
     const nextId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
     const input = document.getElementById('orderId');
     input.value = nextId;
@@ -313,6 +464,17 @@ function handleOrderFormEnter(event, nextId) {
 function handleClientInputJump(val) {
     const dl = document.getElementById('clientsListDatalist');
     if (!dl) return;
+    const codeInput = document.getElementById('orderClientCode');
+    const clients = window._cachedOrderClients || [];
+    const lookup = dataManager.buildClientLookup(clients);
+    const matched = dataManager.resolveClientForOrder(val, lookup);
+
+    if (matched) {
+        if (codeInput) codeInput.value = matched.code || '';
+    } else if (codeInput) {
+        codeInput.value = '';
+    }
+
     const options = Array.from(dl.options).map(o => o.value);
     if (options.includes(val)) {
         // La selección es válida, saltar a Importe
@@ -325,7 +487,8 @@ function handleClientInputJump(val) {
 
 async function saveNewOrder() {
     const date = document.getElementById('orderDate').value;
-    const shop = document.getElementById('orderClient').value;
+    const rawShop = document.getElementById('orderClient').value.trim();
+    const explicitCode = (document.getElementById('orderClientCode')?.value || '').trim();
     const amount = parseFloat(document.getElementById('orderAmount').value);
     const displayId = parseInt(document.getElementById('orderId').value);
     const noTampo = document.getElementById('orderNoTampo').value;
@@ -333,10 +496,27 @@ async function saveNewOrder() {
     const comments = document.getElementById('orderComments').value;
     const isNewClient = document.getElementById('isNewClientSwitch').checked;
 
-    if (!date || !shop || isNaN(amount)) {
+    if (!date || !rawShop || isNaN(amount)) {
         alert('Por favor, rellena los campos obligatorios');
         return;
     }
+
+    // Resolver cliente por código o por nombre (tolerante a espacios y tildes)
+    const clients = await dataManager.getClients();
+    const lookup = dataManager.buildClientLookup(clients);
+    let matchedClient = null;
+    if (explicitCode && lookup.byCode.has(explicitCode)) {
+        matchedClient = lookup.byCode.get(explicitCode);
+        // Verificar que el usuario no haya cambiado el texto manualmente a otra tienda distinta tras seleccionar
+        if (normalizeTextKey(matchedClient.name) !== normalizeTextKey(rawShop)) {
+            matchedClient = dataManager.resolveClientForOrder(rawShop, lookup);
+        }
+    } else {
+        matchedClient = dataManager.resolveClientForOrder(rawShop, lookup);
+    }
+
+    const clientCode = matchedClient ? String(matchedClient.code).trim() : null;
+    const shop = matchedClient && matchedClient.name ? matchedClient.name.trim() : rawShop;
 
     const year = new Date(date).getFullYear();
     const compositeId = `${year}-${displayId}`;
@@ -347,6 +527,7 @@ async function saveNewOrder() {
         date,
         dateISO: new Date(date).toISOString(),
         shop,
+        clientCode,
         amount,
         noTampo,
         facturadoTodo,
@@ -362,11 +543,18 @@ async function saveNewOrder() {
 
     await dataManager.createOrder(orderData);
     closeNewOrderModal();
-    renderPedidos();
+    if (window.currentView === 'mapa' && typeof renderMapa === 'function') {
+        renderMapa(true);
+    } else if (window.currentView === 'clientes' && typeof renderClientes === 'function') {
+        renderClientes(true);
+    } else {
+        renderPedidos();
+    }
 }
 
 async function openEditOrderModal(orderId) {
     injectPedidoModals();
+    refreshOrderClientsDatalist();
     const order = await dataManager.getOrderById(orderId);
     if (!order) return;
 
@@ -379,8 +567,20 @@ async function openEditOrderModal(orderId) {
     const btnDelete = document.getElementById('btnDeleteOrder');
     if (btnDelete) btnDelete.style.display = 'block';
 
+    // Si el pedido tiene clientCode, mostrar siempre el nombre oficial actualizado del cliente
+    let currentShopName = order.shop;
+    let currentClientCode = order.clientCode || '';
+    if (currentClientCode) {
+        const clientObj = await dataManager.getClientByCode(currentClientCode);
+        if (clientObj && clientObj.name) {
+            currentShopName = clientObj.name;
+        }
+    }
+
     document.getElementById('orderDate').value = order.date;
-    document.getElementById('orderClient').value = order.shop;
+    document.getElementById('orderClient').value = currentShopName;
+    const codeInput = document.getElementById('orderClientCode');
+    if (codeInput) codeInput.value = currentClientCode;
     document.getElementById('orderAmount').value = order.amount;
     document.getElementById('orderId').value = order.displayId;
     document.getElementById('orderId').dataset.originalId = order.id;
@@ -425,7 +625,7 @@ async function previewPedidosReport() {
 
         const orders = await dataManager.getOrders();
         const clients = await dataManager.getClients();
-        const clientMap = new Map(clients.map(c => [(c.name || '').toLowerCase().trim(), c]));
+        const lookup = dataManager.buildClientLookup(clients);
 
         const startD = new Date(start); startD.setHours(0,0,0,0);
         const endD = new Date(end); endD.setHours(23,59,59,999);
@@ -435,10 +635,12 @@ async function previewPedidosReport() {
             const dateMatch = d >= startD && d <= endD;
             if (!dateMatch) return false;
 
-            if (shopFilter && !o.shop.toLowerCase().includes(shopFilter)) return false;
+            const c = dataManager.resolveClientForOrder(o, lookup) || {};
+            const displayShop = (c.name || o.shop || '').toLowerCase();
+
+            if (shopFilter && !displayShop.includes(shopFilter) && !(o.shop || '').toLowerCase().includes(shopFilter)) return false;
 
             if (locationFilter) {
-                const c = clientMap.get(o.shop.toLowerCase().trim()) || {};
                 const loc = (c.location || "").toLowerCase();
                 const prov = (c.province || "").toLowerCase();
                 if (!loc.includes(locationFilter) && !prov.includes(locationFilter)) return false;
@@ -505,7 +707,7 @@ async function executeExportXlsx() {
 
         const orders = await dataManager.getOrders();
         const clients = await dataManager.getClients();
-        const clientMap = new Map(clients.map(c => [(c.name || '').toLowerCase().trim(), c]));
+        const lookup = dataManager.buildClientLookup(clients);
 
         const startD = new Date(start); startD.setHours(0,0,0,0);
         const endD = new Date(end); endD.setHours(23,59,59,999);
@@ -515,10 +717,12 @@ async function executeExportXlsx() {
             const dateMatch = d >= startD && d <= endD;
             if (!dateMatch) return false;
 
-            if (shopFilter && !o.shop.toLowerCase().includes(shopFilter)) return false;
+            const c = dataManager.resolveClientForOrder(o, lookup) || {};
+            const displayShop = (c.name || o.shop || '').toLowerCase();
+
+            if (shopFilter && !displayShop.includes(shopFilter) && !(o.shop || '').toLowerCase().includes(shopFilter)) return false;
 
             if (locationFilter) {
-                const c = clientMap.get(o.shop.toLowerCase().trim()) || {};
                 const loc = (c.location || "").toLowerCase();
                 const prov = (c.province || "").toLowerCase();
                 if (!loc.includes(locationFilter) && !prov.includes(locationFilter)) return false;
@@ -530,11 +734,11 @@ async function executeExportXlsx() {
 
         const wb = XLSX.utils.book_new();
         const data = filtered.map(o => {
-            const c = clientMap.get(o.shop.toLowerCase().trim()) || {};
+            const c = dataManager.resolveClientForOrder(o, lookup) || {};
             return {
                 "Nº": o.displayId || String(o.id).split('-').pop(),
                 "FECHA": new Date(o.dateISO || o.date).toLocaleDateString('es-ES'),
-                "TIENDA": o.shop.toUpperCase(),
+                "TIENDA": (c.name || o.shop || '').toUpperCase(),
                 "IMPORTE": Math.round(o.amount || 0),
                 "PROVINCIA": (c.province || "---").toUpperCase(),
                 "POBLACIÓN": (c.location || "---").toUpperCase(),
@@ -590,7 +794,9 @@ async function executeExportXlsx() {
 // Globales
 window.renderPedidos = renderPedidos;
 window.filterPedidos = filterPedidos;
+window.setPedidosStatusFilter = setPedidosStatusFilter;
 window.openNewOrderModal = openNewOrderModal;
+window.openNewOrderForClient = openNewOrderForClient;
 window.closeNewOrderModal = closeNewOrderModal;
 window.saveNewOrder = saveNewOrder;
 window.deleteCurrentOrder = deleteCurrentOrder;
@@ -601,6 +807,7 @@ window.closeExportPedidosModal = closeExportPedidosModal;
 window.executeExportXlsx = executeExportXlsx;
 window.previewPedidosReport = previewPedidosReport;
 window.clearPedidosSearch = clearPedidosSearch;
+window.injectPedidoModals = injectPedidoModals;
 
 
 

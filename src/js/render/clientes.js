@@ -11,6 +11,9 @@ async function renderClientes(isBack = false) {
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Clientes');
 
+    const pendingOps = await dataManager.getPendingClientOps();
+    const pendingCount = Array.isArray(pendingOps) ? pendingOps.length : 0;
+
     let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px;" class="view-enter">';
 
     // Tarjeta de Importación Premium Rediseñada
@@ -42,12 +45,36 @@ async function renderClientes(isBack = false) {
                     <span>Guardar Clientes en Drive</span>
                 </button>
             </div>
+            ${pendingCount > 0 ? `
+            <div id="pendingSyncBanner" style="margin-top: 12px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #b45309; font-size: 12px; font-weight: 700; line-height: 1.3;">
+                    <span class="material-icons-round" style="font-size: 18px; color: #d97706;">cloud_off</span>
+                    <span>${pendingCount} ${pendingCount === 1 ? 'cambio pendiente' : 'cambios pendientes'} de subir a Drive (protegidos frente a importaciones)</span>
+                </div>
+                <button onclick="handleFlushPendingClients(this)" style="background: #d97706; color: white; border: none; border-radius: 8px; padding: 6px 10px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;">
+                    <span class="material-icons-round" style="font-size: 14px;">sync</span>
+                    <span>Subir ahora</span>
+                </button>
+            </div>
+            ` : ''}
             <input type="file" id="clientImportInput" accept=".xlsx, .xls" style="display: none;" onchange="handleClientImport(this)">
         </div>
     `;
 
-    // Buscador
+    // Botón Radar "¿Quién tengo cerca ahora mismo?" + Buscador
     contentHtml += `
+        <button type="button" onclick="window.openNearbyRadarModal()"
+                style="width: 100%; margin-bottom: 12px; padding: 12px 16px; border-radius: 16px; border: 1px solid #bae6fd; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="material-icons-round" style="color: #38bdf8; font-size: 22px;">radar</span>
+                <div style="text-align: left;">
+                    <div style="font-size: 13px; font-weight: 900; letter-spacing: -0.2px;">¿Quién tengo cerca ahora mismo?</div>
+                    <div style="font-size: 10.5px; color: #94a3b8; font-weight: 600;">Ver los 10 clientes más próximos a tu GPS actual</div>
+                </div>
+            </div>
+            <span class="material-icons-round" style="color: #38bdf8; font-size: 20px;">chevron_right</span>
+        </button>
+
         <div class="search-container mb-4">
             <span class="material-icons-round search-icon">search</span>
             <input type="text" id="clientSearchInput" 
@@ -83,7 +110,7 @@ async function renderClientes(isBack = false) {
                             <span>-</span>
                             <span class="client-card-name">${client.name || 'Sin Nombre'}</span>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2" style="flex-wrap: wrap;">
                             <div class="pill-location">
                                 <span class="material-icons-round">place</span>
                                 ${client.location || 'Sin ubicación'}
@@ -92,6 +119,18 @@ async function renderClientes(isBack = false) {
                                 <div class="pill-contact">
                                     <span class="material-icons-round">person</span>
                                     ${client.contact}
+                                </div>
+                            ` : ''}
+                            ${client.lastVisitDate ? `
+                                <div style="display: inline-flex; align-items: center; gap: 3px; background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; border-radius: 999px; padding: 2px 7px; font-size: 10px; font-weight: 800;" title="Última visita sin pedido">
+                                    <span class="material-icons-round" style="font-size: 12px;">visibility</span>
+                                    Visitado ${new Date(client.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+                                </div>
+                            ` : ''}
+                            ${client.pendingSync ? `
+                                <div style="display: inline-flex; align-items: center; gap: 3px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 999px; padding: 2px 7px; font-size: 10px; font-weight: 800;" title="Guardado en el móvil. Pendiente de subir a Drive">
+                                    <span class="material-icons-round" style="font-size: 12px;">cloud_queue</span>
+                                    Pendiente Drive
                                 </div>
                             ` : ''}
                         </div>
@@ -137,9 +176,9 @@ async function openClientDetailModal(clientCode) {
     const modal = document.getElementById('clientDetailModal');
     const content = document.getElementById('modal-client-content');
     
-    // Historial
+    // Historial (vinculado por código de cliente con soporte para pedidos antiguos por nombre normalizado)
     const orders = await dataManager.getOrders();
-    const clientOrders = orders.filter(o => o.shop === client.name).sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
+    const clientOrders = orders.filter(o => dataManager.isOrderForClient(o, client)).sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
     
     let historyHtml = '<div class="flex flex-col gap-1 mt-4">';
     if (clientOrders.length === 0) {
@@ -175,6 +214,11 @@ async function openClientDetailModal(clientCode) {
     }
     historyHtml += '</div>';
 
+    const safeCode = String(client.code || '').replace(/'/g, "\\'");
+    const lastVisitFormatted = client.lastVisitDate
+        ? new Date(client.lastVisitDate).toLocaleDateString('es-ES')
+        : '';
+
     content.innerHTML = `
         <div class="v7-header shadow-lg">
             <!-- BOTON CERRAR: MINIMALISTA -->
@@ -191,11 +235,11 @@ async function openClientDetailModal(clientCode) {
             
             <!-- ACCIONES: BOTONES PROPORCIONALES Y SIMETRICOS -->
             <div class="v7-actions-row">
-                <div class="v7-btn-base v7-btn-edit" onclick="openNewClientModal('${client.code}')">
+                <div class="v7-btn-base v7-btn-edit" onclick="openNewClientModal('${safeCode}')">
                     <span class="material-icons-round" style="font-size: 20px;">edit</span>
                     <span>EDITAR</span>
                 </div>
-                <div class="v7-btn-base v7-btn-delete" onclick="handleDeleteClient('${client.code}')">
+                <div class="v7-btn-base v7-btn-delete" onclick="handleDeleteClient('${safeCode}')">
                     <span class="material-icons-round" style="font-size: 20px;">delete_outline</span>
                     <span>ELIMINAR</span>
                 </div>
@@ -203,6 +247,76 @@ async function openClientDetailModal(clientCode) {
         </div>
         
         <div class="modal-body p-6">
+            <!-- ⚡ ACCIONES EN RUTA 1-CLICK: NUEVO PEDIDO Y VISITADO HOY -->
+            <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px; margin-bottom: 14px;">
+                <button type="button" onclick="window.openNewOrderForClient('${safeCode}')"
+                        style="background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%); color: white; border: none; border-radius: 16px; padding: 13px 12px; font-size: 12.5px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25);">
+                    <span class="material-icons-round" style="font-size: 19px;">add_shopping_cart</span>
+                    <span>NUEVO PEDIDO AQUÍ</span>
+                </button>
+                <button type="button" onclick="toggleQuickVisitBox()"
+                        style="background: #f5f3ff; color: #6d28d9; border: 1.5px solid #ddd6fe; border-radius: 16px; padding: 13px 10px; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 19px;">visibility</span>
+                    <span>VISITADO HOY</span>
+                </button>
+            </div>
+
+            <!-- Panel desplegable para Check-in de Visita sin pedido -->
+            <div id="quickVisitBox" style="display: none; background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 16px; padding: 12px 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 11px; font-weight: 900; color: #5b21b6; text-transform: uppercase;">👁️ Registrar visita de hoy (Sin pedido)</span>
+                    <button type="button" onclick="window.toggleVoiceDictation('clientVisitNoteInput', this)"
+                            style="display: inline-flex; align-items: center; gap: 4px; background: white; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
+                        <span class="material-icons-round" style="font-size: 14px;">mic</span>
+                        <span>Dictar nota</span>
+                    </button>
+                </div>
+                <input type="text" id="clientVisitNoteInput" value="${(client.lastVisitNote || '').replace(/"/g, '&quot;')}"
+                       placeholder="Opcional: ej. Pasar en 15 días, aún tiene stock..."
+                       style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #c4b5fd; font-size: 13px; background: white; margin-bottom: 8px;">
+                <button type="button" onclick="confirmClientVisitCheckIn('${safeCode}')"
+                        style="width: 100%; background: #6d28d9; color: white; border: none; border-radius: 10px; padding: 10px; font-size: 12.5px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span class="material-icons-round" style="font-size: 17px;">check_circle</span>
+                    <span>GUARDAR VISITA DE HOY</span>
+                </button>
+            </div>
+
+            ${lastVisitFormatted ? `
+            <div id="lastVisitInfoBanner" style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 14px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px;">
+                <span class="material-icons-round" style="color: #7c3aed; font-size: 18px; margin-top: 1px;">visibility</span>
+                <div style="font-size: 12px; color: #5b21b6; line-height: 1.35;">
+                    <strong>Última visita registrada:</strong> ${lastVisitFormatted}
+                    ${client.lastVisitNote ? `<div style="margin-top: 2px; color: #6d28d9; font-weight: 600;">"${client.lastVisitNote}"</div>` : ''}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- 🎙️ NOTAS PERMANENTES DEL CLIENTE (CON DICTADO POR VOZ) -->
+            <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 16px; padding: 12px 14px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: #b45309; font-size: 11px; font-weight: 900; text-transform: uppercase;">
+                        <span class="material-icons-round" style="font-size: 16px;">sticky_note_2</span>
+                        <span>Notas Permanentes del Cliente</span>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" onclick="window.toggleVoiceDictation('clientQuickNotesInput', this, () => saveQuickClientNotes('${safeCode}', true))"
+                                style="display: inline-flex; align-items: center; gap: 4px; background: white; color: #d97706; border: 1px solid #fcd34d; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
+                            <span class="material-icons-round" style="font-size: 14px;">mic</span>
+                            <span>Dictar</span>
+                        </button>
+                        <button type="button" id="btnSaveQuickNotes" onclick="saveQuickClientNotes('${safeCode}', false)"
+                                style="display: inline-flex; align-items: center; gap: 4px; background: #d97706; color: white; border: none; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
+                            <span class="material-icons-round" style="font-size: 14px;">save</span>
+                            <span>Guardar</span>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="clientQuickNotesInput" rows="2"
+                          placeholder="Dicta o escribe notas fijas (ej. prefiere imanes resina, hablar con María por la mañana...)"
+                          style="width: 100%; border: 1px solid #fde68a; border-radius: 10px; padding: 8px 10px; font-size: 13px; font-family: inherit; background: white; color: #1e293b; resize: vertical;">${client.notes || ''}</textarea>
+                <div id="quickNotesSavedStatus" style="display: none; font-size: 11px; font-weight: 800; color: #15803d; margin-top: 4px;">✅ Nota guardada en la ficha del cliente</div>
+            </div>
+
             <!-- Info List -->
             <div class="flex flex-col gap-6">
                 
@@ -353,6 +467,8 @@ function openNewClientModal(code = null) {
             document.getElementById('ncAddress').value = client.address || '';
             document.getElementById('ncContact').value = client.contact || '';
             document.getElementById('ncSchedule').value = client.schedule || '';
+            const notesEl = document.getElementById('ncNotes');
+            if (notesEl) notesEl.value = client.notes || '';
             document.getElementById('ncLat').value = client.lat || '';
             document.getElementById('ncLng').value = client.lng || '';
             modal.querySelector('h2').textContent = 'Editar Cliente';
@@ -386,6 +502,7 @@ async function saveNewClient() {
         address: document.getElementById('ncAddress').value,
         contact: document.getElementById('ncContact').value,
         schedule: document.getElementById('ncSchedule').value,
+        notes: document.getElementById('ncNotes') ? document.getElementById('ncNotes').value : '',
         lat: document.getElementById('ncLat').value,
         lng: document.getElementById('ncLng').value
     };
@@ -429,9 +546,16 @@ async function handleClientImport(input) {
         if (res.success) {
             const scriptUrl = getClientScriptUrl();
             if (scriptUrl) {
-                await dataManager.syncAllClientsToDriveExcel(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
+                const syncRes = await dataManager.syncAllClientsToDriveExcel(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
+                if (syncRes && syncRes.success) {
+                    await dataManager.clearPendingClientOps();
+                }
             }
-            alert(`Importados ${res.count} clientes y sincronizados con la carpeta "Copias seguridad App Gestión" en Drive.`);
+            let msg = `Importados ${res.count} clientes y sincronizados con la carpeta "Copias seguridad App Gestión" en Drive.`;
+            if (res.protectedPending > 0) {
+                msg += `\n\n🛡️ Se han respetado ${res.protectedPending} cambio(s) hecho(s) sin cobertura en el móvil.`;
+            }
+            alert(msg);
             renderClientes();
         } else {
             alert("Error: " + res.message);
@@ -443,6 +567,39 @@ async function handleClientImport(input) {
     }
 }
 
+async function handleFlushPendingClients(btn) {
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span class="material-icons-round animate-spin" style="font-size: 14px;">sync</span><span>Subiendo...</span>';
+        btn.disabled = true;
+    }
+    try {
+        const scriptUrl = getClientScriptUrl();
+        const res = await dataManager.flushPendingClientSync(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
+        if (res.success && res.flushed > 0) {
+            alert(`✅ ¡Sincronización completada! Se han subido los ${res.flushed} cambio(s) pendientes a Google Drive.`);
+            renderClientes();
+        } else if (res.pendingCount > 0) {
+            alert(`⚠️ Aún no hay suficiente cobertura para conectar con Drive (${res.message || 'Sin respuesta'}). Tus cambios siguen guardados y protegidos en el móvil.`);
+        } else {
+            renderClientes();
+        }
+    } catch (e) {
+        alert("Error al sincronizar cambios pendientes: " + e.message);
+    } finally {
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+}
+
+window.onClientSyncQueueUpdated = function(remainingCount) {
+    if (window.currentView === 'clientes' && remainingCount === 0) {
+        renderClientes(true);
+    }
+};
+
 async function handleDriveImport() {
     const btn = event.target.closest('button');
     const originalText = btn.innerHTML;
@@ -453,14 +610,20 @@ async function handleDriveImport() {
         const scriptUrl = getClientScriptUrl();
         const res = await dataManager.importFromDrive(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
         if (res.success) {
-            alert(`Sincronizados ${res.count} clientes desde la carpeta "Copias seguridad App Gestión" en Drive.`);
+            let msg = `Sincronizados ${res.count} clientes desde la carpeta "Copias seguridad App Gestión" en Drive.`;
+            if (res.protectedPending > 0) {
+                msg += `\n\n🛡️ Tus ${res.protectedPending} cambio(s) hecho(s) en ruta se han conservado automáticamente (no han sido sobrescritos).`;
+            }
+            alert(msg);
             renderClientes();
         } else {
             const currentClients = await dataManager.getClients();
             if (currentClients.length > 0 && confirm(`No se encontró el archivo de clientes en la carpeta "Copias seguridad App Gestión" (${res.message}).\n\n¿Quieres subir ahora tus ${currentClients.length} clientes actuales de la app para crear el Excel en esa carpeta de Drive?`)) {
                 const syncRes = await dataManager.syncAllClientsToDriveExcel(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
                 if (syncRes.success) {
+                    await dataManager.clearPendingClientOps();
                     alert(`¡Listo! Se ha creado "Clientes_CON_COORDENADAS.xlsx" con ${syncRes.count} clientes dentro de la carpeta "Copias seguridad App Gestión".`);
+                    renderClientes();
                 } else {
                     alert("Error al subir el Excel a Drive: " + syncRes.message);
                 }
@@ -494,7 +657,9 @@ async function handleDriveExportClients() {
         const scriptUrl = getClientScriptUrl();
         const res = await dataManager.syncAllClientsToDriveExcel(scriptUrl, 'Clientes_CON_COORDENADAS.xlsx');
         if (res.success) {
+            await dataManager.clearPendingClientOps();
             alert(`¡Perfecto! Se han guardado ${res.count} clientes en "Clientes_CON_COORDENADAS.xlsx" dentro de la carpeta "Copias seguridad App Gestión".`);
+            renderClientes();
         } else {
             alert("Error al subir a Drive: " + res.message);
         }
@@ -621,6 +786,16 @@ function injectClientModals() {
                                     <input type="text" id="ncSchedule" class="premium-form-input" placeholder="Ej: 9:00 - 14:00">
                                 </div>
                             </div>
+                            <div class="premium-form-group" style="margin-top: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <label class="premium-form-label" style="margin: 0;">NOTAS PERMANENTES DEL CLIENTE</label>
+                                    <button type="button" onclick="window.toggleVoiceDictation('ncNotes', this)" style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #d97706; border: 1px solid #fcd34d; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
+                                        <span class="material-icons-round" style="font-size: 14px;">mic</span>
+                                        <span>Dictar</span>
+                                    </button>
+                                </div>
+                                <textarea id="ncNotes" class="premium-form-input" rows="2" placeholder="Preferencias, persona clave, días de cierre..." style="height: auto; padding: 10px 12px;"></textarea>
+                            </div>
                         </div>
 
                         <!-- CARD 4: GPS -->
@@ -686,6 +861,65 @@ function handleFormNavigation(event) {
     }
 }
 
+function toggleQuickVisitBox() {
+    const box = document.getElementById('quickVisitBox');
+    if (!box) return;
+    const isHidden = box.style.display === 'none' || !box.style.display;
+    box.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        const input = document.getElementById('clientVisitNoteInput');
+        if (input) input.focus();
+    }
+}
+
+async function confirmClientVisitCheckIn(clientCode) {
+    const noteEl = document.getElementById('clientVisitNoteInput');
+    const note = noteEl ? noteEl.value.trim() : '';
+    const res = await dataManager.recordClientVisit(clientCode, note);
+    if (res.success) {
+        await openClientDetailModal(clientCode);
+        if (window.currentView === 'clientes') renderClientes(true);
+    } else {
+        alert("No se pudo registrar la visita: " + (res.message || ''));
+    }
+}
+
+async function quickCheckInVisit(clientCode) {
+    const client = await dataManager.getClientByCode(clientCode);
+    if (!client) return alert('Cliente no encontrado');
+    const note = prompt(`👁️ Registrar visita de hoy a "${client.name}" (Sin pedido).\n\nNota rápida opcional (o déjalo en blanco):`, client.lastVisitNote || '');
+    if (note === null) return; // Cancelado
+    const res = await dataManager.recordClientVisit(clientCode, note);
+    if (res.success) {
+        if (window.showToast) {
+            window.showToast(`👁️ Visita registrada: ${client.name}`);
+        } else {
+            alert(`👁️ Visita de hoy registrada en la ficha de ${client.name}`);
+        }
+        if (window.currentView === 'mapa' && typeof renderMapa === 'function') {
+            renderMapa(true);
+        } else if (window.currentView === 'clientes' && typeof renderClientes === 'function') {
+            renderClientes(true);
+        }
+    }
+}
+
+async function saveQuickClientNotes(clientCode, isAutoFromVoice = false) {
+    const input = document.getElementById('clientQuickNotesInput');
+    if (!input) return;
+    const res = await dataManager.saveClientQuickNotes(clientCode, input.value);
+    if (res.success) {
+        const badge = document.getElementById('quickNotesSavedStatus');
+        if (badge) {
+            badge.textContent = isAutoFromVoice
+                ? '🎙️ Dictado guardado automáticamente en la ficha'
+                : '✅ Nota guardada en la ficha del cliente';
+            badge.style.display = 'block';
+            setTimeout(() => { badge.style.display = 'none'; }, 3000);
+        }
+    }
+}
+
 // Globales
 window.renderClientes = renderClientes;
 window.filterClients = filterClients;
@@ -701,6 +935,10 @@ window.handleDeleteClient = handleDeleteClient;
 window.getCurrentCoordinates = getCurrentCoordinates;
 window.handleFormNavigation = handleFormNavigation;
 window.injectClientModals = injectClientModals;
+window.toggleQuickVisitBox = toggleQuickVisitBox;
+window.confirmClientVisitCheckIn = confirmClientVisitCheckIn;
+window.quickCheckInVisit = quickCheckInVisit;
+window.saveQuickClientNotes = saveQuickClientNotes;
 
 
 

@@ -786,6 +786,8 @@ async function previewReport() {
 
     try {
         const orders = await dataManager.getOrders();
+        const clients = await dataManager.getClients();
+        const lookup = dataManager.buildClientLookup(clients);
         const salesHistory = await dataManager.getSalesHistory();
         
         const startD = new Date(start); 
@@ -810,7 +812,10 @@ async function previewReport() {
         const diff = ventasActual - ventasAnterior;
         const crecimiento = ventasAnterior > 0 ? (diff / ventasAnterior * 100).toFixed(1) : '---';
 
-        const activeClients = new Set(currentOrders.map(o => o.shop)).size;
+        const activeClients = new Set(currentOrders.map(o => {
+            const c = dataManager.resolveClientForOrder(o, lookup);
+            return c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
+        })).size;
         const totalOrders = currentOrders.length;
         const avgTicket = totalOrders > 0 ? ventasActual / totalOrders : 0;
 
@@ -846,19 +851,22 @@ async function previewReport() {
 
         const clientStats = {};
         currentOrders.forEach(o => {
-            if (!clientStats[o.shop]) clientStats[o.shop] = { amount: 0, count: 0 };
-            clientStats[o.shop].amount += (o.amount || 0);
-            clientStats[o.shop].count++;
+            const c = dataManager.resolveClientForOrder(o, lookup);
+            const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
+            const displayName = c ? c.name : o.shop;
+            if (!clientStats[key]) clientStats[key] = { name: displayName, amount: 0, count: 0 };
+            clientStats[key].amount += (o.amount || 0);
+            clientStats[key].count++;
         });
 
-        const sorted = Object.entries(clientStats)
-            .sort((a,b) => b[1].amount - a[1].amount)
+        const sorted = Object.values(clientStats)
+            .sort((a,b) => b.amount - a.amount)
             .slice(0, 15);
 
-        sorted.forEach(([name, data]) => {
+        sorted.forEach(data => {
             html += `
                 <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td class="p-3 font-black text-slate-700 uppercase tracking-tight">${name}</td>
+                    <td class="p-3 font-black text-slate-700 uppercase tracking-tight">${data.name}</td>
                     <td class="p-3 text-right font-black text-slate-900">${formatCurrency(Math.round(data.amount))}</td>
                     <td class="p-3 text-right text-slate-500 font-bold">${data.count}</td>
                 </tr>
@@ -883,7 +891,11 @@ async function generateStrategicReport() {
         const orders = await dataManager.getOrders();
         const clients = await dataManager.getClients();
         const salesHistory = await dataManager.getSalesHistory();
-        const clientMap = new Map(clients.map(c => [(c.name || '').toLowerCase().trim(), c]));
+        const lookup = dataManager.buildClientLookup(clients);
+        const getClientKey = (o) => {
+            const c = dataManager.resolveClientForOrder(o, lookup);
+            return c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
+        };
 
         const startD = new Date(start); startD.setHours(0,0,0,0);
         const endD = new Date(end); endD.setHours(23,59,59,999);
@@ -912,11 +924,11 @@ async function generateStrategicReport() {
             { "MÉTRICA": "Crecimiento de facturación (%)", "VALOR": ventasAnterior > 0 ? (diff/ventasAnterior*100).toFixed(1) + '%' : '---', "NOTA": diff >= 0 ? "Positivo" : "Negativo" },
             { "MÉTRICA": "Total Pedidos (Periodo Base)", "VALOR": currentOrders.length, "NOTA": "" },
             { "MÉTRICA": "Ticket Medio de Compra (€)", "VALOR": currentOrders.length > 0 ? Math.round(ventasActual/currentOrders.length) : 0, "NOTA": "" },
-            { "MÉTRICA": "Clientes Únicos Activos", "VALOR": new Set(currentOrders.map(o => o.shop)).size, "NOTA": "Distintos clientes que compraron ahora" }
+            { "MÉTRICA": "Clientes Únicos Activos", "VALOR": new Set(currentOrders.map(o => getClientKey(o))).size, "NOTA": "Distintos clientes que compraron ahora" }
         ];
         
-        const shopsBeforeStart = new Set(orders.filter(o => new Date(o.dateISO) < startD).map(o => o.shop.toLowerCase().trim()));
-        const newClients = Array.from(new Set(currentOrders.map(o => o.shop))).filter(s => !shopsBeforeStart.has(s.toLowerCase().trim())).length;
+        const shopsBeforeStart = new Set(orders.filter(o => new Date(o.dateISO) < startD).map(o => getClientKey(o)));
+        const newClients = Array.from(new Set(currentOrders.map(o => getClientKey(o)))).filter(k => !shopsBeforeStart.has(k)).length;
         kpis.push({ "MÉTRICA": "Recién Adquiridos (1ª Compra)", "VALOR": newClients, "NOTA": "Atraídos en esta fecha concreta" });
 
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kpis), "1. KPIs Resumen");
@@ -940,37 +952,43 @@ async function generateStrategicReport() {
         // 3. TOP CLIENTES
         const clientStats = {};
         currentOrders.forEach(o => {
-            const s = o.shop;
-            if (!clientStats[s]) clientStats[s] = { amount: 0, count: 0 };
-            clientStats[s].amount += (o.amount || 0);
-            clientStats[s].count++;
+            const c = dataManager.resolveClientForOrder(o, lookup);
+            const key = getClientKey(o);
+            const displayName = c ? c.name : o.shop;
+            if (!clientStats[key]) clientStats[key] = { name: displayName, client: c, amount: 0, count: 0 };
+            clientStats[key].amount += (o.amount || 0);
+            clientStats[key].count++;
         });
-        const ranking = Object.entries(clientStats)
-            .sort((a,b) => b[1].amount - a[1].amount)
-            .map(([name, data], idx) => {
-                const c = clientMap.get(name.toLowerCase().trim()) || {};
+        const ranking = Object.values(clientStats)
+            .sort((a,b) => b.amount - a.amount)
+            .map((data, idx) => {
+                const c = data.client || {};
                 return {
                     "RANKING": idx + 1,
-                    "TIENDA": name,
+                    "CÓDIGO": c.code || "---",
+                    "TIENDA": data.name,
                     "FACTURACIÓN (€)": Math.round(data.amount),
                     "Nº PEDIDOS": data.count,
                     "TICKET MEDIO (€)": Math.round(data.amount / data.count),
-                    "PROVINCIA": c.province || "SUR"
+                    "PROVINCIA": c.province || "---"
                 };
             });
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ranking), "3. Top Clientes");
 
         // 4. FUGAS RIESGO
-        const currentShops = new Set(currentOrders.map(o => o.shop.toLowerCase().trim()));
-        // Fugas basadas en pedidos reales previos si existen, o si no hay, mensaje informativo
+        const currentShops = new Set(currentOrders.map(o => getClientKey(o)));
         const prevOrdersExist = orders.filter(o => new Date(o.dateISO).getFullYear() === prevYear);
         const prevShopsStats = {};
         prevOrdersExist.forEach(o => {
-            if (!currentShops.has(o.shop.toLowerCase().trim())) {
-                prevShopsStats[o.shop] = (prevShopsStats[o.shop] || 0) + (o.amount || 0);
+            const k = getClientKey(o);
+            if (!currentShops.has(k)) {
+                const c = dataManager.resolveClientForOrder(o, lookup);
+                const displayName = c ? c.name : o.shop;
+                if (!prevShopsStats[k]) prevShopsStats[k] = { name: displayName, amount: 0 };
+                prevShopsStats[k].amount += (o.amount || 0);
             }
         });
-        const fugas = Object.entries(prevShopsStats).map(([name, amount]) => ({ "KPI": "CLIENTE PERDIDO", "TIENDA": name, "VENTA AÑO PASADO": Math.round(amount) }));
+        const fugas = Object.values(prevShopsStats).map(item => ({ "KPI": "CLIENTE PERDIDO", "TIENDA": item.name, "VENTA AÑO PASADO": Math.round(item.amount) }));
         if (fugas.length === 0) fugas.push({ "INFO": "No hay datos de pedidos detallados del año anterior para detectar fugas." });
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fugas), "4. Fugas Riesgo");
 
@@ -978,7 +996,7 @@ async function generateStrategicReport() {
         const provStats = {};
         const pobStats = {};
         currentOrders.forEach(o => {
-            const c = clientMap.get(o.shop.toLowerCase().trim()) || {};
+            const c = dataManager.resolveClientForOrder(o, lookup) || {};
             const prov = (c.province || "DESCONOCIDO").toUpperCase();
             const pob = (c.location || "DESCONOCIDO").toUpperCase();
             if (!provStats[prov]) provStats[prov] = { amount: 0, count: 0 };
@@ -1008,11 +1026,12 @@ async function generateStrategicReport() {
         const dbSheet = currentOrders
             .sort((a,b) => (a.displayId || 0) - (b.displayId || 0))
             .map(o => {
-                const c = clientMap.get(o.shop.toLowerCase().trim()) || {};
+                const c = dataManager.resolveClientForOrder(o, lookup) || {};
                 return {
                     "Nº": o.displayId || String(o.id).split('-').pop(),
                     "FECHA": new Date(o.dateISO).toLocaleDateString('es-ES'),
-                    "TIENDA": o.shop,
+                    "CÓDIGO": c.code || o.clientCode || "---",
+                    "TIENDA": c.name || o.shop,
                     "IMPORTE": Math.round(o.amount || 0),
                     "PROVINCIA": (c.province || "---").toUpperCase(),
                     "POBLACIÓN": (c.location || "---").toUpperCase()

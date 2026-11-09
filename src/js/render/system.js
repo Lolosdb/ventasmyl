@@ -836,7 +836,7 @@ window.toggleBulkDeleteBtn = function() {
 window.handleDeleteMultipleRemoteFiles = async function() {
     const checkboxes = Array.from(document.querySelectorAll('.backup-checkbox:checked'));
     if (checkboxes.length === 0) return;
-    if (!confirm(`¿Seguro que quieres eliminar definitivamente ${checkboxes.length} copias de Google Drive?`)) return;
+    if (!confirm(`Â¿Seguro que quieres eliminar definitivamente ${checkboxes.length} copias de Google Drive?`)) return;
     
     try {
         let url = localStorage.getItem('apps_script_url');
@@ -865,7 +865,7 @@ window.handleDeleteMultipleRemoteFiles = async function() {
         setTimeout(openBackupsModal, 300);
         
     } catch (e) {
-        alert("Error al eliminar múltiples copias: " + e.message);
+        alert("Error al eliminar mÃºltiples copias: " + e.message);
     }
 };
 

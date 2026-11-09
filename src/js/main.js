@@ -60,6 +60,18 @@ window.addEventListener('popstate', () => {
     }
 });
 
+// Escuchar cuando el móvil recupera la cobertura (3G/4G/5G/Wi-Fi) en ruta
+window.addEventListener('online', () => {
+    console.log("Cobertura recuperada: revisando cola de cambios pendientes...");
+    if (typeof dataManager !== 'undefined' && typeof dataManager.flushPendingClientSync === 'function') {
+        dataManager.flushPendingClientSync().then(res => {
+            if (res && res.flushed > 0) {
+                console.log(`Se han subido automáticamente ${res.flushed} cambios pendientes a Google Drive al recuperar cobertura.`);
+            }
+        }).catch(err => console.warn("Intento de sincronización tras recuperar red aplazado:", err));
+    }
+});
+
 window.updateHistoryState = updateHistoryState;
 
 if (typeof dataManager === 'undefined') {
@@ -69,6 +81,13 @@ if (typeof dataManager === 'undefined') {
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Iniciando Aplicación...");
+
+    // Registrar Service Worker para funcionamiento 100% Offline en ruta
+    if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('[SW] Modo Offline activo:', reg.scope))
+            .catch(err => console.warn('[SW] No se pudo registrar el Service Worker:', err));
+    }
 
     // Intentar bloquear la orientación en vertical
     if (screen.orientation && screen.orientation.lock) {
@@ -89,6 +108,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 3. Activar y verificar automáticamente la conexión con Google Script al iniciar
         if (typeof window.checkConnectionStatus === 'function') {
             window.checkConnectionStatus(true);
+        }
+
+        // 3b. Sincronizar en segundo plano cambios de clientes pendientes si hay cobertura
+        if (dataManager && typeof dataManager.flushPendingClientSync === 'function') {
+            dataManager.flushPendingClientSync().then(res => {
+                if (res && res.flushed > 0) {
+                    console.log(`Sincronizados automáticamente ${res.flushed} cambios pendientes de clientes con Drive.`);
+                }
+            }).catch(err => console.warn("No se pudo vaciar la cola de clientes al iniciar:", err));
         }
 
         // 4. Renderizar vista inicial (Dashboard)

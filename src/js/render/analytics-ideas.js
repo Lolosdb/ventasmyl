@@ -31,20 +31,25 @@ function analyzeClientPatterns(clients, orders) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Indexar pedidos por nombre de tienda (lowercase trim)
-    const ordersByShop = {};
+    const lookup = dataManager.buildClientLookup(clients);
+
+    // Indexar pedidos por clave única de cliente (código o nombre normalizado)
+    const ordersByClientKey = {};
     orders.forEach(o => {
-        const key = (o.shop || '').toLowerCase().trim();
+        const matched = dataManager.resolveClientForOrder(o, lookup);
+        const key = matched ? `code_${matched.code}` : `shop_${normalizeTextKey(o.shop)}`;
         if (!key) return;
-        if (!ordersByShop[key]) ordersByShop[key] = [];
-        ordersByShop[key].push(o);
+        if (!ordersByClientKey[key]) ordersByClientKey[key] = [];
+        ordersByClientKey[key].push(o);
     });
 
     const patterns = [];
 
     clients.forEach(client => {
-        const key = (client.name || '').toLowerCase().trim();
-        const clientOrders = (ordersByShop[key] || [])
+        const codeKey = `code_${client.code}`;
+        const nameKey = `shop_${normalizeTextKey(client.name)}`;
+        const rawOrders = ordersByClientKey[codeKey] || ordersByClientKey[nameKey] || [];
+        const clientOrders = rawOrders
             .filter(o => o.date || o.dateISO)
             .map(o => ({
                 date: new Date(o.dateISO || o.date),

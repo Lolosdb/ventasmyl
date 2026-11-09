@@ -39,6 +39,9 @@ async function renderMapa(isBack = false) {
             <button class="map-fab-btn" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver Leyenda">
                 <span class="material-icons-round" style="color: #64748b;">info</span>
             </button>
+            <button class="map-fab-btn" onclick="window.openNearbyRadarModal()" id="btnNearbyRadar" title="¿Quién tengo cerca ahora?">
+                <span class="material-icons-round" style="color: #7c3aed;">radar</span>
+            </button>
             <button class="map-fab-btn" onclick="toggleRouteMode()" id="btnRouteMode" title="Optimizar Ruta">
                 <span class="material-icons-round" style="color: #0284c7;">directions</span>
             </button>
@@ -121,6 +124,7 @@ async function initLeafletMap() {
     try {
         // Asegurar que las modales existan
         if (window.injectClientModals) window.injectClientModals();
+        if (window.injectPedidoModals) window.injectPedidoModals();
         
         const clients = await dataManager.getClients();
         const orders = await dataManager.getOrders();
@@ -168,8 +172,8 @@ async function initLeafletMap() {
                 seenCoords.set(coordKey, 1);
             }
 
-            // Cálculo de días desde último pedido
-            const cOrders = orders.filter(o => o.shop === c.name && o.year === year);
+            // Cálculo de días desde último pedido (usando vínculo por código de cliente o nombre normalizado)
+            const cOrders = orders.filter(o => dataManager.isOrderForClient(o, c) && o.year === year);
             let daysAgo = 999;
             let color = '#3b82f6'; // Azul: Sin pedidos
             
@@ -187,22 +191,38 @@ async function initLeafletMap() {
                 fillOpacity: 1
             });
 
+            const safeCode = String(c.code || '').replace(/'/g, "\\'");
+            const visitTag = c.lastVisitDate
+                ? `<div style="font-size: 10px; font-weight: 800; color: #6d28d9; background: #f5f3ff; border-radius: 999px; padding: 2px 8px; margin: -8px auto 10px; width: fit-content;">👁️ Visitado ${new Date(c.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</div>`
+                : '';
+
             marker.bindPopup(`
                 <div class="text-center">
                     <h3 class="popup-title">${c.name}</h3>
                     <p class="popup-subtitle">${c.location || ''}</p>
+                    ${visitTag}
                     <div class="flex flex-col gap-2">
-                        <button class="popup-btn btn-detail"
-                                onclick="event.stopPropagation(); window.openClientDetailModal('${c.code}')">
-                            <span class="material-icons-round">account_circle</span> FICHA
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <button class="popup-btn btn-detail"
+                                    onclick="event.stopPropagation(); window.openClientDetailModal('${safeCode}')">
+                                <span class="material-icons-round">account_circle</span> FICHA
+                            </button>
+                            <button class="popup-btn btn-go-direct"
+                                    onclick="event.stopPropagation(); window.open('https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}', '_blank')">
+                                <span class="material-icons-round">near_me</span> IR
+                            </button>
+                        </div>
+                        <button class="popup-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);"
+                                onclick="event.stopPropagation(); window.openNewOrderForClient('${safeCode}')">
+                            <span class="material-icons-round">add_shopping_cart</span> ➕ NUEVO PEDIDO
                         </button>
-                        <button class="popup-btn btn-go-direct"
-                                onclick="event.stopPropagation(); window.open('https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}', '_blank')">
-                            <span class="material-icons-round">near_me</span> IR
+                        <button class="popup-btn" style="background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe;"
+                                onclick="event.stopPropagation(); window.quickCheckInVisit('${safeCode}')">
+                            <span class="material-icons-round">visibility</span> 👁️ VISITADO HOY
                         </button>
                     </div>
                 </div>
-            `, { closeButton: false, minWidth: 160 });
+            `, { closeButton: false, minWidth: 195 });
 
             markers.addLayer(marker);
         });

@@ -2,6 +2,21 @@
  * Extrae de forma segura el año de una fecha (soporta YYYY-MM-DD, DD/MM/YYYY, ISO completo)
  * Evitando dependencias de zona horaria del constructor de Date en ciertos formatos.
  */
+/**
+ * Normaliza un texto para comparaciones tolerantes (sin tildes, minúsculas y sin espacios dobles o extremos)
+ */
+function normalizeTextKey(str) {
+    if (!str) return '';
+    return String(str)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+window.normalizeTextKey = normalizeTextKey;
+
 function getYearFromDate(dateStr) {
     if (!dateStr) return null;
     const cleanDate = String(dateStr).trim();
@@ -77,7 +92,140 @@ class DataManager {
         return { created, year: currentYear };
     }
 
+    buildClientLookup(clients) {
+        const byCode = new Map();
+        const byNormName = new Map();
+        (clients || []).forEach(c => {
+            if (!c) return;
+            if (c.code !== undefined && c.code !== null && String(c.code).trim() !== '') {
+                byCode.set(String(c.code).trim(), c);
+            }
+            if (c.name) {
+                byNormName.set(normalizeTextKey(c.name), c);
+            }
+        });
+        return { byCode, byNormName };
+    }
+
+    resolveClientForOrder(orderOrShop, lookup) {
+        if (!orderOrShop || !lookup) return null;
+        if (typeof orderOrShop === 'object') {
+            const code = orderOrShop.clientCode !== undefined && orderOrShop.clientCode !== null
+                ? String(orderOrShop.clientCode).trim()
+                : '';
+            if (code && lookup.byCode.has(code)) {
+                return lookup.byCode.get(code);
+            }
+            const shopName = orderOrShop.shop || orderOrShop["Cliente"] || '';
+            const norm = normalizeTextKey(shopName);
+            if (norm && lookup.byNormName.has(norm)) {
+                return lookup.byNormName.get(norm);
+            }
+            return null;
+        } else {
+            const raw = String(orderOrShop).trim();
+            if (lookup.byCode.has(raw)) return lookup.byCode.get(raw);
+            const norm = normalizeTextKey(raw);
+            return lookup.byNormName.get(norm) || null;
+        }
+    }
+
+    isOrderForClient(order, client) {
+        if (!order || !client) return false;
+        const oCode = order.clientCode !== undefined && order.clientCode !== null ? String(order.clientCode).trim() : '';
+        const cCode = client.code !== undefined && client.code !== null ? String(client.code).trim() : '';
+        if (oCode && cCode) {
+            return oCode === cCode;
+        }
+        const oName = normalizeTextKey(order.shop || order["Cliente"] || '');
+        const cName = normalizeTextKey(client.name || '');
+        return oName !== '' && oName === cName;
+    }
+
+    async migrateOrdersClientCode() {
+        try {
+            const [clients, orders] = await Promise.all([
+                this.getClients(),
+                this.db.getAll('orders')
+            ]);
+            if (!clients.length || !orders.length) return 0;
+
+            const lookup = this.buildClientLookup(clients);
+            const toUpdate = [];
+
+            orders.forEach(o => {
+                if (!o) return;
+                const currentCode = o.clientCode !== undefined && o.clientCode !== null ? String(o.clientCode).trim() : '';
+                const matchedClient = this.resolveClientForOrder(o, lookup);
+                if (matchedClient && matchedClient.code) {
+                    const targetCode = String(matchedClient.code).trim();
+                    if (currentCode !== targetCode || (currentCode === targetCode && matchedClient.name && o.shop !== matchedClient.name.trim())) {
+                        o.clientCode = targetCode;
+                        if (matchedClient.name) {
+                            o.shop = matchedClient.name.trim();
+                        }
+                        toUpdate.push(o);
+                    }
+                }
+            });
+
+            if (toUpdate.length > 0) {
+                await this.db.bulkPut('orders', toUpdate);
+                console.log(`[Migración] ${toUpdate.length} pedidos vinculados/actualizados con su código de cliente.`);
+            }
+            return toUpdate.length;
+        } catch (err) {
+            console.warn("Error en migrateOrdersClientCode:", err);
+            return 0;
+        }
+    }
+
+    async syncClientOrdersIdentity(originalCode, originalName, updatedClientData) {
+        try {
+            const orders = await this.db.getAll('orders');
+            if (!orders || orders.length === 0) return 0;
+
+            const origCodeStr = originalCode !== undefined && originalCode !== null ? String(originalCode).trim() : '';
+            const origNameNorm = normalizeTextKey(originalName);
+            const newCodeStr = String(updatedClientData.code || '').trim();
+            const newNameStr = String(updatedClientData.name || '').trim();
+
+            const updatedOrders = [];
+            orders.forEach(o => {
+                if (!o) return;
+                const oCode = o.clientCode !== undefined && o.clientCode !== null ? String(o.clientCode).trim() : '';
+                const oNameNorm = normalizeTextKey(o.shop || o["Cliente"] || '');
+
+                const matchByCode = origCodeStr && oCode && oCode === origCodeStr;
+                const matchByName = !oCode && origNameNorm && oNameNorm === origNameNorm;
+
+                if (matchByCode || matchByName) {
+                    let changed = false;
+                    if (newCodeStr && o.clientCode !== newCodeStr) {
+                        o.clientCode = newCodeStr;
+                        changed = true;
+                    }
+                    if (newNameStr && o.shop !== newNameStr) {
+                        o.shop = newNameStr;
+                        changed = true;
+                    }
+                    if (changed) updatedOrders.push(o);
+                }
+            });
+
+            if (updatedOrders.length > 0) {
+                await this.db.bulkPut('orders', updatedOrders);
+                console.log(`[Integridad] Actualizados ${updatedOrders.length} pedidos tras editar el cliente ${newCodeStr} - ${newNameStr}`);
+            }
+            return updatedOrders.length;
+        } catch (err) {
+            console.warn("Error sincronizando pedidos del cliente editado:", err);
+            return 0;
+        }
+    }
+
     async ensureYearExists(year) {
+        await this.migrateOrdersClientCode();
         let changed = false;
 
         // 1. Sales History
@@ -215,6 +363,98 @@ class DataManager {
         await this.db.delete('departments', id);
     }
 
+    // --- COLA DE SINCRONIZACIÓN DE CLIENTES (OFFLINE-FIRST) ---
+    async getPendingClientOps() {
+        const stored = await this.db.get('config', 'pending_client_ops');
+        return (stored && Array.isArray(stored.ops)) ? stored.ops : [];
+    }
+
+    async savePendingClientOps(ops) {
+        await this.db.put('config', {
+            key: 'pending_client_ops',
+            ops: Array.isArray(ops) ? ops : [],
+            updatedAt: new Date().toISOString()
+        });
+    }
+
+    async enqueueClientSyncOp(op) {
+        let ops = await this.getPendingClientOps();
+        const timestamp = new Date().toISOString();
+
+        if (op.type === 'delete') {
+            const targetCode = String(op.code || '').trim();
+            // Eliminar cualquier alta o edición pendiente sobre ese mismo código
+            ops = ops.filter(item => {
+                const itemCode = String(item.code || item.data?.code || '').trim();
+                const itemOrig = String(item.originalCode || '').trim();
+                return itemCode !== targetCode && itemOrig !== targetCode;
+            });
+            ops.push({ type: 'delete', code: targetCode, timestamp });
+        } else if (op.type === 'upsert') {
+            const newCode = String(op.data?.code || '').trim();
+            const origCode = String(op.originalCode || newCode).trim();
+            // Reemplazar operaciones previas sobre el mismo cliente para dejar solo el último estado
+            ops = ops.filter(item => {
+                const itemCode = String(item.code || item.data?.code || '').trim();
+                const itemOrig = String(item.originalCode || '').trim();
+                return itemCode !== newCode && itemCode !== origCode && itemOrig !== origCode;
+            });
+            ops.push({
+                type: 'upsert',
+                originalCode: origCode,
+                data: { ...op.data, updatedAt: timestamp },
+                timestamp
+            });
+        }
+
+        await this.savePendingClientOps(ops);
+        return ops.length;
+    }
+
+    async clearPendingClientOps() {
+        await this.savePendingClientOps([]);
+    }
+
+    /**
+     * Sincroniza la cola pendiente con Google Drive en segundo plano (un único envío optimizado sin descargar el Excel)
+     */
+    async flushPendingClientSync(url = null, filename = 'Clientes_CON_COORDENADAS.xlsx') {
+        if (this._isFlushingClientSync) {
+            return { success: false, busy: true };
+        }
+        const pending = await this.getPendingClientOps();
+        if (pending.length === 0) {
+            return { success: true, synced: 0, pendingCount: 0 };
+        }
+
+        const scriptUrl = url || localStorage.getItem('apps_script_url') ||
+            (typeof DEFAULT_SCRIPT_URL !== 'undefined' ? DEFAULT_SCRIPT_URL : (typeof GOOGLE_SCRIPT_URL !== 'undefined' ? GOOGLE_SCRIPT_URL : ''));
+
+        if (!scriptUrl || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+            return { success: false, offline: true, pendingCount: pending.length };
+        }
+
+        this._isFlushingClientSync = true;
+        try {
+            const res = await this.syncAllClientsToDriveExcel(scriptUrl, filename);
+            if (res.success) {
+                await this.clearPendingClientOps();
+                console.log(`[Cola Sync] Sincronizados con éxito ${pending.length} cambios pendientes con Google Drive.`);
+                if (typeof window !== 'undefined' && typeof window.onClientSyncQueueUpdated === 'function') {
+                    window.onClientSyncQueueUpdated(0);
+                }
+                return { success: true, synced: pending.length, pendingCount: 0 };
+            } else {
+                return { success: false, message: res.message, pendingCount: pending.length };
+            }
+        } catch (err) {
+            console.warn("[Cola Sync] No se pudo vaciar la cola aún:", err.message);
+            return { success: false, message: err.message, pendingCount: pending.length };
+        } finally {
+            this._isFlushingClientSync = false;
+        }
+    }
+
     // --- CLIENTS ---
     async getClients() {
         return await this.db.getAll('clients');
@@ -260,25 +500,86 @@ class DataManager {
                         phone: String(getValue(row, 'TELEFONO', 'TELÉFONO', 'MOVIL') || '').replace(/^['´]+/, '').trim(),
                         phone2: String(getValue(row, 'TELEFONO 2', 'TELÉFONO 2', 'MOVIL 2') || '').replace(/^['´]+/, '').trim(),
                         schedule: getValue(row, 'HORARIO', 'HORARIOS', 'SCHEDULE'),
+                        notes: getValue(row, 'NOTAS', 'OBSERVACIONES', 'NOTAS CLIENTE') || '',
+                        lastVisitDate: getValue(row, 'ULTIMA VISITA', 'ÚLTIMA VISITA', 'FECHA VISITA') || '',
+                        lastVisitNote: getValue(row, 'NOTA VISITA', 'COMENTARIO VISITA') || '',
                         lat: getValue(row, 'LATITUD', 'LAT', 'LATITUDE'),
                         lng: getValue(row, 'LONGITUD', 'LNG', 'LONG', 'LON', 'LONGITUDE'),
                         createdAt: new Date().toISOString()
                     })).filter(c => c.code && c.name);
 
                     if (clients.length > 0) {
-                        // MERGE: los clientes de Drive actualizan/añaden los locales,
-                        // pero NO se borran los clientes creados solo en local.
                         const existingClients = await this.db.getAll('clients');
+                        const pendingOps = await this.getPendingClientOps();
+
                         if (existingClients.length > 50 && clients.length < 20) {
-                            const ok = confirm(`Atención: El Excel de Drive solo contiene ${clients.length} clientes, mientras que en tu app tienes ${existingClients.length}.\n\n¿Estás seguro de que quieres reemplazar tus ${existingClients.length} clientes por solo ${clients.length}?`);
+                            const ok = confirm(`Atención: El Excel contiene solo ${clients.length} clientes, mientras que en tu app tienes ${existingClients.length}.\n\n¿Estás seguro de que quieres continuar?`);
                             if (!ok) {
                                 resolve({ success: false, message: 'Importación cancelada por seguridad para no perder tus clientes locales.' });
                                 return;
                             }
                         }
+
+                        // FUSIÓN INTELIGENTE (MERGE):
+                        // 1. Empezamos con los clientes locales existentes para NO borrar clientes creados en local que aún no estén en el Excel
+                        const mergedMap = new Map();
+                        existingClients.forEach(c => {
+                            if (c && c.code) mergedMap.set(String(c.code).trim(), c);
+                        });
+
+                        // 2. Aplicamos los clientes entrantes del Excel (conservando notas y visitas locales si el Excel las trae en blanco)
+                        clients.forEach(incoming => {
+                            const code = String(incoming.code).trim();
+                            const prev = mergedMap.get(code);
+                            if (prev) {
+                                mergedMap.set(code, {
+                                    ...prev,
+                                    ...incoming,
+                                    notes: incoming.notes || prev.notes || '',
+                                    lastVisitDate: incoming.lastVisitDate || prev.lastVisitDate || '',
+                                    lastVisitNote: incoming.lastVisitNote || prev.lastVisitNote || '',
+                                    visitHistory: prev.visitHistory || []
+                                });
+                            } else {
+                                mergedMap.set(code, incoming);
+                            }
+                        });
+
+                        // 3. Re-aplicamos encima cualquier operación pendiente en la cola (altas, ediciones o borrados hechos sin cobertura)
+                        let protectedChanges = 0;
+                        if (pendingOps.length > 0) {
+                            pendingOps.forEach(op => {
+                                if (op.type === 'delete' && op.code) {
+                                    mergedMap.delete(String(op.code).trim());
+                                    protectedChanges++;
+                                } else if (op.type === 'upsert' && op.data && op.data.code) {
+                                    const origCode = String(op.originalCode || op.data.code).trim();
+                                    const newCode = String(op.data.code).trim();
+                                    if (origCode !== newCode) mergedMap.delete(origCode);
+                                    mergedMap.set(newCode, {
+                                        ...(mergedMap.get(newCode) || {}),
+                                        ...op.data,
+                                        pendingSync: true
+                                    });
+                                    protectedChanges++;
+                                }
+                            });
+                        }
+
+                        const finalClients = Array.from(mergedMap.values());
+                        const localOnlyPreserved = Math.max(0, finalClients.length - clients.length);
+
                         await this.db.clearStore('clients');
-                        await this.db.bulkPut('clients', clients);
-                        resolve({ success: true, count: clients.length, preserved: 0 });
+                        await this.db.bulkPut('clients', finalClients);
+                        await this.migrateOrdersClientCode();
+
+                        resolve({
+                            success: true,
+                            count: finalClients.length,
+                            importedCount: clients.length,
+                            preserved: localOnlyPreserved,
+                            protectedPending: protectedChanges
+                        });
                     } else {
                         const foundKeys = rawData.length > 0 ? Object.keys(rawData[0]).join(', ') : 'Ninguna';
                         resolve({
@@ -432,7 +733,7 @@ class DataManager {
             const header = [
                 "CODIGO", "TIENDA", "NIF", "MAIL", "DIRECCION", "CONTACTO",
                 "POBLACION", "PROVINCIA", "CP", "TELEFONO", "HORARIO",
-                "", "", "", "", "", "", "", "", "", "",
+                "NOTAS", "ULTIMA VISITA", "NOTA VISITA", "", "", "", "", "", "", "",
                 "LATITUD", "LONGITUD", "TELEFONO 2"
             ];
 
@@ -450,6 +751,9 @@ class DataManager {
                 r[8] = c.cp || "";
                 r[9] = c.phone || "";
                 r[10] = c.schedule || "";
+                r[11] = c.notes || "";
+                r[12] = c.lastVisitDate || "";
+                r[13] = c.lastVisitNote || "";
                 r[21] = c.lat !== undefined && c.lat !== null ? c.lat : "";
                 r[22] = c.lng !== undefined && c.lng !== null ? c.lng : "";
                 r[23] = c.phone2 || "";
@@ -467,6 +771,15 @@ class DataManager {
             });
 
             if (uploadJson.status === 'success' || uploadJson.success) {
+                // Limpiar bandera pendingSync en los clientes locales tras subida exitosa
+                const updatedLocal = clients.filter(c => c.pendingSync).map(c => {
+                    const copy = { ...c };
+                    delete copy.pendingSync;
+                    return copy;
+                });
+                if (updatedLocal.length > 0) {
+                    await this.db.bulkPut('clients', updatedLocal);
+                }
                 return { success: true, driveSynced: true, count: clients.length };
             } else {
                 throw new Error(uploadJson.message || "Error al subir el Excel de clientes a Drive");
@@ -478,330 +791,217 @@ class DataManager {
     }
 
     async saveNewClientToDrive(url, filename, newClientData) {
-        // 1. Guardar primero en la BD local (IndexedDB)
+        const nowISO = new Date().toISOString();
+        const clientRecord = {
+            code: String(newClientData.code || '').trim(),
+            name: String(newClientData.name || '').trim(),
+            nif: newClientData.nif || "",
+            email: newClientData.email || "",
+            address: newClientData.address || "",
+            contact: newClientData.contact || "",
+            location: newClientData.location || "",
+            province: newClientData.province || "",
+            cp: newClientData.cp || "",
+            phone: newClientData.phone || "",
+            phone2: newClientData.phone2 || "",
+            schedule: newClientData.schedule || "",
+            notes: newClientData.notes || "",
+            lastVisitDate: newClientData.lastVisitDate || "",
+            lastVisitNote: newClientData.lastVisitNote || "",
+            visitHistory: Array.isArray(newClientData.visitHistory) ? newClientData.visitHistory : [],
+            lat: newClientData.lat,
+            lng: newClientData.lng,
+            pendingSync: true,
+            createdAt: nowISO,
+            updatedAt: nowISO
+        };
+
+        // 1. Guardar inmediatamente en la BD local (IndexedDB) y registrar en la cola de pendientes
         try {
-            await this.db.put('clients', {
-                code: newClientData.code,
-                name: newClientData.name,
-                nif: newClientData.nif,
-                email: newClientData.email,
-                address: newClientData.address,
-                contact: newClientData.contact,
-                location: newClientData.location,
-                province: newClientData.province,
-                cp: newClientData.cp,
-                phone: newClientData.phone,
-                phone2: newClientData.phone2 || "",
-                schedule: newClientData.schedule || "",
-                lat: newClientData.lat,
-                lng: newClientData.lng,
-                createdAt: new Date().toISOString()
-            });
+            await this.db.put('clients', clientRecord);
+            await this.enqueueClientSyncOp({ type: 'upsert', originalCode: clientRecord.code, data: clientRecord });
+            await this.migrateOrdersClientCode();
         } catch (localErr) {
             console.error("Error guardando cliente localmente:", localErr);
             return { success: false, message: "No se pudo guardar en la base de datos local: " + localErr.message };
         }
 
-        // 2. Intentar guardar en Google Drive
+        // 2. Sincronizar con Google Drive mediante subida directa (sin descargar el Excel previo)
         try {
             if (!url) throw new Error("URL de Google Drive no configurada");
-
-            const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            if (json.status !== 'success' || !json.data) {
-                const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename); if (fallbackSync.success) return { success: true, driveSynced: true }; throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                throw new Error("Sin conexión a Internet en este momento");
             }
 
-            const binaryString = atob(json.data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
-
-            const workbook = XLSX.read(bytes, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-
-            let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-            rows = this._cleanAndSortRows(rows);
-
-            const headerRow = rows[0] || [];
-            const colMap = this._getColumnMap(headerRow);
-
-            const maxIdx = Math.max(...Object.values(colMap), 22);
-            const newRow = new Array(maxIdx + 1).fill("");
-
-            newRow[colMap.code] = newClientData.code;
-            newRow[colMap.name] = newClientData.name;
-            newRow[colMap.nif] = newClientData.nif;
-            newRow[colMap.email] = newClientData.email;
-            newRow[colMap.address] = newClientData.address;
-            newRow[colMap.contact] = newClientData.contact;
-            newRow[colMap.location] = newClientData.location;
-            newRow[colMap.province] = newClientData.province;
-            newRow[colMap.cp] = newClientData.cp;
-            newRow[colMap.phone] = newClientData.phone;
-            if (colMap.phone2 !== undefined) newRow[colMap.phone2] = newClientData.phone2 || "";
-            newRow[colMap.schedule] = newClientData.schedule;
-            newRow[colMap.lat] = newClientData.lat;
-            newRow[colMap.lng] = newClientData.lng;
-
-            rows.push(newRow);
-
-            const header = rows.shift();
-            rows.sort((a, b) => {
-                const valA = (a[colMap.location] || "").toString().toLowerCase();
-                const valB = (b[colMap.location] || "").toString().toLowerCase();
-                return valA.localeCompare(valB);
-            });
-            rows.unshift(header);
-
-            const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
-            workbook.Sheets[firstSheetName] = newWorksheet;
-            const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
-
-            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
-                method: 'POST',
-                body: wbOut
-            });
-
-            if (uploadJson.status === 'success') {
-                return { success: true, driveSynced: true };
+            const syncRes = await this.flushPendingClientSync(url, filename);
+            if (syncRes.success) {
+                return { success: true, driveSynced: true, pendingCount: 0 };
             } else {
-                throw new Error(uploadJson.message || "Error al subir a Drive");
+                throw new Error(syncRes.message || "No se pudo completar la subida a Drive");
             }
-
         } catch (driveErr) {
-            console.warn("Cliente guardado en local, pero no se pudo sincronizar en Drive:", driveErr);
+            const pendingOps = await this.getPendingClientOps();
+            console.warn("Cliente guardado en local y añadido a la cola de sincronización:", driveErr);
             return {
                 success: true,
                 driveSynced: false,
-                warning: `Guardado en el dispositivo. No se pudo sincronizar con Google Drive (${driveErr.message})`
+                queued: true,
+                pendingCount: pendingOps.length,
+                warning: `Guardado en tu dispositivo y añadido a la cola de sincronización (${pendingOps.length} pendiente${pendingOps.length === 1 ? '' : 's'}). Se subirá automáticamente a Drive al recuperar cobertura.`
             };
         }
     }
 
     async updateClientInDrive(url, filename, originalCode, updatedData) {
-        // 1. Guardar primero en la BD local (IndexedDB)
+        const existingClient = await this.getClientByCode(originalCode);
+        const originalName = existingClient ? existingClient.name : '';
+        const nowISO = new Date().toISOString();
+
+        const clientRecord = {
+            code: String(updatedData.code || '').trim(),
+            name: String(updatedData.name || '').trim(),
+            nif: updatedData.nif || "",
+            email: updatedData.email || "",
+            address: updatedData.address || "",
+            contact: updatedData.contact || "",
+            location: updatedData.location || "",
+            province: updatedData.province || "",
+            cp: updatedData.cp || "",
+            phone: updatedData.phone || "",
+            phone2: updatedData.phone2 || "",
+            schedule: updatedData.schedule || "",
+            notes: updatedData.notes !== undefined ? updatedData.notes : (existingClient?.notes || ""),
+            lastVisitDate: updatedData.lastVisitDate !== undefined ? updatedData.lastVisitDate : (existingClient?.lastVisitDate || ""),
+            lastVisitNote: updatedData.lastVisitNote !== undefined ? updatedData.lastVisitNote : (existingClient?.lastVisitNote || ""),
+            visitHistory: Array.isArray(updatedData.visitHistory) ? updatedData.visitHistory : (existingClient?.visitHistory || []),
+            lat: updatedData.lat,
+            lng: updatedData.lng,
+            pendingSync: true,
+            createdAt: existingClient?.createdAt || nowISO,
+            updatedAt: nowISO
+        };
+
+        // 1. Guardar inmediatamente en la BD local (IndexedDB) y encolar
         try {
-            if (String(originalCode) !== String(updatedData.code)) {
+            if (String(originalCode).trim() !== clientRecord.code) {
                 await this.db.delete('clients', originalCode);
             }
-
-            await this.db.put('clients', {
-                code: updatedData.code,
-                name: updatedData.name,
-                nif: updatedData.nif,
-                email: updatedData.email,
-                address: updatedData.address,
-                contact: updatedData.contact,
-                location: updatedData.location,
-                province: updatedData.province,
-                cp: updatedData.cp,
-                phone: updatedData.phone,
-                phone2: updatedData.phone2 || "",
-                schedule: updatedData.schedule || "",
-                lat: updatedData.lat,
-                lng: updatedData.lng,
-                createdAt: new Date().toISOString()
-            });
+            await this.db.put('clients', clientRecord);
+            await this.enqueueClientSyncOp({ type: 'upsert', originalCode, data: clientRecord });
         } catch (localErr) {
             console.error("Error actualizando cliente localmente:", localErr);
             return { success: false, message: "No se pudo actualizar en la base de datos local: " + localErr.message };
         }
 
-        // 2. Intentar actualizar en Google Drive
+        await this.syncClientOrdersIdentity(originalCode, originalName, clientRecord);
+
+        // 2. Sincronizar con Google Drive en un solo paso (sin descargar el Excel previo)
         try {
             if (!url) throw new Error("URL de Google Drive no configurada");
-
-            const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            if (json.status !== 'success' || !json.data) {
-                const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename);
-                if (fallbackSync.success) return { success: true, driveSynced: true };
-                throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                throw new Error("Sin conexión a Internet en este momento");
             }
 
-            const binaryString = atob(json.data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
-
-            const workbook = XLSX.read(bytes, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-            rows = this._cleanAndSortRows(rows);
-
-            const headerRow = rows[0] || [];
-            const colMap = this._getColumnMap(headerRow);
-
-            let rowIndex = -1;
-            for (let i = 1; i < rows.length; i++) {
-                // Comparar como strings ignorando espacios y diferencias de tipo (número vs string)
-                if (String(rows[i][colMap.code]).trim().toLowerCase() === String(originalCode).trim().toLowerCase()) {
-                    rowIndex = i;
-                    break;
-                }
-            }
-
-            // Si no se encuentra en Drive, el cliente solo existía en local (sync fallido anterior).
-            // Lo tratamos como inserción nueva para que quede sincronizado.
-            if (rowIndex === -1) {
-                const maxIdxNew = Math.max(...Object.values(colMap), 22);
-                const newRow = new Array(maxIdxNew + 1).fill("");
-                newRow[colMap.code]     = updatedData.code;
-                newRow[colMap.name]     = updatedData.name;
-                newRow[colMap.nif]      = updatedData.nif;
-                newRow[colMap.email]    = updatedData.email;
-                newRow[colMap.address]  = updatedData.address;
-                newRow[colMap.contact]  = updatedData.contact;
-                newRow[colMap.location] = updatedData.location;
-                newRow[colMap.province] = updatedData.province;
-                newRow[colMap.cp]       = updatedData.cp;
-                newRow[colMap.phone]    = updatedData.phone;
-                if (colMap.phone2 !== undefined) newRow[colMap.phone2] = updatedData.phone2 || "";
-                newRow[colMap.schedule] = updatedData.schedule;
-                newRow[colMap.lat]      = updatedData.lat;
-                newRow[colMap.lng]      = updatedData.lng;
-                rows.push(newRow);
-
-                // Ordenar (sin cabecera) y recomponer
-                const hdr = rows.shift();
-                rows.sort((a, b) => {
-                    const valA = (a[colMap.location] || "").toString().toLowerCase();
-                    const valB = (b[colMap.location] || "").toString().toLowerCase();
-                    return valA.localeCompare(valB);
-                });
-                rows.unshift(hdr);
-
-                const wsNew = XLSX.utils.aoa_to_sheet(rows);
-                workbook.Sheets[firstSheetName] = wsNew;
-                const wbOutNew = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
-                const uploadNew = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
-                    method: 'POST',
-                    body: wbOutNew
-                });
-                if (uploadNew.status === 'success') {
-                    return { success: true, driveSynced: true };
-                } else {
-                    throw new Error(uploadNew.message || "Error al subir a Drive");
-                }
-            }
-
-            const maxIdx = Math.max(...Object.values(colMap), 22);
-            if (!Array.isArray(rows[rowIndex])) rows[rowIndex] = new Array(maxIdx + 1).fill("");
-
-            rows[rowIndex][colMap.code] = updatedData.code;
-            rows[rowIndex][colMap.name] = updatedData.name;
-            rows[rowIndex][colMap.nif] = updatedData.nif;
-            rows[rowIndex][colMap.email] = updatedData.email;
-            rows[rowIndex][colMap.address] = updatedData.address;
-            rows[rowIndex][colMap.contact] = updatedData.contact;
-            rows[rowIndex][colMap.location] = updatedData.location;
-            rows[rowIndex][colMap.province] = updatedData.province;
-            rows[rowIndex][colMap.cp] = updatedData.cp;
-            rows[rowIndex][colMap.phone] = updatedData.phone;
-            if (colMap.phone2 !== undefined) rows[rowIndex][colMap.phone2] = updatedData.phone2 || "";
-            rows[rowIndex][colMap.schedule] = updatedData.schedule;
-            rows[rowIndex][colMap.lat] = updatedData.lat;
-            rows[rowIndex][colMap.lng] = updatedData.lng;
-
-            const header = rows.shift();
-            rows.sort((a, b) => {
-                const valA = (a[colMap.location] || "").toString().toLowerCase();
-                const valB = (b[colMap.location] || "").toString().toLowerCase();
-                return valA.localeCompare(valB);
-            });
-            rows.unshift(header);
-
-            const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
-            workbook.Sheets[firstSheetName] = newWorksheet;
-            const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
-
-            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
-                method: 'POST',
-                body: wbOut
-            });
-
-            if (uploadJson.status === 'success') {
-                return { success: true, driveSynced: true };
+            const syncRes = await this.flushPendingClientSync(url, filename);
+            if (syncRes.success) {
+                return { success: true, driveSynced: true, pendingCount: 0 };
             } else {
-                throw new Error(uploadJson.message || "Error al actualizar en Drive");
+                throw new Error(syncRes.message || "Error al actualizar en Drive");
             }
-
         } catch (driveErr) {
-            console.warn("Cliente guardado en local, pero no se pudo sincronizar en Drive:", driveErr);
+            const pendingOps = await this.getPendingClientOps();
+            console.warn("Cliente actualizado en local y añadido a la cola de sincronización:", driveErr);
             return {
                 success: true,
                 driveSynced: false,
-                warning: `Guardado en el dispositivo. No se pudo sincronizar con Google Drive (${driveErr.message})`
+                queued: true,
+                pendingCount: pendingOps.length,
+                warning: `Cambios guardados en el dispositivo y encolados (${pendingOps.length} pendiente${pendingOps.length === 1 ? '' : 's'}). Se sincronizarán automáticamente al tener cobertura.`
             };
         }
     }
 
+    async saveClientQuickNotes(clientCode, notesText) {
+        const client = await this.getClientByCode(clientCode);
+        if (!client) return { success: false, message: "Cliente no encontrado" };
+
+        const updatedClient = {
+            ...client,
+            notes: String(notesText || '').trim(),
+            pendingSync: true,
+            updatedAt: new Date().toISOString()
+        };
+
+        await this.db.put('clients', updatedClient);
+        await this.enqueueClientSyncOp({ type: 'upsert', originalCode: client.code, data: updatedClient });
+
+        // Sincronizar en segundo plano sin bloquear la UI
+        this.flushPendingClientSync().catch(() => {});
+        return { success: true, client: updatedClient };
+    }
+
+    async recordClientVisit(clientCode, visitNote = '', visitDateISO = null) {
+        const client = await this.getClientByCode(clientCode);
+        if (!client) return { success: false, message: "Cliente no encontrado" };
+
+        const dateISO = visitDateISO || new Date().toISOString().split('T')[0];
+        const cleanNote = String(visitNote || '').trim();
+        const history = Array.isArray(client.visitHistory) ? [...client.visitHistory] : [];
+        history.unshift({
+            date: dateISO,
+            note: cleanNote,
+            timestamp: new Date().toISOString()
+        });
+
+        const updatedClient = {
+            ...client,
+            lastVisitDate: dateISO,
+            lastVisitNote: cleanNote,
+            visitHistory: history.slice(0, 15),
+            pendingSync: true,
+            updatedAt: new Date().toISOString()
+        };
+
+        await this.db.put('clients', updatedClient);
+        await this.enqueueClientSyncOp({ type: 'upsert', originalCode: client.code, data: updatedClient });
+
+        // Sincronizar en segundo plano sin bloquear la UI
+        this.flushPendingClientSync().catch(() => {});
+        return { success: true, client: updatedClient };
+    }
+
     async deleteClientFromDrive(url, filename, clientCode) {
-        // 1. Eliminar localmente en BD primero
+        // 1. Eliminar localmente en BD primero y registrar borrado en la cola
         try {
             await this.db.delete('clients', clientCode);
+            await this.enqueueClientSyncOp({ type: 'delete', code: clientCode });
         } catch (localErr) {
             console.error("Error eliminando cliente localmente:", localErr);
             return { success: false, message: "No se pudo eliminar en el dispositivo: " + localErr.message };
         }
 
-        // 2. Eliminar en Google Drive
+        // 2. Sincronizar con Google Drive en un solo paso
         try {
             if (!url) throw new Error("URL de Google Drive no configurada");
-
-            const json = await this._safeFetchJson(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
-            if (json.status !== 'success' || !json.data) {
-                const fallbackSync = await this.syncAllClientsToDriveExcel(url, filename);
-                if (fallbackSync.success) return { success: true, driveSynced: true };
-                throw new Error(json.message || "No se pudo descargar el archivo de Drive.");
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                throw new Error("Sin conexión a Internet en este momento");
             }
 
-            const binaryString = atob(json.data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
-
-            const workbook = XLSX.read(bytes, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-
-            rows = this._cleanAndSortRows(rows);
-            const headerRow = rows[0] || [];
-            const colMap = this._getColumnMap(headerRow);
-
-            const header = rows.shift();
-            const initialLen = rows.length;
-
-            rows = rows.filter(r => String(r[colMap.code]).trim() !== String(clientCode).trim());
-
-            if (rows.length === initialLen) throw new Error("Cliente no encontrado en el archivo de Drive.");
-
-            rows.unshift(header);
-            rows = this._cleanAndSortRows(rows);
-
-            const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
-            workbook.Sheets[firstSheetName] = newWorksheet;
-            const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
-
-            const uploadJson = await this._safeFetchJson(url + '?action=save&filename=' + encodeURIComponent(filename), {
-                method: 'POST',
-                body: wbOut
-            });
-
-            if (uploadJson.status === 'success') {
-                return { success: true, driveSynced: true };
+            const syncRes = await this.flushPendingClientSync(url, filename);
+            if (syncRes.success) {
+                return { success: true, driveSynced: true, pendingCount: 0 };
             } else {
-                throw new Error(uploadJson.message || "Error al eliminar de Drive");
+                throw new Error(syncRes.message || "Error al eliminar de Drive");
             }
-
         } catch (driveErr) {
-            console.warn("Cliente eliminado localmente pero falló eliminación en Drive:", driveErr);
+            const pendingOps = await this.getPendingClientOps();
+            console.warn("Cliente eliminado localmente, eliminación encolada para Drive:", driveErr);
             return {
                 success: true,
                 driveSynced: false,
-                warning: `Eliminado del dispositivo. No se pudo sincronizar la eliminación con Google Drive (${driveErr.message})`
+                queued: true,
+                pendingCount: pendingOps.length,
+                warning: `Eliminado del dispositivo y encolado (${pendingOps.length} pendiente${pendingOps.length === 1 ? '' : 's'}). Se actualizará en Google Drive cuando haya conexión.`
             };
         }
     }
@@ -819,7 +1019,13 @@ class DataManager {
                 for (let i = 0; i < len; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
-                return await this.importClientsFromExcel(bytes);
+                const importResult = await this.importClientsFromExcel(bytes);
+                // Si teníamos cambios pendientes en la cola local, los subimos ahora para que Drive también quede al día
+                const pendingOps = await this.getPendingClientOps();
+                if (importResult.success && pendingOps.length > 0) {
+                    await this.flushPendingClientSync(url, filename);
+                }
+                return importResult;
             } else {
                 throw new Error(json.message || 'Error al descargar el archivo de Drive');
             }
@@ -856,8 +1062,16 @@ class DataManager {
         // No need to redeclare 'dateISO' if we use 'orderData.dateISO' equivalent inside newOrder
         // But 'orderData' has 'date'. Let's ensure consistency.
 
+        const clients = await this.getClients();
+        const lookup = this.buildClientLookup(clients);
+        const matchedClient = this.resolveClientForOrder(orderData, lookup);
+        const resolvedClientCode = orderData.clientCode || (matchedClient ? String(matchedClient.code).trim() : null);
+        const resolvedShopName = matchedClient && matchedClient.name ? matchedClient.name.trim() : String(orderData.shop || '').trim();
+
         const newOrder = {
             ...orderData,
+            shop: resolvedShopName,
+            clientCode: resolvedClientCode,
             dateISO,
             createdAt: new Date().toISOString()
         };
@@ -917,21 +1131,27 @@ class DataManager {
         const totalVentasAnio = ordersThisYear.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
         const ordersThisYearValued = ordersThisYear.filter(o => (parseFloat(o.amount) || 0) > 0);
 
+        const lookup = this.buildClientLookup(clients);
+
         // Clientes activos (MES seleccionado)
         const activeClientsSet = new Set();
         ordersThisMonth.forEach(o => {
-            activeClientsSet.add(o.clientCode || o.shop);
+            const c = this.resolveClientForOrder(o, lookup);
+            activeClientsSet.add(c ? c.code : (o.clientCode || normalizeTextKey(o.shop)));
         });
 
         // Top Clientes del mes seleccionado
         const clientSales = {};
         ordersThisMonth.forEach(o => {
-            if (!clientSales[o.shop]) clientSales[o.shop] = 0;
-            clientSales[o.shop] += parseFloat(o.amount);
+            const c = this.resolveClientForOrder(o, lookup);
+            const displayShop = c ? c.name : o.shop;
+            const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
+            if (!clientSales[key]) clientSales[key] = { name: displayShop, amount: 0 };
+            clientSales[key].amount += (parseFloat(o.amount) || 0);
         });
 
-        const topClientes = Object.entries(clientSales)
-            .map(([name, amount]) => ({ name, amount, rank: 0 }))
+        const topClientes = Object.values(clientSales)
+            .map(item => ({ name: item.name, amount: item.amount, rank: 0 }))
             .sort((a, b) => b.amount - a.amount)
             .slice(0, 20)
             .map((item, index) => ({ ...item, rank: index + 1 }));
@@ -1004,6 +1224,8 @@ class DataManager {
     // --- YEARLY RANKING ---
     async getYearlyRanking(year = new Date().getFullYear(), sortBy = 'amount') {
         const orders = await this.getOrders();
+        const clients = await this.getClients();
+        const lookup = this.buildClientLookup(clients);
 
         // 1. Filter orders for specified year
         const yearlyOrders = orders.filter(o => {
@@ -1014,16 +1236,18 @@ class DataManager {
         // 2. Aggregate sales and order count by client
         const clientStats = {};
         yearlyOrders.forEach(o => {
-            const key = o.shop;
-            if (!clientStats[key]) clientStats[key] = { amount: 0, orderCount: 0 };
+            const c = this.resolveClientForOrder(o, lookup);
+            const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
+            const displayName = c ? c.name : o.shop;
+            if (!clientStats[key]) clientStats[key] = { name: displayName, code: c ? c.code : (o.clientCode || null), amount: 0, orderCount: 0 };
             const amt = parseFloat(o.amount) || 0;
             clientStats[key].amount += amt;
             if (amt > 0) clientStats[key].orderCount += 1;
         });
 
         // 3. Convert to array and sort
-        const ranking = Object.entries(clientStats)
-            .map(([name, stats]) => ({ name, ...stats }))
+        const ranking = Object.values(clientStats)
+            .map(stats => ({ ...stats }))
             .sort((a, b) => {
                 if (sortBy === 'orders') {
                     // Mas pedidos primero. Si son iguales, mas importe primero.
@@ -1202,6 +1426,8 @@ class DataManager {
         if (data.invoice_history) await this.db.put('config', { key: 'invoice_history', data: data.invoice_history });
         if (data.quarterly_goals) await this.db.put('config', { key: 'quarterly_goals', data: data.quarterly_goals });
 
+        await this.migrateOrdersClientCode();
+
         return { success: true };
     }
     // --- EXCEL BACKUP (LOCAL) ---
@@ -1324,6 +1550,7 @@ class DataManager {
                         if (clients.length > 0) {
                             await this.db.clearStore('clients');
                             await this.db.bulkPut('clients', clients);
+                        await this.migrateOrdersClientCode();
                         }
                     }
 
@@ -1357,13 +1584,15 @@ class DataManager {
 
                                 const yearVal = getYearFromDate(normalizedDate) || new Date().getFullYear();
                                 const compositeId = `${yearVal}-${displayId}`;
+                                const clientCodeVal = o["Código Cliente"] || o["clientCode"] || null;
 
                                 return {
                                     id: compositeId,
                                     displayId,
                                     date: normalizedDate,
                                     dateISO: normalizedDate,
-                                    shop: shopVal,
+                                    shop: String(shopVal).trim(),
+                                    clientCode: clientCodeVal ? String(clientCodeVal).trim() : null,
                                     amount: amountVal,
                                     comments: commentsVal,
                                     year: yearVal,
@@ -1372,6 +1601,7 @@ class DataManager {
                             });
                             await this.db.clearStore('orders');
                             await this.db.bulkPut('orders', normalizedOrders);
+                            await this.migrateOrdersClientCode();
                         }
                     }
 
@@ -1433,7 +1663,7 @@ class DataManager {
             // --- HOJA 1: PEDIDOS ---
             const allOrders = await this.getOrders();
             const clients = await this.getClients();
-            const clientMap = new Map(clients.map(c => [c.name, c]));
+            const lookup = this.buildClientLookup(clients);
 
             const currentYearOrders = allOrders.filter(o => {
                 return getYearFromDate(o.dateISO || o.date) === year;
@@ -1444,11 +1674,12 @@ class DataManager {
             });
 
             const ordersSheetData = currentYearOrders.map(o => {
-                const client = clientMap.get(o.shop || o["Cliente"]) || {};
+                const client = this.resolveClientForOrder(o, lookup) || {};
                 return {
                     "Nº Pedido": o.displayId || String(o.id).split('-').pop(),
                     "Fecha": o.dateISO || o.date,
-                    "Cliente": o.shop || o["Cliente"],
+                    "Código Cliente": client.code || o.clientCode || "---",
+                    "Cliente": client.name || o.shop || o["Cliente"],
                     "Importe": o.amount !== undefined ? o.amount : o["Importe"],
                     "Población": client.location || "---",
                     "Provincia": client.province || "---",
@@ -1469,7 +1700,7 @@ class DataManager {
             currentYearOrders.forEach(o => {
                 const amt = parseFloat(o.amount !== undefined ? o.amount : o["Importe"]) || 0;
                 totalVentasYear += amt;
-                const client = clientMap.get(o.shop || o["Cliente"]);
+                const client = this.resolveClientForOrder(o, lookup);
                 if (client && client.province) {
                     let prov = client.province.trim().toUpperCase();
                     if (prov === 'LEON') prov = 'LEÓN';
@@ -1576,19 +1807,23 @@ class DataManager {
             const clients = await this.getClients();
             const orders = await this.getOrders();
             const today = new Date();
+            const lookup = this.buildClientLookup(clients);
 
-            const ordersByShop = {};
+            const ordersByClientKey = {};
             orders.forEach(o => {
-                const key = (o.shop || '').toLowerCase().trim();
-                if (!ordersByShop[key]) ordersByShop[key] = [];
-                ordersByShop[key].push(o);
+                const matched = this.resolveClientForOrder(o, lookup);
+                const key = matched ? `code_${matched.code}` : `shop_${normalizeTextKey(o.shop)}`;
+                if (!ordersByClientKey[key]) ordersByClientKey[key] = [];
+                ordersByClientKey[key].push(o);
             });
 
             const vipCandidates = [];
 
             clients.forEach(client => {
-                const key = (client.name || '').toLowerCase().trim();
-                const clientOrders = (ordersByShop[key] || [])
+                const key = `code_${client.code}`;
+                const fallbackKey = `shop_${normalizeTextKey(client.name)}`;
+                const rawClientOrders = ordersByClientKey[key] || ordersByClientKey[fallbackKey] || [];
+                const clientOrders = rawClientOrders
                     .filter(o => o.date || o.dateISO)
                     .map(o => ({
                         date: new Date(o.dateISO || o.date),
