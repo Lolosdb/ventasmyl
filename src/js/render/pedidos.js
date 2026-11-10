@@ -34,38 +34,59 @@ async function renderPedidos(isBack = false) {
 
     const activeFilter = window.currentPedidosStatusFilter || 'all';
 
-    let contentHtml = '<main style="padding: 1rem 0; padding-bottom: 100px; margin-top: 168px;">';
+    let contentHtml = '<main class="pedidos-view-main">';
 
-    // Parte fija: Buscador + Pestañas de Estado + Cabecera Tabla
+    // Parte fija superior bien distribuida: 1) Filtros de Estado -> 2) Buscador -> 3) Cabecera Tabla
     contentHtml += `
         <div class="pedidos-fixed-controls">
-            <!-- Buscador -->
-            <div class="search-container mb-2" style="margin-bottom: 8px !important;">
-                <span class="material-icons-round search-icon">search</span>
-                <input type="text" id="searchPedidosInput" class="search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
-                <span id="clearPedidosSearchBtn" class="material-icons-round clear-icon" style="display: none;" onclick="clearPedidosSearch()">cancel</span>
-            </div>
-
-            <!-- Pestañas de Filtro Rápido por Estado -->
-            <div id="pedidosStatusTabs" style="display: flex; gap: 6px; padding: 0 12px 10px 12px; overflow-x: auto; scrollbar-width: none;">
+            <!-- 1. Pestañas de Filtro Rápido por Estado (con aire respecto al encabezado azul) -->
+            <div id="pedidosStatusTabs" class="pedidos-status-tabs">
                 <button type="button" data-status-tab="all" onclick="setPedidosStatusFilter('all')"
-                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'all' ? '#0f172a' : '#e2e8f0'}; background: ${activeFilter === 'all' ? '#0f172a' : '#ffffff'}; color: ${activeFilter === 'all' ? '#ffffff' : '#475569'}; transition: all 0.15s;">
-                    Todos (${sortedOrders.length})
+                        class="pedidos-status-pill ${activeFilter === 'all' ? 'is-active' : ''}"
+                        style="border-color: ${activeFilter === 'all' ? '#0f172a' : '#cbd5e1'}; background: ${activeFilter === 'all' ? '#0f172a' : '#ffffff'}; color: ${activeFilter === 'all' ? '#ffffff' : '#334155'};">
+                    <span>Todos</span>
+                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'all' ? 'rgba(255,255,255,0.18)' : '#f1f5f9'}; color: ${activeFilter === 'all' ? '#ffffff' : '#475569'};">${sortedOrders.length}</span>
                 </button>
                 <button type="button" data-status-tab="almacen" onclick="setPedidosStatusFilter('almacen')"
-                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'almacen' ? '#f59e0b' : '#fde68a'}; background: ${activeFilter === 'almacen' ? '#f59e0b' : '#fffbeb'}; color: ${activeFilter === 'almacen' ? '#ffffff' : '#b45309'}; transition: all 0.15s;">
-                    🟡 Almacén (${countAlmacen})
+                        class="pedidos-status-pill ${activeFilter === 'almacen' ? 'is-active' : ''}"
+                        style="border-color: ${activeFilter === 'almacen' ? '#f59e0b' : '#fde68a'}; background: ${activeFilter === 'almacen' ? '#f59e0b' : '#fffbeb'}; color: ${activeFilter === 'almacen' ? '#ffffff' : '#b45309'};">
+                    <span class="pedidos-status-dot" style="background: ${activeFilter === 'almacen' ? '#ffffff' : '#f59e0b'};"></span>
+                    <span>Almacén</span>
+                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'almacen' ? 'rgba(255,255,255,0.22)' : 'rgba(245,158,11,0.14)'}; color: ${activeFilter === 'almacen' ? '#ffffff' : '#b45309'};">${countAlmacen}</span>
                 </button>
                 <button type="button" data-status-tab="tampo" onclick="setPedidosStatusFilter('tampo')"
-                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'tampo' ? '#2563eb' : '#bfdbfe'}; background: ${activeFilter === 'tampo' ? '#2563eb' : '#eff6ff'}; color: ${activeFilter === 'tampo' ? '#ffffff' : '#1d4ed8'}; transition: all 0.15s;">
-                    🔵 Falta Tampo (${countTampo})
+                        class="pedidos-status-pill ${activeFilter === 'tampo' ? 'is-active' : ''}"
+                        style="border-color: ${activeFilter === 'tampo' ? '#2563eb' : '#bfdbfe'}; background: ${activeFilter === 'tampo' ? '#2563eb' : '#eff6ff'}; color: ${activeFilter === 'tampo' ? '#ffffff' : '#1d4ed8'};">
+                    <span class="pedidos-status-dot" style="background: ${activeFilter === 'tampo' ? '#ffffff' : '#2563eb'};"></span>
+                    <span>Falta Tampo</span>
+                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'tampo' ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.12)'}; color: ${activeFilter === 'tampo' ? '#ffffff' : '#1d4ed8'};">${countTampo}</span>
                 </button>
                 <button type="button" data-status-tab="servido" onclick="setPedidosStatusFilter('servido')"
-                        style="flex: 1; white-space: nowrap; border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1.5px solid ${activeFilter === 'servido' ? '#16a34a' : '#bbf7d0'}; background: ${activeFilter === 'servido' ? '#16a34a' : '#f0fdf4'}; color: ${activeFilter === 'servido' ? '#ffffff' : '#15803d'}; transition: all 0.15s;">
-                    🟢 Servidos (${countServido})
+                        class="pedidos-status-pill ${activeFilter === 'servido' ? 'is-active' : ''}"
+                        style="border-color: ${activeFilter === 'servido' ? '#16a34a' : '#bbf7d0'}; background: ${activeFilter === 'servido' ? '#16a34a' : '#f0fdf4'}; color: ${activeFilter === 'servido' ? '#ffffff' : '#15803d'};">
+                    <span class="pedidos-status-dot" style="background: ${activeFilter === 'servido' ? '#ffffff' : '#16a34a'};"></span>
+                    <span>Servidos</span>
+                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'servido' ? 'rgba(255,255,255,0.22)' : 'rgba(22,163,74,0.12)'}; color: ${activeFilter === 'servido' ? '#ffffff' : '#15803d'};">${countServido}</span>
                 </button>
             </div>
 
+            <!-- 2. Buscador colocado en la zona intermedia con espacio equilibrado -->
+            <div class="pedidos-search-wrap">
+                <div class="pro-search-bar pedidos-search-bar">
+                    <span class="material-icons-round pro-search-icon">search</span>
+                    <input type="text" id="searchPedidosInput" class="pro-search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()" oninput="toggleClearSearch('searchPedidosInput', 'clearPedidosSearchBtn')" onkeydown="if(event.key==='Enter') this.blur()">
+                    <div class="pro-search-actions">
+                        <button type="button" id="clearPedidosSearchBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearPedidosSearch()" title="Borrar búsqueda">
+                            <span class="material-icons-round">close</span>
+                        </button>
+                        <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('searchPedidosInput', this)" title="Buscar por voz">
+                            <span class="material-icons-round">mic</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Cabecera de Columnas unida directamente al listado -->
             <div class="pedidos-table-header">
                 <div>Nº</div>
                 <div>TIENDA</div>
@@ -130,22 +151,45 @@ function setPedidosStatusFilter(status) {
     tabs.forEach(btn => {
         const tab = btn.getAttribute('data-status-tab');
         const isActive = tab === window.currentPedidosStatusFilter;
+        btn.classList.toggle('is-active', isActive);
+        const dot = btn.querySelector('.pedidos-status-dot');
+        const badge = btn.querySelector('.pedidos-pill-count');
+
         if (tab === 'all') {
             btn.style.background = isActive ? '#0f172a' : '#ffffff';
-            btn.style.color = isActive ? '#ffffff' : '#475569';
-            btn.style.borderColor = isActive ? '#0f172a' : '#e2e8f0';
+            btn.style.color = isActive ? '#ffffff' : '#334155';
+            btn.style.borderColor = isActive ? '#0f172a' : '#cbd5e1';
+            if (badge) {
+                badge.style.background = isActive ? 'rgba(255,255,255,0.18)' : '#f1f5f9';
+                badge.style.color = isActive ? '#ffffff' : '#475569';
+            }
         } else if (tab === 'almacen') {
             btn.style.background = isActive ? '#f59e0b' : '#fffbeb';
             btn.style.color = isActive ? '#ffffff' : '#b45309';
             btn.style.borderColor = isActive ? '#f59e0b' : '#fde68a';
+            if (dot) dot.style.background = isActive ? '#ffffff' : '#f59e0b';
+            if (badge) {
+                badge.style.background = isActive ? 'rgba(255,255,255,0.22)' : 'rgba(245,158,11,0.14)';
+                badge.style.color = isActive ? '#ffffff' : '#b45309';
+            }
         } else if (tab === 'tampo') {
             btn.style.background = isActive ? '#2563eb' : '#eff6ff';
             btn.style.color = isActive ? '#ffffff' : '#1d4ed8';
             btn.style.borderColor = isActive ? '#2563eb' : '#bfdbfe';
+            if (dot) dot.style.background = isActive ? '#ffffff' : '#2563eb';
+            if (badge) {
+                badge.style.background = isActive ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.12)';
+                badge.style.color = isActive ? '#ffffff' : '#1d4ed8';
+            }
         } else if (tab === 'servido') {
             btn.style.background = isActive ? '#16a34a' : '#f0fdf4';
             btn.style.color = isActive ? '#ffffff' : '#15803d';
             btn.style.borderColor = isActive ? '#16a34a' : '#bbf7d0';
+            if (dot) dot.style.background = isActive ? '#ffffff' : '#16a34a';
+            if (badge) {
+                badge.style.background = isActive ? 'rgba(255,255,255,0.22)' : 'rgba(22,163,74,0.12)';
+                badge.style.color = isActive ? '#ffffff' : '#15803d';
+            }
         }
     });
     filterPedidos();
@@ -238,11 +282,18 @@ function injectPedidoModals() {
                                 </label>
                             </div>
                         </div>
-                        <div class="client-search-wrapper">
-                            <span class="material-icons-round client-search-icon">search</span>
-                            <input type="text" id="orderClient" class="order-input client-search-input" list="clientsListDatalist" placeholder="Buscar cliente o código..." required onkeydown="handleOrderFormEnter(event, 'orderAmount')" onkeyup="toggleClearSearch('orderClient', 'clearOrderClientBtn')" oninput="handleClientInputJump(this.value)">
+                        <div class="pro-search-bar" style="margin-bottom: 0;">
+                            <span class="material-icons-round pro-search-icon">search</span>
+                            <input type="text" id="orderClient" class="pro-search-input" list="clientsListDatalist" placeholder="Buscar cliente o código..." required onkeydown="handleOrderFormEnter(event, 'orderAmount')" onkeyup="toggleClearSearch('orderClient', 'clearOrderClientBtn')" oninput="toggleClearSearch('orderClient', 'clearOrderClientBtn'); handleClientInputJump(this.value)">
                             <input type="hidden" id="orderClientCode" value="">
-                            <span id="clearOrderClientBtn" class="material-icons-round clear-icon" style="display: none; top: 50%; transform: translateY(-50%);" onclick="clearSearchField('orderClient', 'clearOrderClientBtn'); document.getElementById('orderClientCode').value = ''; document.getElementById('orderClient').focus();">cancel</span>
+                            <div class="pro-search-actions">
+                                <button type="button" id="clearOrderClientBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearSearchField('orderClient', 'clearOrderClientBtn'); document.getElementById('orderClientCode').value = ''; document.getElementById('orderClient').focus();" title="Borrar texto">
+                                    <span class="material-icons-round">close</span>
+                                </button>
+                                <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('orderClient', this, (val) => handleClientInputJump(val))" title="Dictar cliente">
+                                    <span class="material-icons-round">mic</span>
+                                </button>
+                            </div>
                             <datalist id="clientsListDatalist"></datalist>
                         </div>
                     </div>
@@ -321,17 +372,33 @@ function injectPedidoModals() {
 
                 <div class="mb-6">
                     <label class="form-label" style="color: #64748b; font-size: 11px;">CLIENTE / TIENDA</label>
-                    <div class="search-container">
-                        <input type="text" id="exportFilterClient" class="search-input" style="padding: 0.8rem 2.5rem 0.8rem 1rem;" placeholder="Opcional: Filtrar por tienda" onkeyup="toggleClearSearch('exportFilterClient', 'clearExportClientBtn')">
-                        <span id="clearExportClientBtn" class="material-icons-round clear-icon" style="display: none; right: 0.8rem;" onclick="clearSearchField('exportFilterClient', 'clearExportClientBtn')">cancel</span>
+                    <div class="pro-search-bar" style="margin-bottom: 0;">
+                        <span class="material-icons-round pro-search-icon">storefront</span>
+                        <input type="text" id="exportFilterClient" class="pro-search-input" placeholder="Opcional: Filtrar por tienda" oninput="toggleClearSearch('exportFilterClient', 'clearExportClientBtn')" onkeyup="toggleClearSearch('exportFilterClient', 'clearExportClientBtn')">
+                        <div class="pro-search-actions">
+                            <button type="button" id="clearExportClientBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearSearchField('exportFilterClient', 'clearExportClientBtn')">
+                                <span class="material-icons-round">close</span>
+                            </button>
+                            <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('exportFilterClient', this)">
+                                <span class="material-icons-round">mic</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="mb-8">
                     <label class="form-label" style="color: #64748b; font-size: 11px;">POBLACIÓN / PROVINCIA</label>
-                    <div class="search-container">
-                        <input type="text" id="exportFilterLocation" class="search-input" style="padding: 0.8rem 2.5rem 0.8rem 1rem;" placeholder="Opcional: Ej. Asturias, Madrid..." onkeyup="toggleClearSearch('exportFilterLocation', 'clearExportLocBtn')">
-                        <span id="clearExportLocBtn" class="material-icons-round clear-icon" style="display: none; right: 0.8rem;" onclick="clearSearchField('exportFilterLocation', 'clearExportLocBtn')">cancel</span>
+                    <div class="pro-search-bar" style="margin-bottom: 0;">
+                        <span class="material-icons-round pro-search-icon">place</span>
+                        <input type="text" id="exportFilterLocation" class="pro-search-input" placeholder="Opcional: Ej. Asturias, Madrid..." oninput="toggleClearSearch('exportFilterLocation', 'clearExportLocBtn')" onkeyup="toggleClearSearch('exportFilterLocation', 'clearExportLocBtn')">
+                        <div class="pro-search-actions">
+                            <button type="button" id="clearExportLocBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearSearchField('exportFilterLocation', 'clearExportLocBtn')">
+                                <span class="material-icons-round">close</span>
+                            </button>
+                            <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('exportFilterLocation', this)">
+                                <span class="material-icons-round">mic</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

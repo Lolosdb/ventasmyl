@@ -12,81 +12,67 @@ async function renderMapa(isBack = false) {
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Mapa de Clientes');
 
-    let contentHtml = '<main style="padding: 0 1.5rem; position: relative; height: calc(100vh - 120px);">';
+    let contentHtml = '<main class="map-view-main">';
 
-    // Leyenda y Buscador Flotante
+    // Barra de búsqueda superior con espaciado limpio y equilibrado
     contentHtml += `
-            <div class="search-container mb-2" style="margin-top: 0.5rem; width: 100%;">
-                <span class="material-icons-round search-icon">search</span>
-                <input type="text" id="mapSearchInput" class="search-input" placeholder="Buscar localidad..." 
-                       onkeydown="if(event.key==='Enter') searchLocation()" onkeyup="toggleMapClearBtn()">
-                <span id="clearMapSearchBtn" class="material-icons-round clear-icon" style="display: none;" onclick="clearMapSearch()">cancel</span>
+        <div class="map-top-search-wrap">
+            <div class="pro-search-bar map-search-bar">
+                <span class="material-icons-round pro-search-icon">search</span>
+                <input type="text" id="mapSearchInput" class="pro-search-input" placeholder="Buscar localidad..." 
+                       onkeydown="if(event.key==='Enter') searchLocation()" oninput="toggleMapClearBtn()" onkeyup="toggleMapClearBtn()">
+                <div class="pro-search-actions">
+                    <button type="button" id="clearMapSearchBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearMapSearch()" title="Borrar búsqueda">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                    <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('mapSearchInput', this)" title="Buscar localidad por voz">
+                        <span class="material-icons-round">mic</span>
+                    </button>
+                </div>
             </div>
-    `;
-
-    contentHtml += '<div id="map-container" style="width: 100%; height: 100%;"></div>';
-
-    // FABs (Botones flotantes compactos y organizados)
-    contentHtml += `
-        <div class="map-fabs">
-            <!-- Leyenda Popover -->
-            <div id="mapLegendPopover" class="map-legend-popover">
-                <div class="legend-item"><span class="legend-dot dot-active"></span><span class="legend-label">Activos (<=35d)</span></div>
-                <div class="legend-item"><span class="legend-dot dot-inactive"></span><span class="legend-label">Inactivos (>35d)</span></div>
-                <div class="legend-item"><span class="legend-dot dot-no-orders"></span><span class="legend-label">Sin compras</span></div>
-            </div>
-
-            <button class="map-fab-btn" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver Leyenda">
-                <span class="material-icons-round" style="color: #64748b;">info</span>
-            </button>
-            <button class="map-fab-btn" onclick="window.openNearbyRadarModal()" id="btnNearbyRadar" title="¿Quién tengo cerca ahora?">
-                <span class="material-icons-round" style="color: #7c3aed;">radar</span>
-            </button>
-            <button class="map-fab-btn" onclick="toggleRouteMode()" id="btnRouteMode" title="Optimizar Ruta">
-                <span class="material-icons-round" style="color: #0284c7;">directions</span>
-            </button>
-
-            <!-- Grupo compacto de Zoom (+ / -) -->
-            <div class="map-zoom-group">
-                <button class="map-zoom-btn" onclick="window.zoomIn()" title="Acercar">
-                    <span class="material-icons-round">add</span>
-                </button>
-                <div class="map-zoom-divider"></div>
-                <button class="map-zoom-btn" onclick="window.zoomOut()" title="Alejar">
-                    <span class="material-icons-round">remove</span>
-                </button>
-            </div>
-
-            <button class="map-fab-btn map-fab-location" onclick="centerMapOnUser(true)" title="Mi Ubicación">
-                <span class="material-icons-round" style="color: #f59e0b;">my_location</span>
-            </button>
         </div>
     `;
 
-    // Panel de Ruta (Oculto por defecto) - Estilo Bottom Sheet
+    // Lienzo del mapa enmarcado con controles flotantes unificados
     contentHtml += `
-        <div id="route-panel" class="route-panel-modern glass" style="display: none;">
-            <div class="route-header p-4 flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                        <span class="material-icons-round text-sm">route</span>
-                    </div>
-                    <h3 class="font-black text-slate-800 text-sm">Ruta del Día</h3>
+        <div class="map-canvas-wrapper">
+            <div id="map-container"></div>
+
+            <!-- Controles flotantes unificados y elegantes -->
+            <div class="map-fabs">
+                <!-- Leyenda Popover -->
+                <div id="mapLegendPopover" class="map-legend-popover">
+                    <div class="map-legend-title">Estado de Clientes</div>
+                    <div class="legend-item"><span class="legend-dot dot-active"></span><span class="legend-label">Activos (&le; 45 días)</span></div>
+                    <div class="legend-item"><span class="legend-dot dot-inactive"></span><span class="legend-label">Inactivos (&gt; 45 días)</span></div>
+                    <div class="legend-item"><span class="legend-dot dot-no-orders"></span><span class="legend-label">Sin compras este año</span></div>
                 </div>
-                <button class="p-1.5 bg-slate-100 rounded-full text-slate-500" onclick="window.toggleRouteMode()" title="Cerrar y Limpiar">
-                    <span class="material-icons-round text-sm">close</span>
-                </button>
-            </div>
-            
-            <div id="route-list" class="p-4 flex flex-col gap-2 max-h-48 overflow-y-auto">
-                <div class="text-center py-6 text-slate-400 italic text-xs">Añade clientes desde el mapa</div>
-            </div>
-            
-            <div class="p-4 pt-0">
-                <button class="btn btn-generate-premium w-full py-4 rounded-2xl flex items-center justify-center gap-2" 
-                        id="btnGenerateRoute" disabled onclick="window.confirmRoute()">
-                    <span class="material-icons-round">navigation</span>
-                    <span>GENERAR RUTA (<span id="route-count">0</span>)</span>
+
+                <!-- Cápsula 1: Herramientas de Consulta (Leyenda + Radar Cercanos) -->
+                <div class="map-control-group">
+                    <button type="button" class="map-control-btn" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver leyenda de colores">
+                        <span class="material-icons-round">info</span>
+                    </button>
+                    <div class="map-control-divider"></div>
+                    <button type="button" class="map-control-btn" onclick="window.openNearbyRadarModal()" id="btnNearbyRadar" title="¿Quién tengo cerca ahora?">
+                        <span class="material-icons-round">radar</span>
+                    </button>
+                </div>
+
+                <!-- Cápsula 2: Control de Zoom (+ / -) -->
+                <div class="map-control-group">
+                    <button type="button" class="map-control-btn" onclick="window.zoomIn()" title="Acercar mapa">
+                        <span class="material-icons-round">add</span>
+                    </button>
+                    <div class="map-control-divider"></div>
+                    <button type="button" class="map-control-btn" onclick="window.zoomOut()" title="Alejar mapa">
+                        <span class="material-icons-round">remove</span>
+                    </button>
+                </div>
+
+                <!-- Botón Principal GPS: Mi Ubicación -->
+                <button type="button" class="map-fab-btn map-fab-location" onclick="centerMapOnUser(true)" title="Centrar en mi ubicación actual">
+                    <span class="material-icons-round">my_location</span>
                 </button>
             </div>
         </div>
@@ -180,7 +166,7 @@ async function initLeafletMap() {
             if (cOrders.length > 0) {
                 const lastDate = new Date(Math.max(...cOrders.map(o => new Date(o.dateISO).getTime())));
                 daysAgo = Math.ceil(Math.abs(now - lastDate) / (1000 * 60 * 60 * 24));
-                color = daysAgo <= 35 ? '#22c55e' : '#ef4444';
+                color = daysAgo <= 45 ? '#22c55e' : '#ef4444';
             }
 
             const marker = L.circleMarker([lat, lng], {

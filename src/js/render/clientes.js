@@ -14,44 +14,44 @@ async function renderClientes(isBack = false) {
     const pendingOps = await dataManager.getPendingClientOps();
     const pendingCount = Array.isArray(pendingOps) ? pendingOps.length : 0;
 
-    let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px;" class="view-enter">';
+    let contentHtml = '<main style="padding: 1rem 1.25rem; padding-bottom: 100px;" class="view-enter">';
 
-    // Tarjeta de Importación Premium Rediseñada
+    // Panel Superior Unificado de Gestión de Clientes
     contentHtml += `
-        <div class="premium-import-card">
-            <div class="import-title-row">
-                <div class="import-title-group">
-                    <span class="material-icons-round">description</span>
-                    <h3>Importar Clientes</h3>
-                </div>
-                <button class="btn-create-client-premium" onclick="openNewClientModal()">
-                    <span class="material-icons-round">add</span>
-                    <span>Crear nuevo</span>
+        <div class="pro-clients-toolbar">
+            <div class="pro-toolbar-primary-grid">
+                <button type="button" class="pro-btn-new-client" onclick="openNewClientModal()">
+                    <span class="material-icons-round">person_add</span>
+                    <span>Nuevo Cliente</span>
+                </button>
+                <button type="button" class="pro-btn-nearby-gps" onclick="window.openNearbyRadarModal()">
+                    <span class="material-icons-round">my_location</span>
+                    <span>Clientes Cerca</span>
                 </button>
             </div>
-            <div class="import-actions-row">
-                <button class="btn-import-excel" onclick="document.getElementById('clientImportInput').click()">
+
+            <div class="pro-toolbar-sync-row">
+                <button type="button" class="pro-sync-btn" onclick="document.getElementById('clientImportInput').click()">
                     <span class="material-icons-round">upload_file</span>
-                    <span>Excel (.XLSX)</span>
+                    <span>Importar Excel</span>
                 </button>
-                <button class="btn-import-drive" onclick="handleDriveImport()">
+                <button type="button" class="pro-sync-btn" onclick="handleDriveImport()">
                     <span class="material-icons-round">cloud_download</span>
-                    <span>Desde Drive</span>
+                    <span>Bajar Drive</span>
                 </button>
-            </div>
-            <div class="import-actions-row" style="margin-top: 10px;">
-                <button class="btn-import-drive" style="width: 100%; background: #f0fdf4; color: #10b981; border: 1px solid #dcfce7;" onclick="handleDriveExportClients()">
+                <button type="button" class="pro-sync-btn" onclick="handleDriveExportClients()">
                     <span class="material-icons-round">cloud_upload</span>
-                    <span>Guardar Clientes en Drive</span>
+                    <span>Subir Drive</span>
                 </button>
             </div>
+
             ${pendingCount > 0 ? `
-            <div id="pendingSyncBanner" style="margin-top: 12px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 8px; color: #b45309; font-size: 12px; font-weight: 700; line-height: 1.3;">
-                    <span class="material-icons-round" style="font-size: 18px; color: #d97706;">cloud_off</span>
-                    <span>${pendingCount} ${pendingCount === 1 ? 'cambio pendiente' : 'cambios pendientes'} de subir a Drive (protegidos frente a importaciones)</span>
+            <div id="pendingSyncBanner" class="pro-pending-banner">
+                <div class="pro-pending-info">
+                    <span class="material-icons-round">cloud_off</span>
+                    <span>${pendingCount} ${pendingCount === 1 ? 'cambio pendiente' : 'cambios pendientes'} de subir a Drive</span>
                 </div>
-                <button onclick="handleFlushPendingClients(this)" style="background: #d97706; color: white; border: none; border-radius: 8px; padding: 6px 10px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;">
+                <button type="button" onclick="handleFlushPendingClients(this)" class="pro-pending-btn">
                     <span class="material-icons-round" style="font-size: 14px;">sync</span>
                     <span>Subir ahora</span>
                 </button>
@@ -59,35 +59,28 @@ async function renderClientes(isBack = false) {
             ` : ''}
             <input type="file" id="clientImportInput" accept=".xlsx, .xls" style="display: none;" onchange="handleClientImport(this)">
         </div>
-    `;
 
-    // Botón Radar "¿Quién tengo cerca ahora mismo?" + Buscador
-    contentHtml += `
-        <button type="button" onclick="window.openNearbyRadarModal()"
-                style="width: 100%; margin-bottom: 12px; padding: 12px 16px; border-radius: 16px; border: 1px solid #bae6fd; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="material-icons-round" style="color: #38bdf8; font-size: 22px;">radar</span>
-                <div style="text-align: left;">
-                    <div style="font-size: 13px; font-weight: 900; letter-spacing: -0.2px;">¿Quién tengo cerca ahora mismo?</div>
-                    <div style="font-size: 10.5px; color: #94a3b8; font-weight: 600;">Ver los 10 clientes más próximos a tu GPS actual</div>
-                </div>
-            </div>
-            <span class="material-icons-round" style="color: #38bdf8; font-size: 20px;">chevron_right</span>
-        </button>
-
-        <div class="search-container mb-4">
-            <span class="material-icons-round search-icon">search</span>
+        <div class="pro-search-bar mb-4">
+            <span class="material-icons-round pro-search-icon">search</span>
             <input type="text" id="clientSearchInput" 
-                   class="search-input"
-                   placeholder="Buscar por nombre o población..." 
+                   class="pro-search-input"
+                   placeholder="Buscar por nombre, código o población..." 
                    onkeyup="filterClients(this.value)" 
                    onkeydown="if(event.key==='Enter') this.blur()"
                    oninput="toggleClearSearch('clientSearchInput', 'clearSearchBtn')">
-            <span id="clearSearchBtn" class="material-icons-round clear-icon" 
-                  style="display: none;" 
-                  onclick="clearClientSearch()">
-                cancel
-            </span>
+            <div class="pro-search-actions">
+                <button type="button" id="clearSearchBtn" class="pro-search-clear-btn" 
+                        style="display: none;" 
+                        onclick="clearClientSearch()"
+                        title="Borrar búsqueda">
+                    <span class="material-icons-round">close</span>
+                </button>
+                <button type="button" class="pro-search-mic-btn" 
+                        onclick="window.toggleVoiceDictation('clientSearchInput', this)"
+                        title="Buscar por voz">
+                    <span class="material-icons-round">mic</span>
+                </button>
+            </div>
         </div>
     `;
 
@@ -99,43 +92,45 @@ async function renderClientes(isBack = false) {
         contentHtml += '<div class="text-center p-8 text-secondary">No hay clientes registrados</div>';
     } else {
         clients.forEach(client => { if(!client) return;
+            const searchCode = String(client.code || '').toLowerCase();
+            const searchName = String(client.name || '').toLowerCase();
+            const searchLoc = String(client.location || '').toLowerCase();
             contentHtml += `
-                <div class="client-card card glass mb-3 p-3 flex justify-between items-center shadow-sm" 
+                <div class="client-card pro-client-item" 
                      onclick="openClientDetailModal('${String(client.code || '').replace(/'/g, "\\'")}')"
-                     data-name="${(client.name || '').toLowerCase()}" 
-                     data-location="${(client.location || '').toLowerCase()}">
-                    <div class="flex flex-col gap-2 flex-1" style="min-width: 0; padding-right: 8px;">
-                        <div class="client-card-main-info">
-                            <span class="client-card-code">${client.code || '- '}</span>
-                            <span>-</span>
-                            <span class="client-card-name">${client.name || 'Sin Nombre'}</span>
+                     data-name="${searchCode} ${searchName}" 
+                     data-location="${searchLoc}">
+                    <div class="pro-client-item-body">
+                        <div class="pro-client-item-top">
+                            <span class="pro-client-code-badge">#${client.code || '---'}</span>
+                            <span class="pro-client-name">${client.name || 'Sin Nombre'}</span>
                         </div>
-                        <div class="flex items-center gap-2" style="flex-wrap: wrap;">
-                            <div class="pill-location">
+                        <div class="pro-client-meta-row">
+                            <span class="pro-meta-pill pro-meta-loc">
                                 <span class="material-icons-round">place</span>
                                 ${client.location || 'Sin ubicación'}
-                            </div>
+                            </span>
                             ${client.contact ? `
-                                <div class="pill-contact">
+                                <span class="pro-meta-pill pro-meta-contact">
                                     <span class="material-icons-round">person</span>
                                     ${client.contact}
-                                </div>
+                                </span>
                             ` : ''}
                             ${client.lastVisitDate ? `
-                                <div style="display: inline-flex; align-items: center; gap: 3px; background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; border-radius: 999px; padding: 2px 7px; font-size: 10px; font-weight: 800;" title="Última visita sin pedido">
-                                    <span class="material-icons-round" style="font-size: 12px;">visibility</span>
-                                    Visitado ${new Date(client.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
-                                </div>
+                                <span class="pro-meta-pill pro-meta-visit" title="Última visita registrada">
+                                    <span class="material-icons-round">visibility</span>
+                                    ${new Date(client.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+                                </span>
                             ` : ''}
                             ${client.pendingSync ? `
-                                <div style="display: inline-flex; align-items: center; gap: 3px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 999px; padding: 2px 7px; font-size: 10px; font-weight: 800;" title="Guardado en el móvil. Pendiente de subir a Drive">
-                                    <span class="material-icons-round" style="font-size: 12px;">cloud_queue</span>
-                                    Pendiente Drive
-                                </div>
+                                <span class="pro-meta-pill pro-meta-sync" title="Pendiente de subir a Drive">
+                                    <span class="material-icons-round">cloud_queue</span>
+                                    Pendiente
+                                </span>
                             ` : ''}
                         </div>
                     </div>
-                    <span class="material-icons-round text-slate-400">menu</span>
+                    <span class="material-icons-round pro-client-chevron">chevron_right</span>
                 </div>
             `;
         });
@@ -180,9 +175,9 @@ async function openClientDetailModal(clientCode) {
     const orders = await dataManager.getOrders();
     const clientOrders = orders.filter(o => dataManager.isOrderForClient(o, client)).sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
     
-    let historyHtml = '<div class="flex flex-col gap-1 mt-4">';
+    let historyHtml = '<div class="pro-history-list">';
     if (clientOrders.length === 0) {
-        historyHtml += '<p class="text-center text-xs text-gray-400 py-4">Sin historial de pedidos</p>';
+        historyHtml += '<p class="pro-empty-state">Sin pedidos registrados todavía</p>';
     } else {
         clientOrders.forEach(o => {
             let statusLabel = 'ALMACÉN';
@@ -198,14 +193,10 @@ async function openClientDetailModal(clientCode) {
             const formattedAmount = Math.round(parseFloat(o.amount) || 0).toLocaleString('de-DE') + ' €';
 
             historyHtml += `
-                <div class="flex justify-between items-center" style="padding: 1rem 0 !important; border-bottom: 2px solid rgba(0,0,0,0.05) !important;">
-                    <div>
-                        <p style="font-size: 13px !important; color: #64748b !important; font-style: italic !important; font-weight: normal !important; margin-bottom: 6px !important;">
-                            ${new Date(o.dateISO).toLocaleDateString('es-ES')}
-                        </p>
-                        <p style="font-size: 19px !important; font-weight: 900 !important; color: #1e293b !important; line-height: 1 !important;">
-                            ${formattedAmount}
-                        </p>
+                <div class="pro-history-row">
+                    <div class="pro-history-info">
+                        <span class="pro-history-amount">${formattedAmount}</span>
+                        <span class="pro-history-date">${new Date(o.dateISO).toLocaleDateString('es-ES')}</span>
                     </div>
                     <div class="history-badge ${statusClass}">${statusLabel}</div>
                 </div>
@@ -219,218 +210,262 @@ async function openClientDetailModal(clientCode) {
         ? new Date(client.lastVisitDate).toLocaleDateString('es-ES')
         : '';
 
+    const waPref = window.getWhatsAppPref ? window.getWhatsAppPref() : 'business';
+    const waBadgeText = waPref === 'business' ? 'WA Business' : (waPref === 'personal' ? 'WA Personal' : 'Elegir al enviar');
+    const cleanPhone1 = (client.phone || '').replace(/\s+/g, '');
+    const cleanPhone2 = (client.phone2 || '').replace(/\s+/g, '');
+    const cleanEmail = (client.email || '').trim();
+
     content.innerHTML = `
-        <div class="v7-header shadow-lg">
-            <!-- BOTON CERRAR: MINIMALISTA -->
-            <div class="v7-btn-close-minimal" onclick="closeClientDetailModal()">
-                <span class="material-icons-round">close</span>
+        <!-- CABECERA EJECUTIVA UNIFICADA -->
+        <div class="pro-modal-header">
+            <div class="pro-header-topbar">
+                <div class="pro-header-badges">
+                    <span class="pro-code-pill">CLIENTE #${client.code || '---'}</span>
+                    ${client.nif ? `<span class="pro-nif-pill">${client.nif}</span>` : ''}
+                </div>
+                <div class="pro-header-icon-actions">
+                    <button type="button" class="pro-header-icon-btn" onclick="openNewClientModal('${safeCode}')" title="Editar cliente">
+                        <span class="material-icons-round">edit</span>
+                    </button>
+                    <button type="button" class="pro-header-icon-btn pro-header-icon-danger" onclick="handleDeleteClient('${safeCode}')" title="Eliminar cliente">
+                        <span class="material-icons-round">delete_outline</span>
+                    </button>
+                    <button type="button" class="pro-header-icon-btn" onclick="closeClientDetailModal()" title="Cerrar">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- IDENTIDAD: NOMBRE Y CODIGO UNIFICADOS CON RESTRICCION DE ANCHO -->
-            <div class="flex flex-col" style="width: 100%; max-width: calc(100% - 60px); overflow: hidden;">
-                <h2 class="v7-name-premium" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 1.5rem;">
-                    ${client.code} &nbsp;&nbsp; ${client.name}
-                </h2>
-            </div>
-            
-            <!-- ACCIONES: BOTONES PROPORCIONALES Y SIMETRICOS -->
-            <div class="v7-actions-row">
-                <div class="v7-btn-base v7-btn-edit" onclick="openNewClientModal('${safeCode}')">
-                    <span class="material-icons-round" style="font-size: 20px;">edit</span>
-                    <span>EDITAR</span>
-                </div>
-                <div class="v7-btn-base v7-btn-delete" onclick="handleDeleteClient('${safeCode}')">
-                    <span class="material-icons-round" style="font-size: 20px;">delete_outline</span>
-                    <span>ELIMINAR</span>
-                </div>
+            <h2 class="pro-client-title">${client.name || 'Sin Nombre'}</h2>
+
+            <div class="pro-header-subrow">
+                <span class="pro-header-subitem">
+                    <span class="material-icons-round">place</span>
+                    <span>${client.location || 'Sin localidad'}${client.province ? ' · ' + client.province : ''}</span>
+                </span>
+                ${client.contact ? `
+                <span class="pro-header-subitem">
+                    <span class="material-icons-round">person</span>
+                    <span>${client.contact}</span>
+                </span>
+                ` : ''}
             </div>
         </div>
         
-        <div class="modal-body p-6">
-            <!-- ⚡ ACCIONES EN RUTA 1-CLICK: NUEVO PEDIDO Y VISITADO HOY -->
-            <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px; margin-bottom: 14px;">
-                <button type="button" onclick="window.openNewOrderForClient('${safeCode}')"
-                        style="background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%); color: white; border: none; border-radius: 16px; padding: 13px 12px; font-size: 12.5px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25);">
-                    <span class="material-icons-round" style="font-size: 19px;">add_shopping_cart</span>
-                    <span>NUEVO PEDIDO AQUÍ</span>
+        <div class="pro-modal-body">
+            <!-- BARRA DE ACCIONES PRINCIPALES SIMÉTRICA -->
+            <div class="pro-primary-actions-grid">
+                <button type="button" class="pro-btn-primary-action" onclick="window.openNewOrderForClient('${safeCode}')">
+                    <span class="material-icons-round">add_shopping_cart</span>
+                    <span>Nuevo Pedido</span>
                 </button>
-                <button type="button" onclick="toggleQuickVisitBox()"
-                        style="background: #f5f3ff; color: #6d28d9; border: 1.5px solid #ddd6fe; border-radius: 16px; padding: 13px 10px; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
-                    <span class="material-icons-round" style="font-size: 19px;">visibility</span>
-                    <span>VISITADO HOY</span>
+                <button type="button" class="pro-btn-secondary-action" onclick="toggleQuickVisitBox()">
+                    <span class="material-icons-round">visibility</span>
+                    <span>Registrar Visita</span>
                 </button>
             </div>
 
             <!-- Panel desplegable para Check-in de Visita sin pedido -->
-            <div id="quickVisitBox" style="display: none; background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 16px; padding: 12px 14px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 11px; font-weight: 900; color: #5b21b6; text-transform: uppercase;">👁️ Registrar visita de hoy (Sin pedido)</span>
-                    <button type="button" onclick="window.toggleVoiceDictation('clientVisitNoteInput', this)"
-                            style="display: inline-flex; align-items: center; gap: 4px; background: white; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
-                        <span class="material-icons-round" style="font-size: 14px;">mic</span>
-                        <span>Dictar nota</span>
+            <div id="quickVisitBox" class="pro-visit-drawer" style="display: none;">
+                <div class="pro-section-head" style="margin-bottom: 8px;">
+                    <div class="pro-section-title">
+                        <span class="material-icons-round" style="color: #0284c7;">visibility</span>
+                        <span>Registrar visita de hoy (Sin pedido)</span>
+                    </div>
+                    <button type="button" class="pro-mini-pill-btn" onclick="window.toggleVoiceDictation('clientVisitNoteInput', this)">
+                        <span class="material-icons-round">mic</span>
+                        <span>Dictar</span>
                     </button>
                 </div>
-                <input type="text" id="clientVisitNoteInput" value="${(client.lastVisitNote || '').replace(/"/g, '&quot;')}"
-                       placeholder="Opcional: ej. Pasar en 15 días, aún tiene stock..."
-                       style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #c4b5fd; font-size: 13px; background: white; margin-bottom: 8px;">
-                <button type="button" onclick="confirmClientVisitCheckIn('${safeCode}')"
-                        style="width: 100%; background: #6d28d9; color: white; border: none; border-radius: 10px; padding: 10px; font-size: 12.5px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    <span class="material-icons-round" style="font-size: 17px;">check_circle</span>
-                    <span>GUARDAR VISITA DE HOY</span>
+                <input type="text" id="clientVisitNoteInput" class="pro-clean-input"
+                       value="${(client.lastVisitNote || '').replace(/"/g, '&quot;')}"
+                       placeholder="Nota opcional (ej. pasar en 15 días, tiene stock...)">
+                <button type="button" class="pro-btn-confirm-visit" onclick="confirmClientVisitCheckIn('${safeCode}')">
+                    <span class="material-icons-round">check_circle</span>
+                    <span>Guardar Visita de Hoy</span>
                 </button>
             </div>
 
             ${lastVisitFormatted ? `
-            <div id="lastVisitInfoBanner" style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 14px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px;">
-                <span class="material-icons-round" style="color: #7c3aed; font-size: 18px; margin-top: 1px;">visibility</span>
-                <div style="font-size: 12px; color: #5b21b6; line-height: 1.35;">
-                    <strong>Última visita registrada:</strong> ${lastVisitFormatted}
-                    ${client.lastVisitNote ? `<div style="margin-top: 2px; color: #6d28d9; font-weight: 600;">"${client.lastVisitNote}"</div>` : ''}
+            <div id="lastVisitInfoBanner" class="pro-visit-status-bar">
+                <span class="material-icons-round">event_available</span>
+                <div class="pro-visit-status-text">
+                    <span><strong>Última visita:</strong> ${lastVisitFormatted}</span>
+                    ${client.lastVisitNote ? `<span class="pro-visit-note-quote">· "${client.lastVisitNote}"</span>` : ''}
                 </div>
             </div>
             ` : ''}
 
-            <!-- 🎙️ NOTAS PERMANENTES DEL CLIENTE (CON DICTADO POR VOZ) -->
-            <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 16px; padding: 12px 14px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 6px; color: #b45309; font-size: 11px; font-weight: 900; text-transform: uppercase;">
-                        <span class="material-icons-round" style="font-size: 16px;">sticky_note_2</span>
-                        <span>Notas Permanentes del Cliente</span>
+            <!-- SECCIÓN 1: CONTACTO DIRECTO (TELÉFONO, WHATSAPP BUSINESS Y CORREO) -->
+            <div class="pro-section-card">
+                <div class="pro-section-head">
+                    <div class="pro-section-title">
+                        <span class="material-icons-round">contact_phone</span>
+                        <span>Contacto y Comunicación</span>
                     </div>
-                    <div style="display: flex; gap: 6px;">
-                        <button type="button" onclick="window.toggleVoiceDictation('clientQuickNotesInput', this, () => saveQuickClientNotes('${safeCode}', true))"
-                                style="display: inline-flex; align-items: center; gap: 4px; background: white; color: #d97706; border: 1px solid #fcd34d; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
-                            <span class="material-icons-round" style="font-size: 14px;">mic</span>
+                    <button type="button" class="pro-comm-pref-chip" onclick="window.openCommPrefsModal('${safeCode}')" title="Configurar desde qué WhatsApp o Correo enviar">
+                        <span class="material-icons-round" style="font-size: 13px; color: #10b981;">storefront</span>
+                        <span>${waBadgeText}</span>
+                        <span class="material-icons-round" style="font-size: 13px; color: #94a3b8;">tune</span>
+                    </button>
+                </div>
+
+                <!-- Teléfono Principal -->
+                <div class="pro-contact-row">
+                    <div class="pro-contact-icon-box">
+                        <span class="material-icons-round">phone</span>
+                    </div>
+                    <div class="pro-contact-info">
+                        <span class="pro-field-label">Teléfono Principal</span>
+                        ${cleanPhone1
+                            ? `<a href="tel:${cleanPhone1}" class="pro-contact-value-link">${client.phone}</a>`
+                            : `<span class="pro-field-empty">No registrado</span>`}
+                    </div>
+                    ${cleanPhone1 ? `
+                    <div class="pro-contact-actions">
+                        <button type="button" class="pro-icon-action pro-action-call" onclick="window.location.href='tel:${cleanPhone1}'" title="Llamar por teléfono">
+                            <span class="material-icons-round">call</span>
+                        </button>
+                        <button type="button" class="pro-icon-action pro-action-wa" onclick="window.openAppWhatsApp('${cleanPhone1}')" title="Enviar por ${waBadgeText}">
+                            <span class="material-icons-round">chat</span>
+                            ${waPref === 'business' ? `<span class="pro-wa-b-tag">B</span>` : ''}
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+
+                ${cleanPhone2 ? `
+                <!-- Teléfono Secundario -->
+                <div class="pro-contact-row pro-row-divider">
+                    <div class="pro-contact-icon-box">
+                        <span class="material-icons-round">phone_forwarded</span>
+                    </div>
+                    <div class="pro-contact-info">
+                        <span class="pro-field-label">Teléfono Secundario</span>
+                        <a href="tel:${cleanPhone2}" class="pro-contact-value-link">${client.phone2}</a>
+                    </div>
+                    <div class="pro-contact-actions">
+                        <button type="button" class="pro-icon-action pro-action-call" onclick="window.location.href='tel:${cleanPhone2}'" title="Llamar por teléfono">
+                            <span class="material-icons-round">call</span>
+                        </button>
+                        <button type="button" class="pro-icon-action pro-action-wa" onclick="window.openAppWhatsApp('${cleanPhone2}')" title="Enviar por ${waBadgeText}">
+                            <span class="material-icons-round">chat</span>
+                            ${waPref === 'business' ? `<span class="pro-wa-b-tag">B</span>` : ''}
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Correo Electrónico -->
+                <div class="pro-contact-row pro-row-divider">
+                    <div class="pro-contact-icon-box">
+                        <span class="material-icons-round">mail_outline</span>
+                    </div>
+                    <div class="pro-contact-info">
+                        <span class="pro-field-label">Correo Electrónico</span>
+                        ${cleanEmail
+                            ? `<a href="javascript:void(0)" onclick="window.openAppEmail('${cleanEmail.replace(/'/g, "\\'")}')" class="pro-email-value-link">${cleanEmail}</a>`
+                            : `<span class="pro-field-empty">No registrado</span>`}
+                    </div>
+                    ${cleanEmail ? `
+                    <div class="pro-contact-actions">
+                        <button type="button" class="pro-icon-action pro-action-mail" onclick="window.openAppEmail('${cleanEmail.replace(/'/g, "\\'")}')" title="Enviar correo electrónico">
+                            <span class="material-icons-round">send</span>
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <!-- Persona de Contacto y Horario -->
+                <div class="pro-contact-meta-grid pro-row-divider">
+                    <div>
+                        <span class="pro-field-label">Persona de Contacto</span>
+                        <p class="pro-field-text">${client.contact || '---'}</p>
+                    </div>
+                    <div>
+                        <span class="pro-field-label">Horario Comercial</span>
+                        <p class="pro-field-text">${client.schedule || '---'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: UBICACIÓN Y NAVEGACIÓN GPS -->
+            <div class="pro-section-card">
+                <div class="pro-section-head">
+                    <div class="pro-section-title">
+                        <span class="material-icons-round">location_on</span>
+                        <span>Ubicación y Logística</span>
+                    </div>
+                    ${(client.lat && client.lng) ? `
+                    <button type="button" class="pro-btn-gps-route" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${client.lat},${client.lng}', '_blank')">
+                        <span class="material-icons-round" style="font-size: 16px;">directions</span>
+                        <span>Cómo llegar</span>
+                    </button>
+                    ` : ''}
+                </div>
+
+                <div class="pro-location-grid">
+                    <div class="pro-location-main">
+                        <span class="pro-field-label">Dirección</span>
+                        <p class="pro-field-text">${client.address || '---'}</p>
+                    </div>
+                    <div class="pro-location-subgrid">
+                        <div>
+                            <span class="pro-field-label">Población</span>
+                            <p class="pro-field-text">${client.location || '---'}${client.cp ? ` (${client.cp})` : ''}</p>
+                        </div>
+                        <div>
+                            <span class="pro-field-label">Provincia</span>
+                            <p class="pro-field-text">${client.province || '---'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 3: NOTAS PERMANENTES DEL CLIENTE -->
+            <div class="pro-section-card">
+                <div class="pro-section-head">
+                    <div class="pro-section-title">
+                        <span class="material-icons-round">description</span>
+                        <span>Notas Permanentes</span>
+                    </div>
+                    <div class="pro-notes-actions">
+                        <button type="button" class="pro-mini-pill-btn" onclick="window.toggleVoiceDictation('clientQuickNotesInput', this, () => saveQuickClientNotes('${safeCode}', true))">
+                            <span class="material-icons-round">mic</span>
                             <span>Dictar</span>
                         </button>
-                        <button type="button" id="btnSaveQuickNotes" onclick="saveQuickClientNotes('${safeCode}', false)"
-                                style="display: inline-flex; align-items: center; gap: 4px; background: #d97706; color: white; border: none; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
-                            <span class="material-icons-round" style="font-size: 14px;">save</span>
+                        <button type="button" id="btnSaveQuickNotes" class="pro-mini-pill-btn pro-mini-pill-primary" onclick="saveQuickClientNotes('${safeCode}', false)">
+                            <span class="material-icons-round">save</span>
                             <span>Guardar</span>
                         </button>
                     </div>
                 </div>
-                <textarea id="clientQuickNotesInput" rows="2"
-                          placeholder="Dicta o escribe notas fijas (ej. prefiere imanes resina, hablar con María por la mañana...)"
-                          style="width: 100%; border: 1px solid #fde68a; border-radius: 10px; padding: 8px 10px; font-size: 13px; font-family: inherit; background: white; color: #1e293b; resize: vertical;">${client.notes || ''}</textarea>
-                <div id="quickNotesSavedStatus" style="display: none; font-size: 11px; font-weight: 800; color: #15803d; margin-top: 4px;">✅ Nota guardada en la ficha del cliente</div>
+                <textarea id="clientQuickNotesInput" rows="2" class="pro-notes-textarea"
+                          placeholder="Escribe o dicta notas fijas (ej. prefiere imanes de resina, hablar con María por la mañana...)">${client.notes || ''}</textarea>
+                <div id="quickNotesSavedStatus" class="pro-notes-saved-msg" style="display: none;">✅ Nota guardada en la ficha del cliente</div>
             </div>
 
-            <!-- Info List -->
-            <div class="flex flex-col gap-6">
-                
-                <div class="detail-item-row">
-                    <div class="info-icon-circle"><span class="material-icons-round">tag</span></div>
-                    <div class="flex-1">
-                        <label class="detail-label">Código de Cliente</label>
-                        <p class="detail-value">${client.code}</p>
+            <!-- SECCIÓN 4: HISTORIAL DE PEDIDOS -->
+            <div class="pro-section-card">
+                <div class="pro-section-head">
+                    <div class="pro-section-title">
+                        <span class="material-icons-round">history</span>
+                        <span>Historial de Pedidos</span>
                     </div>
+                    <span class="pro-count-badge">${clientOrders.length}</span>
                 </div>
-
-                <div class="detail-item-row">
-                    <div class="info-icon-circle"><span class="material-icons-round">place</span></div>
-                    <div class="flex-1">
-                        <label class="detail-label">Dirección</label>
-                        <p class="detail-value">${client.address || '---'}</p>
-                    </div>
-                </div>
-
-                <div class="detail-item-row">
-                    <div class="info-icon-circle"><span class="material-icons-round">language</span></div>
-                    <div class="flex-1 flex justify-between items-center pr-2">
-                        <div class="field-vertical">
-                            <label class="detail-label">Localidad</label>
-                            <p class="detail-value">${client.location || '---'}</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase">Provincia: ${client.province || '---'}</p>
-                        </div>
-                        ${(client.lat && client.lng) ? `
-                        <button class="btn-gps-navigation" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${client.lat},${client.lng}', '_blank')">
-                            <span class="material-icons-round" style="font-size: 20px;">directions</span>
-                            <span>LLEVAME</span>
-                        </button>
-                        ` : ''}
-                    </div>
-                </div>
-
-                <div class="detail-item-row">
-                    <div class="info-icon-circle"><span class="material-icons-round">person</span></div>
-                    <div class="flex-1">
-                        <label class="detail-label">Persona de Contacto</label>
-                        <p class="detail-value">${client.contact || '---'}</p>
-                    </div>
-                </div>
-
-                <div class="detail-item-row">
-                    <div class="info-icon-circle"><span class="material-icons-round" style="color: #25d366;">call_made</span></div>
-                    <div class="flex-1 v7-phone-container">
-                        <!-- Telefono Principal -->
-                        <div class="v7-phone-entry">
-                            <div class="v7-phone-info">
-                                <label class="detail-label" style="color: #64748b; margin-bottom: 2px;">Teléfono principal</label>
-                                <a href="tel:${(client.phone || '').replace(/\s+/g, '')}" class="detail-value" style="font-size: 18px !important; color: #0f172a !important; font-weight: 900 !important;">${client.phone || '---'}</a>
-                            </div>
-                            <div class="v7-phone-actions">
-                                <button class="btn-action-icon-only btn-call-icon" onclick="window.location.href='tel:${(client.phone || '').replace(/\s+/g, '')}'" title="Llamar">
-                                    <span class="material-icons-round">call</span>
-                                </button>
-                                <button class="btn-action-icon-only btn-wa-icon" onclick="window.open('https://wa.me/34${(client.phone || '').replace(/[^0-9]/g, '')}', '_blank')" title="WhatsApp">
-                                    <span class="material-icons-round">chat</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        ${client.phone2 && client.phone2.trim() !== '' ? `
-                        <!-- Telefono Secundario -->
-                        <div class="v7-phone-entry" style="margin-top: 8px; padding-top: 8px; border-t: 1px solid #f1f5f9;">
-                            <div class="v7-phone-info">
-                                <label class="detail-label" style="color: #64748b; margin-bottom: 2px;">Teléfono secundario</label>
-                                <a href="tel:${(client.phone2 || '').replace(/\s+/g, '')}" class="detail-value" style="font-size: 17px !important; color: #0f172a !important; font-weight: 850 !important;">${client.phone2}</a>
-                            </div>
-                            <div class="v7-phone-actions">
-                                <button class="btn-action-icon-only btn-call-icon" onclick="window.location.href='tel:${(client.phone2 || '').replace(/\s+/g, '')}'" title="Llamar">
-                                    <span class="material-icons-round">call</span>
-                                </button>
-                                <button class="btn-action-icon-only btn-wa-icon" onclick="window.open('https://wa.me/34${(client.phone2 || '').replace(/[^0-9]/g, '')}', '_blank')" title="WhatsApp">
-                                    <span class="material-icons-round">chat</span>
-                                </button>
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-
-                <div class="detail-item-row">
-                    <div class="info-icon-circle"><span class="material-icons-round">mail</span></div>
-                    <div class="flex-1 field-vertical">
-                        <label class="detail-label">Correo Electrónico</label>
-                        ${client.email ? `<a href="mailto:${client.email}" class="detail-value underline block" style="font-size: 16px !important;">${client.email}</a>` : `<p class="detail-value">---</p>`}
-                    </div>
-                </div>
-
-                <div class="mt-2 pt-4 border-t border-slate-100">
-                    <h3 class="text-lg font-black text-slate-800 flex items-center gap-3 mb-4">
-                        <span class="material-icons-round text-blue-primary">history</span>
-                        Historial de Pedidos
-                    </h3>
-                    ${historyHtml}
-                </div>
+                ${historyHtml}
             </div>
             
-            <div class="modal-footer">
-                <button class="btn-footer-close" onclick="closeClientDetailModal()">Cerrar</button>
+            <div class="pro-modal-footer">
+                <button type="button" class="btn-footer-close" onclick="closeClientDetailModal()">Cerrar Ficha</button>
             </div>
         </div>
     `;
 
     modal.classList.add('open');
     document.body.classList.add('no-scroll');
-
-    // Auto-ajuste de tipografía Premium (Shrink-to-Fit) 
-    if (window.autoShrinkText) {
-        window.autoShrinkText(modal.querySelector('.v7-name-premium'));
-        window.autoShrinkText(modal.querySelector('a[href^="mailto:"]'));
-    }
 }
 
 function closeClientDetailModal() {
@@ -472,10 +507,12 @@ function openNewClientModal(code = null) {
             document.getElementById('ncLat').value = client.lat || '';
             document.getElementById('ncLng').value = client.lng || '';
             modal.querySelector('h2').textContent = 'Editar Cliente';
+            if (window.enhanceClearableInputs) window.enhanceClearableInputs(modal);
         });
     } else {
         form.dataset.isEdit = 'false';
         modal.querySelector('h2').textContent = 'Nuevo Cliente';
+        if (window.enhanceClearableInputs) window.enhanceClearableInputs(modal);
     }
     
     modal.classList.add('open');
@@ -695,137 +732,151 @@ function injectClientModals() {
     
     const html = `
     <div id="newClientModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 580px !important; width: 95% !important; max-height: 94vh; padding: 0; overflow: hidden; margin: 0 auto; border-radius: 24px;">
-            <div style="display: grid; grid-template-rows: auto 1fr auto; height: 100%; width: 100%;">
+        <div class="modal-content" style="max-width: 560px !important; width: 95% !important; height: 92vh; max-height: 92vh; padding: 0; overflow: hidden; margin: auto; border-radius: 24px; display: flex; flex-direction: column;">
+            <div style="display: flex; flex-direction: column; height: 100%; min-height: 0; width: 100%; overflow: hidden;">
                 
-                <div class="client-detail-header" style="flex-shrink: 0; padding: 2.25rem 2.75rem !important; border-radius: 24px 24px 0 0; position: relative;">
-                    <h2 class="text-2xl font-black uppercase text-white m-0" style="letter-spacing: -0.5px;">Nuevo Cliente</h2>
-                    <button type="button" class="btn-close-modal" onclick="document.getElementById('newClientModal').classList.remove('open')">
+                <div class="pro-modal-header" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 1.15rem 1.35rem; flex-shrink: 0;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="material-icons-round" style="color: #ffffff; font-size: 22px;">person_add</span>
+                        <h2 class="pro-client-title" style="margin: 0; font-size: 17px;">Nuevo Cliente</h2>
+                    </div>
+                    <button type="button" class="pro-header-icon-btn" onclick="document.getElementById('newClientModal').classList.remove('open')">
                         <span class="material-icons-round">close</span>
                     </button>
                 </div>
                 
-                <form id="newClientForm" onsubmit="event.preventDefault(); saveNewClient();" onkeydown="handleFormNavigation(event)" style="display: contents;">
-                    <div class="modal-body p-6 overflow-y-auto" style="background: #f1f5f9;">
+                <form id="newClientForm" onsubmit="event.preventDefault(); saveNewClient();" onkeydown="handleFormNavigation(event)" style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden;">
+                    <div class="pro-modal-body" style="flex: 1 1 auto; min-height: 0; overflow-y: auto;">
                         
-                        <!-- CARD 1: IDENTIDAD -->
-                        <div class="premium-form-card">
-                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #f8fafc; padding-bottom: 10px;">
-                                <span class="material-icons-round text-blue-500" style="font-size: 20px;">badge</span>
-                                <h4 class="text-xs font-black uppercase text-slate-500">Identidad Comercial</h4>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">CÓDIGO *</label>
-                                    <input type="text" id="ncCode" class="premium-form-input" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 1234" required>
-                                </div>
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">NIF / DNI</label>
-                                    <input type="text" id="ncNIF" class="premium-form-input" placeholder="A12345678">
+                        <!-- SECCIÓN 1: IDENTIDAD COMERCIAL -->
+                        <div class="pro-section-card">
+                            <div class="pro-section-head">
+                                <div class="pro-section-title">
+                                    <span class="material-icons-round">badge</span>
+                                    <span>Identidad Comercial</span>
                                 </div>
                             </div>
-                            <div class="premium-form-group">
-                                <label class="premium-form-label">NOMBRE DE TIENDA *</label>
-                                <input type="text" id="ncName" class="premium-form-input" placeholder="Nombre comercial" required>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label class="pro-field-label">Código *</label>
+                                    <input type="text" id="ncCode" class="pro-clean-input" style="margin-bottom: 0;" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 1234" required>
+                                </div>
+                                <div>
+                                    <label class="pro-field-label">NIF / DNI</label>
+                                    <input type="text" id="ncNIF" class="pro-clean-input" style="margin-bottom: 0;" placeholder="A12345678">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="pro-field-label">Nombre de Tienda *</label>
+                                <input type="text" id="ncName" class="pro-clean-input" style="margin-bottom: 0;" placeholder="Nombre comercial" required>
                             </div>
                         </div>
 
-                        <!-- CARD 2: CONTACTO -->
-                        <div class="premium-form-card">
-                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #f8fafc; padding-bottom: 10px;">
-                                <span class="material-icons-round text-emerald-500" style="font-size: 20px;">contact_phone</span>
-                                <h4 class="text-xs font-black uppercase text-slate-500">Contacto</h4>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">TELÉFONO 1</label>
-                                    <input type="text" id="ncPhone" class="premium-form-input" inputmode="numeric" placeholder="600000000">
-                                </div>
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">TELÉFONO 2</label>
-                                    <input type="text" id="ncPhone2" class="premium-form-input" inputmode="numeric" placeholder="Opcional">
+                        <!-- SECCIÓN 2: CONTACTO -->
+                        <div class="pro-section-card">
+                            <div class="pro-section-head">
+                                <div class="pro-section-title">
+                                    <span class="material-icons-round">contact_phone</span>
+                                    <span>Datos de Contacto</span>
                                 </div>
                             </div>
-                            <div class="premium-form-group">
-                                <label class="premium-form-label">PERSONA DE CONTACTO</label>
-                                <input type="text" id="ncContact" class="premium-form-input" placeholder="Nombre del responsable">
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label class="pro-field-label">Teléfono Principal</label>
+                                    <input type="text" id="ncPhone" class="pro-clean-input" style="margin-bottom: 0;" inputmode="numeric" placeholder="600000000">
+                                </div>
+                                <div>
+                                    <label class="pro-field-label">Teléfono Secundario</label>
+                                    <input type="text" id="ncPhone2" class="pro-clean-input" style="margin-bottom: 0;" inputmode="numeric" placeholder="Opcional">
+                                </div>
                             </div>
-                            <div class="premium-form-group">
-                                <label class="premium-form-label">EMAIL</label>
-                                <input type="email" id="ncEmail" class="premium-form-input" placeholder="cliente@correo.com">
+                            <div class="mb-3">
+                                <label class="pro-field-label">Persona de Contacto</label>
+                                <input type="text" id="ncContact" class="pro-clean-input" style="margin-bottom: 0;" placeholder="Nombre del responsable">
+                            </div>
+                            <div>
+                                <label class="pro-field-label">Correo Electrónico</label>
+                                <input type="email" id="ncEmail" class="pro-clean-input" style="margin-bottom: 0;" placeholder="cliente@correo.com">
                             </div>
                         </div>
 
-                        <!-- CARD 3: UBICACIÓN -->
-                        <div class="premium-form-card">
-                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #f8fafc; padding-bottom: 10px;">
-                                <span class="material-icons-round text-orange-500" style="font-size: 20px;">map</span>
-                                <h4 class="text-xs font-black uppercase text-slate-500">Ubicación y Logística</h4>
-                            </div>
-                            <div class="premium-form-group">
-                                <label class="premium-form-label">DIRECCIÓN</label>
-                                <input type="text" id="ncAddress" class="premium-form-input" placeholder="Calle, número, oficina...">
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">POBLACIÓN</label>
-                                    <input type="text" id="ncLocation" class="premium-form-input" placeholder="Ciudad">
-                                </div>
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">PROVINCIA</label>
-                                    <input type="text" id="ncProvince" class="premium-form-input" placeholder="Provincia">
+                        <!-- SECCIÓN 3: UBICACIÓN Y NOTAS -->
+                        <div class="pro-section-card">
+                            <div class="pro-section-head">
+                                <div class="pro-section-title">
+                                    <span class="material-icons-round">location_on</span>
+                                    <span>Ubicación y Logística</span>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">CP</label>
-                                    <input type="text" id="ncCP" class="premium-form-input" inputmode="numeric" placeholder="33000">
+                            <div class="mb-3">
+                                <label class="pro-field-label">Dirección</label>
+                                <input type="text" id="ncAddress" class="pro-clean-input" style="margin-bottom: 0;" placeholder="Calle, número, local...">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label class="pro-field-label">Población</label>
+                                    <input type="text" id="ncLocation" class="pro-clean-input" style="margin-bottom: 0;" placeholder="Ciudad">
                                 </div>
-                                <div class="premium-form-group">
-                                    <label class="premium-form-label">HORARIO</label>
-                                    <input type="text" id="ncSchedule" class="premium-form-input" placeholder="Ej: 9:00 - 14:00">
+                                <div>
+                                    <label class="pro-field-label">Provincia</label>
+                                    <input type="text" id="ncProvince" class="pro-clean-input" style="margin-bottom: 0;" placeholder="Provincia">
                                 </div>
                             </div>
-                            <div class="premium-form-group" style="margin-top: 8px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                    <label class="premium-form-label" style="margin: 0;">NOTAS PERMANENTES DEL CLIENTE</label>
-                                    <button type="button" onclick="window.toggleVoiceDictation('ncNotes', this)" style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #d97706; border: 1px solid #fcd34d; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
-                                        <span class="material-icons-round" style="font-size: 14px;">mic</span>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label class="pro-field-label">Código Postal</label>
+                                    <input type="text" id="ncCP" class="pro-clean-input" style="margin-bottom: 0;" inputmode="numeric" placeholder="33000">
+                                </div>
+                                <div>
+                                    <label class="pro-field-label">Horario Comercial</label>
+                                    <input type="text" id="ncSchedule" class="pro-clean-input" style="margin-bottom: 0;" placeholder="Ej: 9:00 - 14:00">
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <label class="pro-field-label" style="margin: 0;">Notas Permanentes</label>
+                                    <button type="button" class="pro-mini-pill-btn" onclick="window.toggleVoiceDictation('ncNotes', this)">
+                                        <span class="material-icons-round">mic</span>
                                         <span>Dictar</span>
                                     </button>
                                 </div>
-                                <textarea id="ncNotes" class="premium-form-input" rows="2" placeholder="Preferencias, persona clave, días de cierre..." style="height: auto; padding: 10px 12px;"></textarea>
+                                <textarea id="ncNotes" class="pro-notes-textarea" rows="2" placeholder="Preferencias, persona clave, días de cierre..."></textarea>
                             </div>
                         </div>
 
-                        <!-- CARD 4: GPS -->
-                        <div class="premium-form-card premium-gps-card">
-                            <div class="flex items-center gap-2 mb-4" style="border-bottom: 2px solid #e0f2fe; padding-bottom: 10px;">
-                                <span class="material-icons-round text-sky-600" style="font-size: 20px;">explore</span>
-                                <h4 class="text-xs font-black uppercase text-sky-700">Geolocalización (GPS)</h4>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div class="field-vertical">
-                                    <label class="premium-form-label text-sky-600">LATITUD</label>
-                                    <input type="text" id="ncLat" class="premium-form-input bg-white" placeholder="43.xxxx">
+                        <!-- SECCIÓN 4: GEOLOCALIZACIÓN GPS -->
+                        <div class="pro-section-card">
+                            <div class="pro-section-head">
+                                <div class="pro-section-title">
+                                    <span class="material-icons-round">my_location</span>
+                                    <span>Coordenadas GPS</span>
                                 </div>
-                                <div class="field-vertical">
-                                    <label class="premium-form-label text-sky-600">LONGITUD</label>
-                                    <input type="text" id="ncLng" class="premium-form-input bg-white" placeholder="-6.xxxx">
+                                <button type="button" class="pro-btn-gps-route" onclick="getCurrentCoordinates()">
+                                    <span class="material-icons-round" style="font-size: 15px;">gps_fixed</span>
+                                    <span>Capturar mi GPS actual</span>
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="pro-field-label">Latitud</label>
+                                    <input type="text" id="ncLat" class="pro-clean-input" style="margin-bottom: 0;" placeholder="43.xxxx">
+                                </div>
+                                <div>
+                                    <label class="pro-field-label">Longitud</label>
+                                    <input type="text" id="ncLng" class="pro-clean-input" style="margin-bottom: 0;" placeholder="-5.xxxx">
                                 </div>
                             </div>
-                            <button type="button" class="btn-premium-gps" style="height: 50px !important; font-size: 13px !important;" onclick="getCurrentCoordinates()">
-                                <span class="material-icons-round">gps_fixed</span> OBTENER MI UBICACIÓN ACTUAL
-                            </button>
                         </div>
                     </div>
 
-                    <div class="bg-white border-t border-slate-200 flex items-center justify-center gap-6 p-6 px-10">
-                        <button type="button" class="btn-link-cancel" onclick="document.getElementById('newClientModal').classList.remove('open')">
-                            <span class="material-icons-round">close</span> CANCELAR
+                    <div style="background: #ffffff; border-top: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1.3fr; gap: 10px; padding: 14px 16px;">
+                        <button type="button" class="pro-btn-secondary-action" onclick="document.getElementById('newClientModal').classList.remove('open')">
+                            <span class="material-icons-round">close</span>
+                            <span>Cancelar</span>
                         </button>
-                        <button type="submit" class="btn-premium-save">
-                            <span class="material-icons-round">save</span> GUARDAR CLIENTE
+                        <button type="submit" class="pro-btn-primary-action">
+                            <span class="material-icons-round">save</span>
+                            <span>Guardar Cliente</span>
                         </button>
                     </div>
                 </form>
@@ -834,8 +885,8 @@ function injectClientModals() {
     </div>
     
     <div id="clientDetailModal" class="modal-overlay">
-        <div class="modal-content" style="height: 90vh; padding: 0; border-radius: 24px;">
-            <div id="modal-client-content" class="h-full flex flex-col overflow-y-auto"></div>
+        <div class="modal-content" style="height: 92vh; max-height: 92vh; max-width: 540px !important; width: 96% !important; margin: auto; padding: 0; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column;">
+            <div id="modal-client-content" style="display: flex; flex-direction: column; flex: 1 1 auto; height: 100%; min-height: 0; overflow: hidden;"></div>
         </div>
     </div>
     `;
@@ -845,8 +896,10 @@ function injectClientModals() {
 function getCurrentCoordinates() {
     if (!navigator.geolocation) return alert("GPS no disponible");
     navigator.geolocation.getCurrentPosition(p => {
-        document.getElementById('ncLat').value = p.coords.latitude;
-        document.getElementById('ncLng').value = p.coords.longitude;
+        const latEl = document.getElementById('ncLat');
+        const lngEl = document.getElementById('ncLng');
+        if (latEl) { latEl.value = p.coords.latitude; latEl.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (lngEl) { lngEl.value = p.coords.longitude; lngEl.dispatchEvent(new Event('input', { bubbles: true })); }
     }, e => alert("Error GPS: " + e.message), { enableHighAccuracy: true });
 }
 

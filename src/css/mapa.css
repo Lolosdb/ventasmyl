@@ -1,16 +1,51 @@
-/* Mapa View Styles - Rediseño Leyenda Desplegable */
+/* Mapa View Styles - Diseño Ejecutivo Unificado */
+
+.map-view-main {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 144px);
+    padding: 14px 16px 12px 16px;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.map-top-search-wrap {
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.map-search-bar {
+    margin-bottom: 0 !important;
+    min-height: 48px;
+    border-radius: 15px;
+    border: 1.5px solid #cbd5e1;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.map-canvas-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    position: relative;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1.5px solid #cbd5e1;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    background: #e2e8f0;
+}
 
 #map-container {
-    height: calc(100vh - 120px);
+    height: 100%;
     width: 100%;
     z-index: 1;
 }
 
-/* Contenedor de FABs (Botones Flotantes Compactos y Organizados) */
+/* Contenedor de Controles Flotantes (Armonioso y Ejecutivo) */
 .map-fabs {
     position: absolute;
-    bottom: 24px;
-    right: 16px;
+    bottom: 18px;
+    right: 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -18,49 +53,23 @@
     z-index: 1000;
 }
 
-.map-fab-btn {
-    position: relative !important;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.94) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(226, 232, 240, 0.9) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12) !important;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    padding: 0;
-}
-
-.map-fab-btn .material-icons-round {
-    font-size: 22px;
-}
-
-.map-fab-btn:active {
-    transform: scale(0.92);
-}
-
-/* Cápsula compacta de Zoom (+ / -) */
-.map-zoom-group {
-    width: 44px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+/* Cápsulas agrupadas de controles (Leyenda+Radar y Zoom +/-) */
+.map-control-group {
+    width: 46px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(203, 213, 225, 0.95);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-.map-zoom-btn {
+.map-control-btn {
     width: 100%;
-    height: 38px;
+    height: 42px;
     background: transparent;
     border: none;
     display: flex;
@@ -69,23 +78,72 @@
     color: #1e293b;
     cursor: pointer;
     padding: 0;
-    transition: background-color 0.15s ease, transform 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
-.map-zoom-btn .material-icons-round {
-    font-size: 20px;
+.map-control-btn .material-icons-round {
+    font-size: 21px;
+    color: #334155;
+    transition: color 0.15s ease;
 }
 
-.map-zoom-btn:active {
-    background: #f1f5f9;
+.map-control-btn:hover {
+    background: #f8fafc;
+}
+
+.map-control-btn:hover .material-icons-round,
+.map-control-btn.active .material-icons-round {
+    color: #0284c7;
+}
+
+.map-control-btn.active {
+    background: #f0f9ff;
+}
+
+.map-control-btn:active {
+    background: #e0f2fe;
     transform: scale(0.92);
 }
 
-.map-zoom-divider {
+.map-control-divider {
     height: 1px;
-    width: 70%;
+    width: 72%;
     margin: 0 auto;
     background: #e2e8f0;
+}
+
+/* Botón Principal Destacado: Mi Ubicación GPS */
+.map-fab-btn {
+    position: relative !important;
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(203, 213, 225, 0.95) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14) !important;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0;
+}
+
+.map-fab-location {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.32) !important;
+}
+
+.map-fab-location .material-icons-round {
+    font-size: 22px;
+    color: #ffffff !important;
+}
+
+.map-fab-btn:active {
+    transform: scale(0.92);
 }
 
 .user-location-marker {
@@ -93,29 +151,39 @@
     border: none !important;
 }
 
-/* Leyenda Desplegable */
+/* Leyenda Desplegable Ejecutiva */
 .map-legend-popover {
     position: absolute;
-    bottom: calc(100% + 12px);
-    right: 0;
-    min-width: 180px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    top: 0;
+    right: calc(100% + 12px);
+    min-width: 205px;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1.5px solid #e2e8f0;
     border-radius: 18px;
-    padding: 1rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    padding: 14px 16px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
     z-index: 1100;
-    transform-origin: bottom right;
+    transform-origin: top right;
     display: none;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 10px;
+}
+
+.map-legend-title {
+    font-size: 10.5px;
+    font-weight: 900;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .map-legend-popover.open {
     display: flex;
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes popIn {

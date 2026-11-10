@@ -204,19 +204,24 @@ async function renderAlertas(isBack = false) {
     let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px;">';
     
     contentHtml += `
-        <div style="margin-bottom: 1.5rem;">
-            <div class="glass shadow-sm" style="display: flex; align-items: center; padding: 0.75rem 1.25rem; border-radius: 9999px; background: white; border: 1px solid rgba(0,0,0,0.05);">
-                <span class="material-icons-round text-slate-400" style="margin-right: 0.75rem;">search</span>
-                <input type="text" id="alertSearchInput" placeholder="Buscar por tienda, población o provincia..." 
-                       style="border: none; outline: none; flex: 1; min-width: 0; font-size: 15px; background: transparent; color: #334155; font-weight: 500;"
-                       onkeyup="filterAlerts()"
-                       oninput="toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn')"
-                       onkeydown="if(event.key==='Enter') this.blur()">
-                <span id="clearAlertSearchBtn" class="material-icons-round text-slate-400" 
-                      style="display: none; cursor: pointer; margin-left: 0.5rem;" 
-                      onclick="clearAlertSearch()">
-                    cancel
-                </span>
+        <div class="pro-search-bar mb-4">
+            <span class="material-icons-round pro-search-icon">search</span>
+            <input type="text" id="alertSearchInput" class="pro-search-input" placeholder="Buscar por tienda, población o provincia..." 
+                   onkeyup="filterAlerts()"
+                   oninput="toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn')"
+                   onkeydown="if(event.key==='Enter') this.blur()">
+            <div class="pro-search-actions">
+                <button type="button" id="clearAlertSearchBtn" class="pro-search-clear-btn" 
+                        style="display: none;" 
+                        onclick="clearAlertSearch()"
+                        title="Borrar búsqueda">
+                    <span class="material-icons-round">close</span>
+                </button>
+                <button type="button" class="pro-search-mic-btn"
+                        onclick="window.toggleVoiceDictation('alertSearchInput', this)"
+                        title="Buscar por voz">
+                    <span class="material-icons-round">mic</span>
+                </button>
             </div>
         </div>
         <div id="alertsListContainer">
@@ -226,7 +231,7 @@ async function renderAlertas(isBack = false) {
         contentHtml += '<div class="text-center p-12 text-slate-400 italic">Sin actividad de pedidos este año</div>';
     } else {
         entries.forEach(e => {
-            const isDanger = e.days > 35;
+            const isDanger = e.days > 45;
             const searchData = `${e.shop} ${e.location} ${e.province}`.toLowerCase().replace(/"/g, '');
             contentHtml += `
                 <div class="alert-card ${isDanger ? 'red-theme' : 'green-theme'}" 
@@ -247,7 +252,7 @@ async function renderAlertas(isBack = false) {
                             <span class="material-icons-round">call</span> 
                         </button>
                         <button class="btn-alert-v7 whatsapp shadow-sm"
-                                onclick="event.stopPropagation(); window.open('https://wa.me/34${(e.phone || '').replace(/[^0-9]/g, '')}', '_blank')" title="WhatsApp">
+                                onclick="event.stopPropagation(); window.openAppWhatsApp('${(e.phone || '').replace(/[^0-9]/g, '')}')" title="WhatsApp">
                             <span class="material-icons-round">chat</span> 
                         </button>
                     </div>
@@ -556,21 +561,23 @@ async function openRankingModal(sortBy = 'sales', searchTerm = '') {
                     </button>
                 </div>
 
-                <div style="position: relative; width: 100%; display: block; margin-bottom: 1rem;">
-                    <span class="material-icons-round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none;">search</span>
-                    <input type="text" id="rankSearch" 
+                <div class="pro-search-bar" style="margin-bottom: 0.75rem;">
+                    <span class="material-icons-round pro-search-icon">search</span>
+                    <input type="text" id="rankSearch" class="pro-search-input"
                            placeholder="Buscar tienda..." 
                            value="${searchTerm}"
                            oninput="openRankingModal('${sortBy}', this.value)"
-                           autocomplete="off"
-                           style="width: 100% !important; padding: 10px 40px 10px 40px !important; box-sizing: border-box !important; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 13.5px; font-weight: 700; color: #0f172a;">
-                    ${searchTerm ? `
-                        <span class="material-icons-round" 
-                              onclick="openRankingModal('${sortBy}', '')"
-                              style="position: absolute !important; right: 12px !important; top: 50% !important; transform: translateY(-50%) !important; color: #94a3b8; cursor: pointer; z-index: 10; font-size: 18px;">
-                            close
-                        </span>
-                    ` : ''}
+                           autocomplete="off">
+                    <div class="pro-search-actions">
+                        ${searchTerm ? `
+                        <button type="button" class="pro-search-clear-btn" style="display: inline-flex;" onclick="openRankingModal('${sortBy}', '')" title="Borrar búsqueda">
+                            <span class="material-icons-round">close</span>
+                        </button>
+                        ` : ''}
+                        <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('rankSearch', this, (val) => openRankingModal('${sortBy}', val))" title="Buscar por voz">
+                            <span class="material-icons-round">mic</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

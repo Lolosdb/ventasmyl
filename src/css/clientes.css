@@ -601,3 +601,936 @@
     box-shadow: none !important;
     background: #d97706 !important;
 }
+
+/* ==========================================================================
+   SISTEMA VISUAL EJECUTIVO UNIFICADO (V8 PRO - CLIENTES Y FICHA)
+   ========================================================================== */
+
+/* --- 1. PANEL DE GESTIÓN EN VISTA CLIENTES --- */
+.pro-clients-toolbar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pro-toolbar-primary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.pro-btn-new-client {
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+    transition: transform 0.15s ease;
+    white-space: nowrap;
+}
+
+.pro-btn-new-client .material-icons-round {
+    font-size: 18px;
+}
+
+.pro-btn-new-client:active {
+    transform: scale(0.97);
+}
+
+.pro-btn-nearby-gps {
+    background: #f0f9ff;
+    color: #0284c7;
+    border: 1.5px solid #bae6fd;
+    border-radius: 12px;
+    height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+    white-space: nowrap;
+}
+
+.pro-btn-nearby-gps .material-icons-round {
+    font-size: 18px;
+    color: #0284c7;
+}
+
+.pro-btn-nearby-gps:hover {
+    background: #e0f2fe;
+}
+
+.pro-btn-nearby-gps:active {
+    transform: scale(0.97);
+}
+
+.pro-toolbar-sync-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.pro-sync-btn {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.pro-sync-btn .material-icons-round {
+    font-size: 15px;
+    color: #0284c7;
+}
+
+.pro-sync-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.pro-sync-btn:active {
+    transform: scale(0.97);
+}
+
+.pro-pending-banner {
+    padding: 9px 12px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 3.5px solid #0284c7;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.pro-pending-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #334155;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.pro-pending-info .material-icons-round {
+    font-size: 17px;
+    color: #0284c7;
+}
+
+.pro-pending-btn {
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* --- 2. TARJETAS DE LISTA DE CLIENTES --- */
+.pro-client-item {
+    background: #ffffff !important;
+    border-radius: 16px !important;
+    padding: 13px 15px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+    margin-bottom: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pro-client-item:hover {
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+}
+
+.pro-client-item:active {
+    transform: scale(0.99);
+}
+
+.pro-client-item-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pro-client-item-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.pro-client-code-badge {
+    background: #f0f9ff;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
+}
+
+.pro-client-name {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #0f172a;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.2px;
+}
+
+.pro-client-meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pro-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2.5px 8px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.pro-meta-pill .material-icons-round {
+    font-size: 12.5px;
+}
+
+.pro-meta-loc {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.pro-meta-loc .material-icons-round {
+    color: #0284c7;
+}
+
+.pro-meta-contact {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.pro-meta-contact .material-icons-round {
+    color: #64748b;
+}
+
+.pro-meta-visit {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.pro-meta-sync {
+    background: #f8fafc;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+}
+
+.pro-client-chevron {
+    color: #94a3b8;
+    font-size: 20px !important;
+    flex-shrink: 0;
+}
+
+/* --- 3. FICHA DE CLIENTE (MODAL EJECUTIVO UNIFICADO) --- */
+.pro-modal-header {
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    padding: 1.25rem 1.35rem 1.15rem;
+    border-radius: 24px 24px 0 0;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pro-header-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pro-header-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pro-code-pill {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.4px;
+}
+
+.pro-nif-pill {
+    background: rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.pro-header-icon-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pro-header-icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pro-header-icon-btn .material-icons-round {
+    font-size: 18px;
+}
+
+.pro-header-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.pro-header-icon-btn:active {
+    transform: scale(0.94);
+}
+
+.pro-header-icon-danger {
+    color: #ffffff;
+}
+
+.pro-header-icon-danger:hover {
+    background: rgba(239, 68, 68, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+}
+
+.pro-client-title {
+    margin: 2px 0 0;
+    font-size: 18.5px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+    text-transform: uppercase;
+    word-break: break-word;
+}
+
+.pro-header-subrow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 2px;
+}
+
+.pro-header-subitem {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.pro-header-subitem .material-icons-round {
+    font-size: 14px;
+    color: #ffffff;
+}
+
+/* Cuerpo de la Ficha (con scroll garantizado en PC y móvil) */
+#clientDetailModal .modal-content,
+#newClientModal .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 92vh !important;
+    overflow: hidden !important;
+}
+
+#modal-client-content {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+.pro-modal-header {
+    flex-shrink: 0;
+}
+
+.pro-modal-body {
+    padding: 14px 16px 26px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Barra de Acciones Principales Simétrica */
+.pro-primary-actions-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 10px;
+}
+
+.pro-btn-primary-action {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 14px;
+    height: 46px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
+    transition: transform 0.15s ease;
+}
+
+.pro-btn-primary-action .material-icons-round,
+.pro-btn-secondary-action .material-icons-round {
+    font-size: 18px;
+}
+
+.pro-btn-primary-action:active,
+.pro-btn-secondary-action:active {
+    transform: scale(0.97);
+}
+
+.pro-btn-secondary-action {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 14px;
+    height: 46px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.pro-btn-secondary-action .material-icons-round {
+    color: #0284c7;
+}
+
+.pro-btn-secondary-action:hover {
+    background: #f1f5f9;
+}
+
+/* Cajón desplegable de Visita */
+.pro-visit-drawer {
+    background: #ffffff;
+    border: 1.5px solid #bae6fd;
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+}
+
+.pro-clean-input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 13px;
+    font-family: inherit;
+    color: #0f172a;
+    background: #f8fafc;
+    margin-bottom: 8px;
+    outline: none;
+}
+
+.pro-clean-input:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+}
+
+.pro-btn-confirm-visit {
+    width: 100%;
+    background: #0f172a;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.pro-visit-status-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 3.5px solid #0284c7;
+    border-radius: 12px;
+    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #334155;
+}
+
+.pro-visit-status-bar .material-icons-round {
+    font-size: 17px;
+    color: #0284c7;
+    flex-shrink: 0;
+}
+
+.pro-visit-status-text {
+    line-height: 1.35;
+}
+
+.pro-visit-note-quote {
+    color: #64748b;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+/* Tarjetas de Sección Unificadas */
+.pro-section-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 14px 15px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.pro-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pro-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pro-section-title .material-icons-round {
+    font-size: 16px;
+    color: #0284c7;
+}
+
+.pro-comm-pref-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pro-comm-pref-chip:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* Filas de Contacto (Teléfono y Correo con la misma estética) */
+.pro-contact-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.pro-row-divider {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.pro-contact-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pro-contact-icon-box .material-icons-round {
+    font-size: 18px;
+}
+
+.pro-contact-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.pro-field-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+}
+
+.pro-contact-value-link {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    text-decoration: none;
+    letter-spacing: -0.2px;
+}
+
+.pro-email-value-link {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pro-field-empty {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.pro-field-text {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.35;
+}
+
+.pro-contact-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.pro-icon-action {
+    position: relative;
+    width: 44px;
+    height: 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pro-icon-action .material-icons-round {
+    font-size: 20px;
+}
+
+.pro-icon-action:active {
+    transform: scale(0.92);
+}
+
+.pro-action-call {
+    background: #f0f9ff;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+.pro-action-wa {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+
+.pro-action-mail {
+    background: #f8fafc;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+.pro-wa-b-tag {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    background: #059669;
+    color: #ffffff;
+    font-size: 8.5px;
+    font-weight: 900;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #ffffff;
+    line-height: 1;
+}
+
+.pro-contact-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Sección Ubicación */
+.pro-btn-gps-route {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 5px 11px;
+    font-size: 11.5px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.22);
+    transition: transform 0.15s ease;
+}
+
+.pro-btn-gps-route:active {
+    transform: scale(0.95);
+}
+
+.pro-location-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pro-location-subgrid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #f8fafc;
+}
+
+/* Sección Notas Permanentes */
+.pro-notes-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pro-mini-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pro-mini-pill-btn .material-icons-round {
+    font-size: 14px;
+}
+
+.pro-mini-pill-primary {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+
+.pro-notes-textarea {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 11px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #f8fafc;
+    color: #1e293b;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pro-notes-textarea:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+}
+
+.pro-notes-saved-msg {
+    font-size: 11px;
+    font-weight: 700;
+    color: #059669;
+    margin-top: 6px;
+}
+
+/* Sección Historial de Pedidos */
+.pro-count-badge {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.pro-history-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.pro-history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pro-history-row:last-child {
+    border-bottom: none;
+    padding-bottom: 2px;
+}
+
+.pro-history-info {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.pro-history-amount {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.pro-history-date {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.pro-empty-state {
+    text-align: center;
+    font-size: 12.5px;
+    color: #94a3b8;
+    font-weight: 600;
+    padding: 14px 0 6px;
+    margin: 0;
+}
+
+.pro-modal-footer {
+    margin-top: 4px;
+}

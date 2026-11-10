@@ -89,6 +89,22 @@ class DataManager {
             await this.db.bulkPut('departments', defaultDepts);
         }
 
+        // 4. Sincronizar Preferencias de Comunicación (WhatsApp y Correo) entre IndexedDB y localStorage
+        const storedCommPrefs = await this.db.get('config', 'comm_prefs');
+        if (storedCommPrefs) {
+            if (!localStorage.getItem('pref_whatsapp_app') && storedCommPrefs.pref_whatsapp_app) {
+                localStorage.setItem('pref_whatsapp_app', storedCommPrefs.pref_whatsapp_app);
+            }
+            if (!localStorage.getItem('pref_email_app') && storedCommPrefs.pref_email_app) {
+                localStorage.setItem('pref_email_app', storedCommPrefs.pref_email_app);
+            }
+            if (!localStorage.getItem('pref_work_email') && storedCommPrefs.pref_work_email) {
+                localStorage.setItem('pref_work_email', storedCommPrefs.pref_work_email);
+            }
+        } else {
+            await this.db.put('config', this._getCommPrefsRecord());
+        }
+
         return { created, year: currentYear };
     }
 
@@ -1359,7 +1375,33 @@ class DataManager {
         return history;
     }
 
+    _getCommPrefsRecord() {
+        return {
+            key: 'comm_prefs',
+            pref_whatsapp_app: localStorage.getItem('pref_whatsapp_app') || 'business',
+            pref_email_app: localStorage.getItem('pref_email_app') || 'default',
+            pref_work_email: localStorage.getItem('pref_work_email') || ''
+        };
+    }
+
+    _applyCommPrefsRecord(prefs) {
+        if (!prefs || typeof prefs !== 'object') return;
+        if (prefs.pref_whatsapp_app) {
+            localStorage.setItem('pref_whatsapp_app', prefs.pref_whatsapp_app);
+        }
+        if (prefs.pref_email_app) {
+            localStorage.setItem('pref_email_app', prefs.pref_email_app);
+        }
+        if (prefs.pref_work_email !== undefined) {
+            localStorage.setItem('pref_work_email', String(prefs.pref_work_email || '').trim());
+        }
+    }
+
     async exportFullBackup() {
+        // Sincronizar preferencias de WhatsApp y Correo en la tabla config antes de exportar
+        const commPrefs = this._getCommPrefsRecord();
+        await this.db.put('config', commPrefs);
+
         // Recolectar todos los datos de todas las tablas
         const clients = await this.db.getAll('clients');
         const orders = await this.db.getAll('orders');
@@ -1372,7 +1414,8 @@ class DataManager {
             clients,
             orders,
             departments,
-            config 
+            config,
+            comm_prefs: commPrefs
         };
 
         return backupData;
@@ -1410,15 +1453,25 @@ class DataManager {
             await this.db.bulkPut('departments', data.departments);
         }
 
-        // 4. Restaurar Configuración (Objetivos, Históricos, Ajustes)
+        // 4. Restaurar Configuración (Objetivos, Históricos, Ajustes, Preferencias WhatsApp/Mail)
         if (data.config) {
             if (Array.isArray(data.config)) {
                 for (const item of data.config) {
-                    if (item && item.key) await this.db.put('config', item);
+                    if (item && item.key) {
+                        await this.db.put('config', item);
+                        if (item.key === 'comm_prefs') {
+                            this._applyCommPrefsRecord(item);
+                        }
+                    }
                 }
             } else if (data.config.goals) {
                 await this.db.put('config', { key: 'goals', ...data.config.goals });
             }
+        }
+
+        if (data.comm_prefs) {
+            await this.db.put('config', { key: 'comm_prefs', ...data.comm_prefs });
+            this._applyCommPrefsRecord(data.comm_prefs);
         }
 
         // Compatibilidad con backups antiguos (claves fuera de config)
@@ -1456,16 +1509,18 @@ class DataManager {
                 XLSX.utils.book_append_sheet(wb, wsDepts, "Departamentos");
             }
 
-            // 3. Goal & History (Config)
-            // Flatten config into a key-value pair sheet or JSON string
+            // 3. Goal & History (Config) + Preferencias WhatsApp/Mail
             const goals = await this.db.get('config', 'goals');
             const salesHistory = await this.db.get('config', 'sales_history');
-            const invoiceHistory = await this.db.get('config', 'invoice_history'); // Also export Invoice History
+            const invoiceHistory = await this.db.get('config', 'invoice_history');
+            const commPrefs = this._getCommPrefsRecord();
+            await this.db.put('config', commPrefs);
 
             const configData = [
                 { key: 'goals', value: JSON.stringify(goals || {}) },
                 { key: 'sales_history', value: JSON.stringify(salesHistory || {}) },
-                { key: 'invoice_history', value: JSON.stringify(invoiceHistory || {}) }
+                { key: 'invoice_history', value: JSON.stringify(invoiceHistory || {}) },
+                { key: 'comm_prefs', value: JSON.stringify(commPrefs) }
             ];
             const wsConfig = XLSX.utils.json_to_sheet(configData);
             XLSX.utils.book_append_sheet(wb, wsConfig, "Config");
@@ -1506,11 +1561,14 @@ class DataManager {
             const goals = await this.db.get('config', 'goals');
             const salesHistory = await this.db.get('config', 'sales_history');
             const invoiceHistory = await this.db.get('config', 'invoice_history');
+            const commPrefs = this._getCommPrefsRecord();
+            await this.db.put('config', commPrefs);
 
             const configData = [
                 { key: 'goals', value: JSON.stringify(goals || {}) },
                 { key: 'sales_history', value: JSON.stringify(salesHistory || {}) },
-                { key: 'invoice_history', value: JSON.stringify(invoiceHistory || {}) }
+                { key: 'invoice_history', value: JSON.stringify(invoiceHistory || {}) },
+                { key: 'comm_prefs', value: JSON.stringify(commPrefs) }
             ];
             const wsConfig = XLSX.utils.json_to_sheet(configData);
             XLSX.utils.book_append_sheet(wb, wsConfig, "Config");
@@ -1630,12 +1688,11 @@ class DataManager {
                                     // Let's check if parsedVal has the key property or if we need to add it.
 
                                     if (row.key === 'goals' || row.key === 'sales_history' || row.key === 'invoice_history') {
-                                        // Reuse the key from the row to ensure consistency
-                                        // If parsedVal already has 'key', good. If not (unlikely if we exported standard way), we might need to add it.
-                                        // Actually in export we did: value: JSON.stringify(goals)
-                                        // 'goals' object from db.get('config', 'goals') ALREADY has { key: 'goals', ...rest }
-                                        // so JSON.parse(row.value) returns the full object with key.
                                         await this.db.put('config', parsedVal);
+                                    } else if (row.key === 'comm_prefs') {
+                                        const commRecord = { key: 'comm_prefs', ...parsedVal };
+                                        await this.db.put('config', commRecord);
+                                        this._applyCommPrefsRecord(commRecord);
                                     }
 
                                 } catch (err) {

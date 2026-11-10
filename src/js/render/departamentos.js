@@ -140,14 +140,14 @@ async function openDeptDetailModal(id) {
                     <span class="contact-label">Llamar</span>
                     <span class="contact-data">${dept.phone || '---'}</span>
                 </div>
-                <div class="btn-contact-action btn-whatsapp" onclick="window.open('https://wa.me/34${(dept.whatsapp || '').replace(/[^0-9]/g, '')}', '_blank')">
+                <div class="btn-contact-action btn-whatsapp" onclick="window.openAppWhatsApp('${(dept.whatsapp || '').replace(/[^0-9]/g, '')}')">
                     <span class="material-icons-round">chat</span>
                     <span class="contact-label">WhatsApp</span>
                     <span class="contact-data">${dept.whatsapp || '---'}</span>
                 </div>
             </div>
 
-            <div class="contact-email-premium" onclick="window.location.href='mailto:${dept.mail}'">
+            <div class="contact-email-premium" onclick="window.openAppEmail('${dept.mail || ''}')">
                 <div class="email-icon-wrapper">
                     <span class="material-icons-round">alternate_email</span>
                 </div>

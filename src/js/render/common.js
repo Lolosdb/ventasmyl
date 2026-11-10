@@ -18,8 +18,8 @@ function getCommonHeaderHtml(title, options = {}) {
     const extraAction = options.extraAction || '';
     return `
         <header class="header">
-            <div class="header-container flex justify-between items-center w-full" style="padding: 0 1.5rem;">
-                <div class="flex items-center gap-3">
+            <div class="header-container flex justify-between items-center w-full" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 1.25rem;">
+                <div class="flex items-center gap-3" style="min-width: 0;">
                     ${showBack ? `
                         <button class="icon-btn text-white" onclick="${backFn}">
                             <span class="material-icons-round">arrow_back</span>
@@ -27,7 +27,7 @@ function getCommonHeaderHtml(title, options = {}) {
                     ` : ''}
                     <h1 class="header-title">${title}</h1>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3" style="flex-shrink: 0;">
                     ${extraAction}
                     <button class="icon-btn text-white" onclick="openNavMenu()">
                         <span class="material-icons-round" style="font-size: 32px;">menu</span>
@@ -178,7 +178,7 @@ function toggleClearSearch(inputId, btnId) {
     const input = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
     if (input && btn) {
-        btn.style.display = input.value ? 'block' : 'none';
+        btn.style.display = (input.value && input.value.length > 0) ? 'inline-flex' : 'none';
     }
 }
 
@@ -194,6 +194,8 @@ function clearSearchField(inputId, btnId, callback = null) {
         if (callback) callback();
         else if (typeof window.filterPedidos === 'function' && inputId === 'searchPedidosInput') window.filterPedidos();
         else if (typeof window.filterClients === 'function' && inputId === 'clientSearchInput') window.filterClients('');
+        else if (typeof window.filterAlerts === 'function' && inputId === 'alertSearchInput') window.filterAlerts();
+        input.dispatchEvent(new Event('input', { bubbles: true }));
         input.focus();
     }
 }
@@ -521,8 +523,17 @@ window.toggleVoiceDictation = function(targetId, btnEl, onCompleteCallback = nul
         window._activeSpeechBtn = null;
     };
 
+    const isIconOnlyBtn = btnEl && (
+        btnEl.classList.contains('pro-search-mic-btn') ||
+        btnEl.dataset.iconOnly === 'true'
+    );
+
     if (btnEl) {
-        btnEl.innerHTML = '<span class="material-icons-round" style="font-size: 16px;">graphic_eq</span><span>Escuchando...</span>';
+        if (isIconOnlyBtn) {
+            btnEl.innerHTML = '<span class="material-icons-round">graphic_eq</span>';
+        } else {
+            btnEl.innerHTML = '<span class="material-icons-round" style="font-size: 16px;">graphic_eq</span><span>Escuchando...</span>';
+        }
         btnEl.style.background = '#fee2e2';
         btnEl.style.color = '#dc2626';
         btnEl.style.borderColor = '#fca5a5';
@@ -535,13 +546,34 @@ window.toggleVoiceDictation = function(targetId, btnEl, onCompleteCallback = nul
     recognition.onresult = (event) => {
         const transcript = event.results?.[0]?.[0]?.transcript || '';
         if (transcript.trim()) {
-            const cleanText = transcript.trim();
-            const capitalized = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
-            const currentVal = (targetEl.value || '').trim();
-            targetEl.value = currentVal
-                ? (currentVal.endsWith('.') || currentVal.endsWith(',') ? `${currentVal} ${capitalized}` : `${currentVal}. ${capitalized}`)
-                : capitalized;
+            const cleanText = transcript.trim().replace(/\.+$/, '');
+            const isTextarea = targetEl.tagName === 'TEXTAREA';
+
+            if (isTextarea) {
+                const capitalized = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+                const currentVal = (targetEl.value || '').trim();
+                targetEl.value = currentVal
+                    ? (currentVal.endsWith('.') || currentVal.endsWith(',') ? `${currentVal} ${capitalized}` : `${currentVal}. ${capitalized}`)
+                    : capitalized;
+            } else {
+                // En buscadores e inputs de una línea, escribir el texto limpio directamente
+                targetEl.value = cleanText;
+            }
+
             targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+            targetEl.dispatchEvent(new Event('keyup', { bubbles: true }));
+
+            if (targetId === 'clientSearchInput' && typeof window.filterClients === 'function') {
+                window.filterClients(targetEl.value);
+            } else if (targetId === 'searchPedidosInput' && typeof window.filterPedidos === 'function') {
+                window.filterPedidos();
+            } else if (targetId === 'alertSearchInput' && typeof window.filterAlerts === 'function') {
+                window.filterAlerts();
+            } else if (targetId === 'mapSearchInput') {
+                if (typeof window.toggleMapClearBtn === 'function') window.toggleMapClearBtn();
+                if (typeof window.searchLocation === 'function') window.searchLocation();
+            }
+
             if (typeof onCompleteCallback === 'function') {
                 onCompleteCallback(targetEl.value);
             }
@@ -590,19 +622,19 @@ window.openNearbyRadarModal = async function() {
     }
 
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 520px; width: 96%; max-height: 90vh; border-radius: 26px; overflow: hidden; padding: 0; background: #f8fafc; margin: auto;">
-            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; color: white;">
+        <div class="modal-content" style="max-width: 520px; width: 96%; max-height: 90vh; border-radius: 24px; overflow: hidden; padding: 0; background: #f8fafc; margin: auto;">
+            <div style="background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%); padding: 1.15rem 1.35rem; display: flex; justify-content: space-between; align-items: center; color: white;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(56, 189, 248, 0.2); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
-                        <span class="material-icons-round" style="font-size: 22px;">radar</span>
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; color: #ffffff;">
+                        <span class="material-icons-round" style="font-size: 21px;">my_location</span>
                     </div>
                     <div>
-                        <h2 style="font-size: 1.05rem; font-weight: 900; margin: 0; letter-spacing: -0.3px;">¿Quién tengo cerca ahora?</h2>
-                        <p id="radarSubtitleStatus" style="font-size: 11px; color: #94a3b8; margin: 2px 0 0; font-weight: 600;">Obteniendo tu posición GPS...</p>
+                        <h2 style="font-size: 1rem; font-weight: 800; margin: 0; letter-spacing: -0.2px; text-transform: uppercase;">Clientes Cerca de Mí</h2>
+                        <p id="radarSubtitleStatus" style="font-size: 11px; color: rgba(255,255,255,0.88); margin: 2px 0 0; font-weight: 600;">Obteniendo tu posición GPS...</p>
                     </div>
                 </div>
-                <button onclick="closeNearbyRadarModal()" style="background: rgba(255,255,255,0.12); border: none; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                    <span class="material-icons-round" style="font-size: 20px;">close</span>
+                <button onclick="closeNearbyRadarModal()" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.25); color: white; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 19px;">close</span>
                 </button>
             </div>
             <div id="nearbyRadarBody" style="padding: 1rem 1.15rem; overflow-y: auto; max-height: calc(90vh - 80px);">
@@ -629,14 +661,7 @@ window.openNearbyRadarModal = async function() {
         const orders = await dataManager.getOrders();
         const now = new Date();
 
-        const withDist = [];
-        clients.forEach(c => {
-            if (!c || !c.lat || !c.lng) return;
-            const lat = parseFloat(String(c.lat).replace(',', '.'));
-            const lng = parseFloat(String(c.lng).replace(',', '.'));
-            if (isNaN(lat) || isNaN(lng)) return;
-
-            const distKm = _calcRadarDistanceKm(userLat, userLng, lat, lng);
+        const buildClientRadarItem = (c, lat, lng, distKm) => {
             const cOrders = orders
                 .filter(o => dataManager.isOrderForClient(o, c))
                 .sort((a, b) => new Date(b.dateISO || b.date) - new Date(a.dateISO || a.date));
@@ -662,38 +687,109 @@ window.openNearbyRadarModal = async function() {
                 }
             }
 
-            withDist.push({
+            const locNorm = (typeof normalizeTextKey === 'function')
+                ? normalizeTextKey(c.location || '')
+                : String(c.location || '').trim().toLowerCase();
+
+            return {
                 client: c,
                 lat,
                 lng,
                 distKm,
+                locNorm,
                 lastOrderDays,
                 lastOrderAmount,
                 lastOrderDateStr,
                 lastVisitDays
-            });
+            };
+        };
+
+        const withDist = [];
+        clients.forEach(c => {
+            if (!c || !c.lat || !c.lng) return;
+            const lat = parseFloat(String(c.lat).replace(',', '.'));
+            const lng = parseFloat(String(c.lng).replace(',', '.'));
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const distKm = _calcRadarDistanceKm(userLat, userLng, lat, lng);
+            withDist.push(buildClientRadarItem(c, lat, lng, distKm));
         });
 
         withDist.sort((a, b) => a.distKm - b.distKm);
-        const top10 = withDist.slice(0, 10);
+
+        // 1. Tomamos los 10 clientes más cercanos como semilla
+        const seedTop = withDist.slice(0, 10);
+
+        // 2. Identificamos todas las poblaciones presentes en esos clientes cercanos
+        const includedCodes = new Set(seedTop.map(item => String(item.client.code)));
+        const nearbyLocations = new Set();
+        const locationMaxDist = new Map();
+
+        seedTop.forEach(item => {
+            if (item.locNorm) {
+                nearbyLocations.add(item.locNorm);
+                const prevMax = locationMaxDist.get(item.locNorm) || 0;
+                if (item.distKm > prevMax) locationMaxDist.set(item.locNorm, item.distKm);
+            }
+        });
+
+        // 3. Incluimos TODOS los clientes que pertenezcan a cualquiera de esas poblaciones cercanas
+        // (tanto si tienen GPS y estaban más allá del puesto 10, como si están en esa misma población)
+        const finalResults = [...seedTop];
+
+        withDist.forEach(item => {
+            const codeStr = String(item.client.code);
+            if (!includedCodes.has(codeStr) && item.locNorm && nearbyLocations.has(item.locNorm)) {
+                includedCodes.add(codeStr);
+                finalResults.push(item);
+            }
+        });
+
+        // También incluir clientes de esas mismas poblaciones aunque no tuvieran coordenadas GPS
+        clients.forEach(c => {
+            if (!c) return;
+            const codeStr = String(c.code);
+            if (includedCodes.has(codeStr)) return;
+            const locNorm = (typeof normalizeTextKey === 'function')
+                ? normalizeTextKey(c.location || '')
+                : String(c.location || '').trim().toLowerCase();
+            if (locNorm && nearbyLocations.has(locNorm)) {
+                includedCodes.add(codeStr);
+                const refDist = (locationMaxDist.get(locNorm) || 0) + 0.05;
+                finalResults.push(buildClientRadarItem(c, null, null, refDist));
+            }
+        });
+
+        // Ordenar por distancia para mantener el orden natural de cercanía
+        finalResults.sort((a, b) => a.distKm - b.distKm);
+
+        if (subtitle) {
+            const numTowns = nearbyLocations.size;
+            subtitle.textContent = isCached
+                ? `${finalResults.length} clientes cercanos (afinando GPS...)`
+                : `${finalResults.length} clientes en ${numTowns || 1} ${numTowns === 1 ? 'población cercana' : 'poblaciones cercanas'} (completas)`;
+        }
 
         const bodyEl = document.getElementById('nearbyRadarBody');
         if (!bodyEl) return;
 
-        if (top10.length === 0) {
+        if (finalResults.length === 0) {
             bodyEl.innerHTML = `<div style="text-align: center; padding: 3rem 1rem; color: #64748b; font-weight: 700;">No hay clientes con coordenadas GPS registradas.</div>`;
             return;
         }
 
-        bodyEl.innerHTML = `<div style="display: flex; flex-direction: column; gap: 10px;">` + top10.map((item, idx) => {
+        bodyEl.innerHTML = `<div style="display: flex; flex-direction: column; gap: 10px;">` + finalResults.map((item, idx) => {
             const c = item.client;
-            const distFormatted = item.distKm < 1
-                ? `${Math.round(item.distKm * 1000)} m`
-                : `${item.distKm.toFixed(1).replace('.', ',')} km`;
+            const hasCoords = item.lat !== null && item.lng !== null;
+            const distFormatted = !hasCoords
+                ? `Misma población`
+                : (item.distKm < 1
+                    ? `${Math.round(item.distKm * 1000)} m`
+                    : `${item.distKm.toFixed(1).replace('.', ',')} km`);
 
             let statusBadge = `<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 800;">🔵 Sin compras registradas</span>`;
             if (item.lastOrderDays !== null) {
-                const isRecent = item.lastOrderDays <= 35;
+                const isRecent = item.lastOrderDays <= 45;
                 statusBadge = isRecent
                     ? `<span style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 800;">🟢 Últ. pedido hace ${item.lastOrderDays}d (${item.lastOrderAmount} €)</span>`
                     : `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 800;">🔴 Hace ${item.lastOrderDays} días (${item.lastOrderAmount} €)</span>`;
@@ -737,7 +833,7 @@ window.openNearbyRadarModal = async function() {
                     ` : ''}
 
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9;">
-                        <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}', '_blank')" style="background: #16a34a; color: white; border: none; border-radius: 10px; padding: 7px 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        <button onclick="${hasCoords ? `window.open('https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}', '_blank')` : `window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('${String((c.address || '') + ' ' + (c.location || '')).replace(/'/g, "\\'")}'), '_blank')`}" style="background: #16a34a; color: white; border: none; border-radius: 10px; padding: 7px 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
                             <span class="material-icons-round" style="font-size: 15px;">near_me</span> IR
                         </button>
                         <button onclick="closeNearbyRadarModal(); window.openNewOrderForClient('${safeCode}')" style="background: #009ee3; color: white; border: none; border-radius: 10px; padding: 7px 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
@@ -798,7 +894,456 @@ window.closeNearbyRadarModal = function() {
     if (modal) modal.classList.remove('open');
 };
 
-// Exportar para uso global
+// ============================================================================
+// PREFERENCIAS DE COMUNICACIÓN: WHATSAPP BUSINESS Y CORREO ELECTRÓNICO
+// ============================================================================
+
+window.getWhatsAppPref = function() {
+    return localStorage.getItem('pref_whatsapp_app') || 'business'; // 'business' | 'personal' | 'ask'
+};
+
+window.syncCommPrefsToDb = function() {
+    try {
+        if (typeof dataManager !== 'undefined' && dataManager && dataManager.db) {
+            dataManager.db.put('config', {
+                key: 'comm_prefs',
+                pref_whatsapp_app: window.getWhatsAppPref(),
+                pref_email_app: window.getEmailPref(),
+                pref_work_email: window.getWorkEmailAddress()
+            });
+        }
+    } catch (e) {
+        console.warn('No se pudo sincronizar comm_prefs en IndexedDB:', e);
+    }
+};
+
+window.setWhatsAppPref = function(mode) {
+    localStorage.setItem('pref_whatsapp_app', mode);
+    window.syncCommPrefsToDb();
+};
+
+window.getEmailPref = function() {
+    return localStorage.getItem('pref_email_app') || 'default'; // 'default' | 'gmail' | 'outlook' | 'ask'
+};
+
+window.setEmailPref = function(mode) {
+    localStorage.setItem('pref_email_app', mode);
+    window.syncCommPrefsToDb();
+};
+
+window.getWorkEmailAddress = function() {
+    return localStorage.getItem('pref_work_email') || '';
+};
+
+window.setWorkEmailAddress = function(email) {
+    localStorage.setItem('pref_work_email', (email || '').trim());
+    window.syncCommPrefsToDb();
+};
+
+window.getWhatsAppPrefLabel = function() {
+    const pref = window.getWhatsAppPref();
+    if (pref === 'business') return 'WhatsApp Business';
+    if (pref === 'personal') return 'WhatsApp Personal';
+    return 'Preguntar al enviar';
+};
+
+window.getEmailPrefLabel = function() {
+    const pref = window.getEmailPref();
+    if (pref === 'gmail') return 'Gmail';
+    if (pref === 'outlook') return 'Outlook';
+    if (pref === 'ask') return 'Preguntar al enviar';
+    return 'App predeterminada';
+};
+
+window.openAppWhatsApp = function(phone = '', text = '', forcedMode = null) {
+    const cleanDigits = String(phone || '').replace(/[^0-9]/g, '');
+    let fullPhone = cleanDigits;
+    if (cleanDigits.length === 9) {
+        fullPhone = '34' + cleanDigits;
+    }
+
+    if (!fullPhone && !text) {
+        alert('No hay un número de teléfono válido registrado.');
+        return;
+    }
+
+    const mode = forcedMode || window.getWhatsAppPref();
+    if (mode === 'ask') {
+        window.openWhatsAppSelectorModal(fullPhone, text);
+        return;
+    }
+
+    const params = [];
+    if (fullPhone) params.push(`phone=${fullPhone}`);
+    if (text) params.push(`text=${encodeURIComponent(text)}`);
+    const queryString = params.join('&');
+
+    const fallbackUrl = fullPhone
+        ? `https://wa.me/${fullPhone}${text ? '?text=' + encodeURIComponent(text) : ''}`
+        : `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+    const isAndroid = /Android/i.test(navigator.userAgent || '');
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+    if (isAndroid) {
+        const pkg = (mode === 'personal') ? 'com.whatsapp' : 'com.whatsapp.w4b';
+        const intentUrl = `intent://send?${queryString}#Intent;scheme=whatsapp;package=${pkg};S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};end`;
+        window.location.href = intentUrl;
+        return;
+    }
+
+    if (isIOS && mode === 'business') {
+        window.location.href = `whatsapp-business://send?${queryString}`;
+        return;
+    }
+
+    window.open(fallbackUrl, '_blank');
+};
+
+window.openAppEmail = function(email = '', subject = '', body = '', forcedMode = null) {
+    const cleanEmail = String(email || '').trim();
+    if (!cleanEmail) {
+        alert('No hay una dirección de correo registrada.');
+        return;
+    }
+
+    const mode = forcedMode || window.getEmailPref();
+    if (mode === 'ask') {
+        window.openEmailSelectorModal(cleanEmail, subject, body);
+        return;
+    }
+
+    const workEmail = window.getWorkEmailAddress();
+    const queryParts = [];
+    if (subject) queryParts.push(`subject=${encodeURIComponent(subject)}`);
+    if (body) queryParts.push(`body=${encodeURIComponent(body)}`);
+    const mailtoUrl = `mailto:${cleanEmail}${queryParts.length ? '?' + queryParts.join('&') : ''}`;
+
+    const isAndroid = /Android/i.test(navigator.userAgent || '');
+
+    if (mode === 'gmail') {
+        if (isAndroid) {
+            const composeParams = [`to=${encodeURIComponent(cleanEmail)}`];
+            if (subject) composeParams.push(`subject=${encodeURIComponent(subject)}`);
+            if (body) composeParams.push(`body=${encodeURIComponent(body)}`);
+            const intentUrl = `intent://compose?${composeParams.join('&')}#Intent;scheme=mailto;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(mailtoUrl)};end`;
+            window.location.href = intentUrl;
+            return;
+        } else {
+            const gmailWeb = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cleanEmail)}${workEmail ? '&authuser=' + encodeURIComponent(workEmail) : ''}${subject ? '&su=' + encodeURIComponent(subject) : ''}${body ? '&body=' + encodeURIComponent(body) : ''}`;
+            window.open(gmailWeb, '_blank');
+            return;
+        }
+    }
+
+    if (mode === 'outlook' && isAndroid) {
+        const composeParams = [`to=${encodeURIComponent(cleanEmail)}`];
+        if (subject) composeParams.push(`subject=${encodeURIComponent(subject)}`);
+        if (body) composeParams.push(`body=${encodeURIComponent(body)}`);
+        const intentUrl = `intent://compose?${composeParams.join('&')}#Intent;scheme=mailto;package=com.microsoft.office.outlook;S.browser_fallback_url=${encodeURIComponent(mailtoUrl)};end`;
+        window.location.href = intentUrl;
+        return;
+    }
+
+    window.location.href = mailtoUrl;
+};
+
+window.openWhatsAppSelectorModal = function(fullPhone, text) {
+    let modal = document.getElementById('commSelectorModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'commSelectorModal';
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '2200';
+        modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('open'); };
+        document.body.appendChild(modal);
+    }
+
+    window._pendingWaPayload = { fullPhone, text };
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 380px !important; width: 92% !important; padding: 0; border-radius: 24px; overflow: hidden; background: #ffffff;">
+            <div style="padding: 1.25rem 1.5rem; background: #0f172a; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="material-icons-round" style="color: #10b981;">chat</span>
+                    <h3 style="margin: 0; font-size: 15px; font-weight: 800;">Elegir WhatsApp</h3>
+                </div>
+                <button onclick="document.getElementById('commSelectorModal').classList.remove('open')" style="background: rgba(255,255,255,0.1); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 18px;">close</span>
+                </button>
+            </div>
+            <div style="padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 10px;">
+                <p style="margin: 0 0 4px; font-size: 12.5px; color: #64748b; font-weight: 600;">¿Desde qué cuenta deseas enviar el mensaje?</p>
+                <button onclick="document.getElementById('commSelectorModal').classList.remove('open'); window.openAppWhatsApp(window._pendingWaPayload.fullPhone, window._pendingWaPayload.text, 'business')"
+                        style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 14px; border: 1.5px solid #10b981; background: #f0fdf4; color: #065f46; font-weight: 800; font-size: 13.5px; cursor: pointer;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <span class="material-icons-round" style="color: #059669;">storefront</span>
+                        <span>WhatsApp Business (Trabajo)</span>
+                    </span>
+                    <span class="material-icons-round" style="font-size: 18px;">chevron_right</span>
+                </button>
+                <button onclick="document.getElementById('commSelectorModal').classList.remove('open'); window.openAppWhatsApp(window._pendingWaPayload.fullPhone, window._pendingWaPayload.text, 'personal')"
+                        style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc; color: #334155; font-weight: 700; font-size: 13.5px; cursor: pointer;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <span class="material-icons-round" style="color: #64748b;">person</span>
+                        <span>WhatsApp Personal</span>
+                    </span>
+                    <span class="material-icons-round" style="font-size: 18px; color: #94a3b8;">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('open');
+};
+
+window.openEmailSelectorModal = function(email, subject, body) {
+    let modal = document.getElementById('commSelectorModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'commSelectorModal';
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '2200';
+        modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('open'); };
+        document.body.appendChild(modal);
+    }
+
+    window._pendingEmailPayload = { email, subject, body };
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 380px !important; width: 92% !important; padding: 0; border-radius: 24px; overflow: hidden; background: #ffffff;">
+            <div style="padding: 1.25rem 1.5rem; background: #0f172a; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="material-icons-round" style="color: #38bdf8;">mail</span>
+                    <h3 style="margin: 0; font-size: 15px; font-weight: 800;">Elegir aplicación de correo</h3>
+                </div>
+                <button onclick="document.getElementById('commSelectorModal').classList.remove('open')" style="background: rgba(255,255,255,0.1); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 18px;">close</span>
+                </button>
+            </div>
+            <div style="padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 10px;">
+                <p style="margin: 0 0 4px; font-size: 12.5px; color: #64748b; font-weight: 600;">Destinatario: <strong>${email}</strong></p>
+                <button onclick="document.getElementById('commSelectorModal').classList.remove('open'); window.openAppEmail(window._pendingEmailPayload.email, window._pendingEmailPayload.subject, window._pendingEmailPayload.body, 'gmail')"
+                        style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-radius: 14px; border: 1.5px solid #bae6fd; background: #f0f9ff; color: #0369a1; font-weight: 800; font-size: 13.5px; cursor: pointer;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <span class="material-icons-round" style="color: #0284c7;">mail</span>
+                        <span>Gmail</span>
+                    </span>
+                    <span class="material-icons-round" style="font-size: 18px;">chevron_right</span>
+                </button>
+                <button onclick="document.getElementById('commSelectorModal').classList.remove('open'); window.openAppEmail(window._pendingEmailPayload.email, window._pendingEmailPayload.subject, window._pendingEmailPayload.body, 'outlook')"
+                        style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc; color: #1e293b; font-weight: 700; font-size: 13.5px; cursor: pointer;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <span class="material-icons-round" style="color: #2563eb;">business_center</span>
+                        <span>Microsoft Outlook</span>
+                    </span>
+                    <span class="material-icons-round" style="font-size: 18px; color: #94a3b8;">chevron_right</span>
+                </button>
+                <button onclick="document.getElementById('commSelectorModal').classList.remove('open'); window.openAppEmail(window._pendingEmailPayload.email, window._pendingEmailPayload.subject, window._pendingEmailPayload.body, 'default')"
+                        style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-radius: 14px; border: 1px solid #e2e8f0; background: #ffffff; color: #475569; font-weight: 700; font-size: 13.5px; cursor: pointer;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <span class="material-icons-round" style="color: #64748b;">forward_to_inbox</span>
+                        <span>App de correo predeterminada</span>
+                    </span>
+                    <span class="material-icons-round" style="font-size: 18px; color: #94a3b8;">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('open');
+};
+
+window.openCommPrefsModal = function(clientCodeToRefresh = null) {
+    let modal = document.getElementById('commPrefsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'commPrefsModal';
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '2100';
+        modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('open'); };
+        document.body.appendChild(modal);
+    }
+
+    const currentWa = window.getWhatsAppPref();
+    const currentEmail = window.getEmailPref();
+    const currentWorkEmail = window.getWorkEmailAddress();
+    const safeClientCode = clientCodeToRefresh ? String(clientCodeToRefresh).replace(/'/g, "\\'") : '';
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 440px !important; width: 93% !important; padding: 0; border-radius: 24px; overflow: hidden; background: #ffffff;">
+            <div style="padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="material-icons-round" style="color: #38bdf8; font-size: 22px;">tune</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 15px; font-weight: 800;">Canales de Comunicación</h3>
+                        <p style="margin: 2px 0 0; font-size: 11px; color: #94a3b8; font-weight: 500;">Configura desde dónde enviar WhatsApp y correos</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('commPrefsModal').classList.remove('open')" style="background: rgba(255,255,255,0.12); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 18px;">close</span>
+                </button>
+            </div>
+            <div style="padding: 1.35rem 1.5rem; display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px;">
+                        <span class="material-icons-round" style="font-size: 16px; color: #10b981;">chat</span>
+                        <span>Aplicación de WhatsApp al pulsar enviar</span>
+                    </label>
+                    <select id="modalPrefWaSelect" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #f8fafc; font-size: 13.5px; font-weight: 700; color: #0f172a; outline: none;">
+                        <option value="business" ${currentWa === 'business' ? 'selected' : ''}>WhatsApp Business (Trabajo - Recomendado)</option>
+                        <option value="personal" ${currentWa === 'personal' ? 'selected' : ''}>WhatsApp Personal</option>
+                        <option value="ask" ${currentWa === 'ask' ? 'selected' : ''}>Preguntar siempre antes de abrir</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px;">
+                        <span class="material-icons-round" style="font-size: 16px; color: #0284c7;">mail</span>
+                        <span>Aplicación de Correo Electrónico</span>
+                    </label>
+                    <select id="modalPrefEmailSelect" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #f8fafc; font-size: 13.5px; font-weight: 700; color: #0f172a; outline: none;">
+                        <option value="default" ${currentEmail === 'default' ? 'selected' : ''}>App de correo predeterminada</option>
+                        <option value="gmail" ${currentEmail === 'gmail' ? 'selected' : ''}>Abrir siempre en Gmail</option>
+                        <option value="outlook" ${currentEmail === 'outlook' ? 'selected' : ''}>Abrir siempre en Microsoft Outlook</option>
+                        <option value="ask" ${currentEmail === 'ask' ? 'selected' : ''}>Preguntar siempre antes de abrir</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 10.5px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px;">
+                        Tu Correo de Trabajo (Opcional, para Gmail en Web/PC)
+                    </label>
+                    <input type="email" id="modalPrefWorkEmailInput" value="${currentWorkEmail.replace(/"/g, '&quot;')}" placeholder="Ej: tu.correo@empresa.com"
+                           style="width: 100%; padding: 11px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #f8fafc; font-size: 13px; font-weight: 600; color: #0f172a; outline: none;">
+                </div>
+
+                <button type="button" onclick="window.saveCommPrefsFromModal('${safeClientCode}')"
+                        style="width: 100%; margin-top: 4px; padding: 13px; border-radius: 14px; border: none; background: #0284c7; color: white; font-size: 13.5px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+                    <span class="material-icons-round" style="font-size: 18px;">check_circle</span>
+                    <span>Guardar Preferencias</span>
+                </button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('open');
+};
+
+window.saveCommPrefsFromModal = function(clientCodeToRefresh = '') {
+    const waSelect = document.getElementById('modalPrefWaSelect');
+    const emailSelect = document.getElementById('modalPrefEmailSelect');
+    const workEmailInput = document.getElementById('modalPrefWorkEmailInput');
+
+    if (waSelect) window.setWhatsAppPref(waSelect.value);
+    if (emailSelect) window.setEmailPref(emailSelect.value);
+    if (workEmailInput) window.setWorkEmailAddress(workEmailInput.value);
+
+    const modal = document.getElementById('commPrefsModal');
+    if (modal) modal.classList.remove('open');
+
+    if (clientCodeToRefresh && typeof window.openClientDetailModal === 'function') {
+        window.openClientDetailModal(clientCodeToRefresh);
+    } else if (window.currentView === 'ajustes' && typeof window.renderAjustes === 'function') {
+        window.renderAjustes(true);
+    }
+};
+
+// ============================================================================
+// BOTÓN 'X' UNIVERSAL DE BORRADO RÁPIDO PARA TODOS LOS CUADROS DE TEXTO
+// ============================================================================
+
+window.enhanceClearableInputs = function(root = document) {
+    if (!root || !root.querySelectorAll) return;
+    const candidates = root.querySelectorAll(
+        'input[type="text"], input[type="tel"], input[type="email"], input[type="number"], input[type="search"], textarea'
+    );
+
+    candidates.forEach(el => {
+        if (el.dataset.clearEnhanced === 'true') {
+            if (el._syncClearBtn) el._syncClearBtn();
+            return;
+        }
+        if (el.readOnly || el.disabled) return;
+        if (el.id === 'orderId' || el.id === 'rankSearch') return;
+        if (
+            el.closest('.search-container') ||
+            el.closest('.pro-search-bar') ||
+            el.closest('.client-search-wrapper') ||
+            el.closest('.trim-input-group') ||
+            el.closest('.order-input-wrapper')
+        ) {
+            return;
+        }
+
+        el.dataset.clearEnhanced = 'true';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pro-clearable-wrapper';
+        const isTextarea = el.tagName === 'TEXTAREA';
+        if (isTextarea) wrapper.classList.add('is-textarea');
+
+        // Conservar margen inferior si lo tenía el input directo
+        const computedMb = el.style.marginBottom;
+        if (computedMb) {
+            wrapper.style.marginBottom = computedMb;
+            el.style.marginBottom = '0';
+        }
+
+        const parent = el.parentNode;
+        if (!parent) return;
+        parent.insertBefore(wrapper, el);
+        wrapper.appendChild(el);
+
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'pro-input-clear-x';
+        clearBtn.title = 'Borrar texto';
+        clearBtn.tabIndex = -1;
+        clearBtn.innerHTML = '<span class="material-icons-round">close</span>';
+        wrapper.appendChild(clearBtn);
+
+        const syncVisibility = () => {
+            const hasVal = el.value && String(el.value).length > 0;
+            clearBtn.style.display = hasVal ? 'inline-flex' : 'none';
+        };
+
+        el._syncClearBtn = syncVisibility;
+        el.addEventListener('input', syncVisibility);
+        el.addEventListener('focus', syncVisibility);
+        el.addEventListener('change', syncVisibility);
+
+        clearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            el.value = '';
+            syncVisibility();
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.focus();
+        });
+
+        syncVisibility();
+    });
+};
+
+if (typeof document !== 'undefined') {
+    const startClearableObserver = () => {
+        window.enhanceClearableInputs(document);
+        const obs = new MutationObserver(() => {
+            window.enhanceClearableInputs(document);
+        });
+        if (document.body) {
+            obs.observe(document.body, { childList: true, subtree: true });
+        }
+        document.addEventListener('focusin', (e) => {
+            if (e.target && e.target._syncClearBtn) e.target._syncClearBtn();
+        });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startClearableObserver);
+    } else {
+        startClearableObserver();
+    }
+}
 
 
 

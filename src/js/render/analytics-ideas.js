@@ -737,7 +737,7 @@ async function generateIdeasPlan() {
                                             <a href="tel:${cleanPhone}" class="ideas-action-icon ideas-call-btn" title="Llamar">
                                                 <span class="material-icons-round">call</span>
                                             </a>
-                                            <a href="https://wa.me/34${cleanPhone}" target="_blank" class="ideas-action-icon ideas-wa-btn" title="WhatsApp">
+                                            <a href="javascript:void(0)" onclick="window.openAppWhatsApp('${cleanPhone}')" class="ideas-action-icon ideas-wa-btn" title="WhatsApp">
                                                 <span class="material-icons-round">chat</span>
                                             </a>
                                             ` : ''}
@@ -799,8 +799,7 @@ function shareIdeasDayRoute(dayNumber) {
         text += `\n${idx + 1}. *${c.name}*${locStr}\n   💡 ${c.reason}${phoneStr}\n`;
     });
 
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    window.openAppWhatsApp('', text);
 }
 
 window.renderIdeas = renderIdeas;

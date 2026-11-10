@@ -131,7 +131,55 @@ async function renderAjustes(isBack = false) {
         </div>
     `;
 
-    // SECCIÓN 3: GESTIÓN DE DATOS Y SISTEMA
+    // SECCIÓN 3: CANALES DE COMUNICACIÓN (WHATSAPP Y CORREO)
+    const currentWaPref = window.getWhatsAppPref ? window.getWhatsAppPref() : 'business';
+    const currentEmailPref = window.getEmailPref ? window.getEmailPref() : 'default';
+    const currentWorkEmail = window.getWorkEmailAddress ? window.getWorkEmailAddress() : '';
+
+    contentHtml += `<span class="ajustes-section-label">Canales de Comunicación</span>`;
+
+    contentHtml += `
+        <div class="ajustes-card">
+            <div class="ajustes-header">
+                <div class="ajustes-icon-box bg-green-lite">
+                    <span class="material-icons-round">chat</span>
+                </div>
+                <div>
+                    <h3 class="ajustes-title">WhatsApp y Correo de Trabajo</h3>
+                    <p class="ajustes-subtitle">Elige desde qué aplicación enviar mensajes a clientes y equipo.</p>
+                </div>
+            </div>
+
+            <div class="premium-input-card" style="margin-bottom: 12px;">
+                <label class="premium-input-label">Aplicación de WhatsApp</label>
+                <select class="url-input" style="cursor: pointer;" onchange="window.setWhatsAppPref(this.value)">
+                    <option value="business" ${currentWaPref === 'business' ? 'selected' : ''}>WhatsApp Business (Trabajo - Por defecto)</option>
+                    <option value="personal" ${currentWaPref === 'personal' ? 'selected' : ''}>WhatsApp Personal</option>
+                    <option value="ask" ${currentWaPref === 'ask' ? 'selected' : ''}>Preguntar siempre antes de abrir</option>
+                </select>
+            </div>
+
+            <div class="premium-input-card" style="margin-bottom: 12px;">
+                <label class="premium-input-label">Aplicación de Correo Electrónico</label>
+                <select class="url-input" style="cursor: pointer;" onchange="window.setEmailPref(this.value)">
+                    <option value="default" ${currentEmailPref === 'default' ? 'selected' : ''}>App de correo predeterminada</option>
+                    <option value="gmail" ${currentEmailPref === 'gmail' ? 'selected' : ''}>Abrir directamente en Gmail</option>
+                    <option value="outlook" ${currentEmailPref === 'outlook' ? 'selected' : ''}>Abrir directamente en Microsoft Outlook</option>
+                    <option value="ask" ${currentEmailPref === 'ask' ? 'selected' : ''}>Preguntar siempre antes de abrir</option>
+                </select>
+            </div>
+
+            <div class="premium-input-card">
+                <label class="premium-input-label">Tu Correo de Trabajo (Opcional)</label>
+                <input type="email" class="url-input"
+                       value="${currentWorkEmail.replace(/"/g, '&quot;')}"
+                       placeholder="Ej: comercial@tuempresa.com"
+                       onchange="window.setWorkEmailAddress(this.value)">
+            </div>
+        </div>
+    `;
+
+    // SECCIÓN 4: GESTIÓN DE DATOS Y SISTEMA
     contentHtml += `<span class="ajustes-section-label">Sistema y Datos</span>`;
     
     contentHtml += `
