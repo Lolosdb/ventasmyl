@@ -2,166 +2,123 @@
  * Lógica de Sistema, Ajustes, Backups e Información
  */
 
-// --- AJUSTES Y SISTEMA (REDiseño PREMIUM) ---
-// --- AJUSTES Y SISTEMA (REDiseño PREMIUM) ---
+// --- AJUSTES Y BACKUPS (DISEÑO EJECUTIVO UNIFICADO) ---
 async function renderAjustes(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('ajustes', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Backups', { showBack: true });
 
     const currentUrl = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
-    const lastBackup = localStorage.getItem('last_auto_backup_str') || 'Sin registros';
+    const lastBackup = localStorage.getItem('last_auto_backup_str') || 'Sin registros recientes';
     const orders = await dataManager.getOrders();
+    const clients = await dataManager.getClients();
     const salesHistory = await dataManager.getSalesHistory();
-    const configuredYears = Object.keys(salesHistory).sort((a,b) => a - b);
+    const configuredYears = Object.keys(salesHistory).sort((a, b) => a - b);
+    const currentYearStr = String(new Date().getFullYear());
+
+    const currentWaPref = window.getWhatsAppPref ? window.getWhatsAppPref() : 'business';
+    const currentEmailPref = window.getEmailPref ? window.getEmailPref() : 'default';
+    const currentWorkEmail = window.getWorkEmailAddress ? window.getWorkEmailAddress() : '';
 
     let contentHtml = `<main class="ajustes-container fade-in-up">`;
-    
-    contentHtml += `
-        <p class="text-sm text-slate-500 font-bold mb-8 px-2 leading-relaxed">
-            Gestiona la seguridad de tus datos y la conectividad con la nube.
-        </p>
-    `;
 
-    // SECCIÓN 1: SEGURIDAD Y COPIAS
-    contentHtml += `<span class="ajustes-section-label">Seguridad y Copias</span>`;
-    
-    // Card Nube
+    // 1. COPIA DE SEGURIDAD EN LA NUBE (GOOGLE DRIVE)
     contentHtml += `
-        <div class="ajustes-card">
-            <div class="ajustes-header">
-                <div class="ajustes-icon-box bg-purple-lite">
-                    <span class="material-icons-round">cloud_done</span>
-                </div>
-                <div>
-                    <h3 class="ajustes-title">Copia en la Nube</h3>
-                    <p class="ajustes-subtitle">Sincroniza tus datos con Google Drive.</p>
+        <section class="sys-pro-card">
+            <div class="sys-card-head">
+                <div class="sys-card-head-left">
+                    <div class="sys-icon-box">
+                        <span class="material-icons-round">cloud_done</span>
+                    </div>
+                    <div>
+                        <h3 class="sys-card-title">Copia en la Nube (Google Drive)</h3>
+                        <p class="sys-card-subtitle">${orders.length} pedidos · ${clients.length} clientes sincronizados</p>
+                    </div>
                 </div>
             </div>
-            
-            <div class="btn-grid">
-                <button class="btn-ajuste btn-nube-primary" onclick="initiateDriveBackup()">
+
+            <div class="sys-btn-grid-2">
+                <button type="button" class="sys-btn-primary" onclick="initiateDriveBackup()">
                     <span class="material-icons-round">cloud_upload</span>
                     <span>Guardar Ahora</span>
                 </button>
-                <button class="btn-ajuste btn-nube-secondary" onclick="openBackupsModal()">
+                <button type="button" class="sys-btn-secondary" onclick="openBackupsModal()">
                     <span class="material-icons-round">history</span>
                     <span>Ver Historial</span>
                 </button>
             </div>
 
-            <div class="status-box-lite">
-                <span class="material-icons-round">schedule</span>
-                <p>Auto-Backup L-V 20:30h<br><strong>Última:</strong> ${lastBackup}</p>
+            <div class="sys-info-strip">
+                <div class="sys-info-strip-left">
+                    <span class="material-icons-round">schedule</span>
+                    <span>Auto-Backup L-V (20:30h)</span>
+                </div>
+                <span class="sys-info-strip-badge">Última: ${lastBackup}</span>
             </div>
-        </div>
+        </section>
     `;
 
-    // Card Local
+    // 2. COPIA EN ARCHIVO EXCEL (.XLSX)
     contentHtml += `
-        <div class="ajustes-card">
-            <div class="ajustes-header">
-                <div class="ajustes-icon-box bg-blue-lite">
-                    <span class="material-icons-round">inventory_2</span>
-                </div>
-                <div>
-                    <h3 class="ajustes-title">Archivo Local (Excel)</h3>
-                    <p class="ajustes-subtitle">Exporta o importa tus datos manualmente.</p>
+        <section class="sys-pro-card">
+            <div class="sys-card-head">
+                <div class="sys-card-head-left">
+                    <div class="sys-icon-box">
+                        <span class="material-icons-round">table_view</span>
+                    </div>
+                    <div>
+                        <h3 class="sys-card-title">Copia Completa en Excel (.XLSX)</h3>
+                        <p class="sys-card-subtitle">Descarga, importa o sube un archivo Excel con todas las tablas.</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="btn-grid" style="margin-bottom: 12px;">
-                <button class="btn-ajuste btn-local-primary" onclick="handleExcelExport()">
+            <div class="sys-btn-grid-2">
+                <button type="button" class="sys-btn-primary" onclick="handleExcelExport()">
                     <span class="material-icons-round">file_download</span>
-                    <span>Descargar</span>
+                    <span>Descargar Excel</span>
                 </button>
-                <button class="btn-ajuste btn-local-secondary" onclick="document.getElementById('excelBackupInput').click()">
+                <button type="button" class="sys-btn-secondary" onclick="document.getElementById('excelBackupInput').click()">
                     <span class="material-icons-round">file_upload</span>
-                    <span>Importar</span>
-                </button>
-            </div>
-            <div class="btn-grid">
-                <button class="btn-ajuste btn-nube-primary" onclick="handleExcelDriveExport()">
-                    <span class="material-icons-round">cloud_upload</span>
-                    <span>Subir Excel a Drive</span>
-                </button>
-                <input type="file" id="excelBackupInput" style="display:none;" onchange="handleExcelImport(this)">
-            </div>
-        </div>
-    `;
-
-    // SECCIÓN 2: CONECTIVIDAD CLOUD
-    contentHtml += `<span class="ajustes-section-label">Conectividad Cloud</span>`;
-    
-    contentHtml += `
-        <div class="ajustes-card">
-            <div class="ajustes-header">
-                <div class="ajustes-icon-box bg-rose-lite">
-                    <span class="material-icons-round">settings_remote</span>
-                </div>
-                <div>
-                    <h3 class="ajustes-title">Configuración del Script</h3>
-                    <p class="ajustes-subtitle">Enlace técnico con Google Apps Script.</p>
-                </div>
-            </div>
-
-            <div class="premium-input-card">
-                <label class="premium-input-label">URL del Servidor</label>
-                <input type="text" id="scriptUrlInput" class="url-input" 
-                       value="${currentUrl}" 
-                       placeholder="https://script.google.com/..."
-                       onchange="updateScriptUrl(this.value)">
-            </div>
-
-            <div class="conn-footer">
-                <div id="syncStatus" class="sync-status-indicator" style="color: #64748b;">
-                    <span class="material-icons-round" style="font-size: 18px;">sensors</span>
-                    <span>Estado: Desconocido</span>
-                </div>
-                <button class="btn-test-conn" onclick="testConnection()">
-                    <span class="material-icons-round" style="font-size: 16px;">refresh</span>
-                    Probar enlace
+                    <span>Importar Excel</span>
                 </button>
             </div>
 
-            <button class="btn-force-sync" onclick="initiateDriveBackup()">
-                <span class="material-icons-round">sync</span>
-                <span>Sincronizar todo ahora (${orders.length})</span>
+            <button type="button" class="sys-btn-soft" onclick="handleExcelDriveExport()">
+                <span class="material-icons-round">cloud_upload</span>
+                <span>Guardar Copia Excel en Google Drive</span>
             </button>
-        </div>
+            <input type="file" id="excelBackupInput" accept=".xlsx,.xls" style="display:none;" onchange="handleExcelImport(this)">
+        </section>
     `;
 
-    // SECCIÓN 3: CANALES DE COMUNICACIÓN (WHATSAPP Y CORREO)
-    const currentWaPref = window.getWhatsAppPref ? window.getWhatsAppPref() : 'business';
-    const currentEmailPref = window.getEmailPref ? window.getEmailPref() : 'default';
-    const currentWorkEmail = window.getWorkEmailAddress ? window.getWorkEmailAddress() : '';
-
-    contentHtml += `<span class="ajustes-section-label">Canales de Comunicación</span>`;
-
+    // 3. CANALES DE COMUNICACIÓN (WHATSAPP BUSINESS Y CORREO)
     contentHtml += `
-        <div class="ajustes-card">
-            <div class="ajustes-header">
-                <div class="ajustes-icon-box bg-green-lite">
-                    <span class="material-icons-round">chat</span>
-                </div>
-                <div>
-                    <h3 class="ajustes-title">WhatsApp y Correo de Trabajo</h3>
-                    <p class="ajustes-subtitle">Elige desde qué aplicación enviar mensajes a clientes y equipo.</p>
+        <section class="sys-pro-card">
+            <div class="sys-card-head">
+                <div class="sys-card-head-left">
+                    <div class="sys-icon-box">
+                        <span class="material-icons-round">forum</span>
+                    </div>
+                    <div>
+                        <h3 class="sys-card-title">WhatsApp y Correo de Trabajo</h3>
+                        <p class="sys-card-subtitle">Elige desde qué aplicación enviar mensajes a clientes y equipo.</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="premium-input-card" style="margin-bottom: 12px;">
-                <label class="premium-input-label">Aplicación de WhatsApp</label>
-                <select class="url-input" style="cursor: pointer;" onchange="window.setWhatsAppPref(this.value)">
+            <div class="sys-field-group">
+                <label class="sys-field-label">Aplicación de WhatsApp</label>
+                <select class="sys-select-control" style="cursor: pointer;" onchange="window.setWhatsAppPref(this.value)">
                     <option value="business" ${currentWaPref === 'business' ? 'selected' : ''}>WhatsApp Business (Trabajo - Por defecto)</option>
                     <option value="personal" ${currentWaPref === 'personal' ? 'selected' : ''}>WhatsApp Personal</option>
                     <option value="ask" ${currentWaPref === 'ask' ? 'selected' : ''}>Preguntar siempre antes de abrir</option>
                 </select>
             </div>
 
-            <div class="premium-input-card" style="margin-bottom: 12px;">
-                <label class="premium-input-label">Aplicación de Correo Electrónico</label>
-                <select class="url-input" style="cursor: pointer;" onchange="window.setEmailPref(this.value)">
+            <div class="sys-field-group">
+                <label class="sys-field-label">Aplicación de Correo Electrónico</label>
+                <select class="sys-select-control" style="cursor: pointer;" onchange="window.setEmailPref(this.value)">
                     <option value="default" ${currentEmailPref === 'default' ? 'selected' : ''}>App de correo predeterminada</option>
                     <option value="gmail" ${currentEmailPref === 'gmail' ? 'selected' : ''}>Abrir directamente en Gmail</option>
                     <option value="outlook" ${currentEmailPref === 'outlook' ? 'selected' : ''}>Abrir directamente en Microsoft Outlook</option>
@@ -169,58 +126,81 @@ async function renderAjustes(isBack = false) {
                 </select>
             </div>
 
-            <div class="premium-input-card">
-                <label class="premium-input-label">Tu Correo de Trabajo (Opcional)</label>
-                <input type="email" class="url-input"
+            <div class="sys-field-group">
+                <label class="sys-field-label">Tu Correo de Trabajo (Opcional)</label>
+                <input type="email" class="sys-input-control"
                        value="${currentWorkEmail.replace(/"/g, '&quot;')}"
                        placeholder="Ej: comercial@tuempresa.com"
                        onchange="window.setWorkEmailAddress(this.value)">
             </div>
-        </div>
+        </section>
     `;
 
-    // SECCIÓN 4: GESTIÓN DE DATOS Y SISTEMA
-    contentHtml += `<span class="ajustes-section-label">Sistema y Datos</span>`;
-    
+    // 4. CONECTIVIDAD CON GOOGLE APPS SCRIPT
     contentHtml += `
-        <div class="ajustes-card">
-            <div class="integrated-header">
-                <div class="flex items-center gap-3">
-                    <div class="ajustes-icon-box bg-green-lite">
-                        <span class="material-icons-round">calendar_today</span>
+        <section class="sys-pro-card">
+            <div class="sys-card-head">
+                <div class="sys-card-head-left">
+                    <div class="sys-icon-box">
+                        <span class="material-icons-round">cloud_sync</span>
                     </div>
-                    <h3 class="ajustes-title">Gestión de Años</h3>
+                    <div>
+                        <h3 class="sys-card-title">Conexión con Servidor Cloud</h3>
+                        <p class="sys-card-subtitle">Enlace técnico con Google Apps Script para sincronización.</p>
+                    </div>
                 </div>
-                <button class="btn-add-action" onclick="openManagementYearsModal()">
-                    <span class="material-icons-round" style="font-size: 16px;">add</span>
-                    Añadir
+            </div>
+
+            <div class="sys-field-group">
+                <label class="sys-field-label">URL del Servidor</label>
+                <input type="text" id="scriptUrlInput" class="sys-input-control" 
+                       value="${currentUrl}" 
+                       placeholder="https://script.google.com/..."
+                       onchange="updateScriptUrl(this.value)">
+            </div>
+
+            <div class="sys-conn-bar">
+                <div id="syncStatus" class="sync-status-indicator" style="color: #64748b;">
+                    <span class="material-icons-round" style="font-size: 17px;">sensors</span>
+                    <span>Estado: Comprobando...</span>
+                </div>
+                <button type="button" class="btn-test-conn" onclick="testConnection()">
+                    <span class="material-icons-round" style="font-size: 15px;">refresh</span>
+                    <span>Probar enlace</span>
                 </button>
             </div>
-            
-            <p class="text-[11px] font-bold text-slate-400 mb-3 ml-1">AÑOS ACTIVOS EN TABLAS:</p>
-            <div class="years-pill-cloud">
-                ${configuredYears.map(y => `<span class="pill-year">${y}</span>`).join('')}
-            </div>
-        </div>
+        </section>
     `;
 
-    // Banner Alerta
+    // 5. GESTIÓN DE AÑOS COMERCIALES
     contentHtml += `
-        <div class="ajustes-banner-alert">
-            <div class="alert-icon-box">
-                <span class="material-icons-round">security</span>
+        <section class="sys-pro-card">
+            <div class="sys-card-head">
+                <div class="sys-card-head-left">
+                    <div class="sys-icon-box">
+                        <span class="material-icons-round">date_range</span>
+                    </div>
+                    <div>
+                        <h3 class="sys-card-title">Gestión de Años</h3>
+                        <p class="sys-card-subtitle">Ejercicios activos en tus tablas de ventas y objetivos.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-add-year-pro" onclick="openManagementYearsModal()">
+                    <span class="material-icons-round" style="font-size: 16px;">add</span>
+                    <span>Añadir Año</span>
+                </button>
             </div>
-            <div class="alert-content">
-                <p>Protección de Datos: Realiza copias regularmente.</p>
-                <p style="opacity: 0.7; font-weight: 500;">Los cambios en el historial son permanentes.</p>
+
+            <div class="years-pill-cloud">
+                ${configuredYears.map(y => `<span class="pill-year ${String(y) === currentYearStr ? 'is-current-year' : ''}">${y}</span>`).join('')}
             </div>
-        </div>
+        </section>
     `;
 
-    // Versión
+    // Pie de versión
     contentHtml += `
         <div class="app-version-footer">
-            <p>App Ventas v5.0 • marzo 2026</p>
+            <p>App Ventas · Sistema de Seguridad y Sincronización Cloud</p>
         </div>
     `;
 
@@ -239,12 +219,25 @@ async function renderAjustes(isBack = false) {
 // --- LOGICA DE // Función núcleo de backup (puede ser manual o automática)
 async function performDriveBackup(isSilent = false) {
     try {
+        const fullData = await dataManager.exportFullBackup();
+        const totalOrders = Array.isArray(fullData.orders) ? fullData.orders.length : 0;
+        const totalClients = Array.isArray(fullData.clients) ? fullData.clients.length : 0;
+
+        // Protección anti-copias vacías (2.6 KB): si la base de datos local está vacía (p.ej. al abrir en un navegador nuevo o de prueba),
+        // bloquear la subida automática para no ensuciar Google Drive con copias sin pedidos ni clientes.
+        if (totalOrders === 0 && totalClients === 0) {
+            console.warn("[Backup] Cancelada subida de copia vacía (0 pedidos y 0 clientes).");
+            if (!isSilent) {
+                alert("No hay pedidos ni clientes cargados en este dispositivo para hacer copia de seguridad.");
+            }
+            return false;
+        }
+
         // Prevent backup spam from quick reloads
         if (isSilent) {
             localStorage.setItem("last_auto_backup", new Date().getTime().toString());
         }
-        const fullData = await dataManager.exportFullBackup();
-        console.log(`[Backup] Exportando ${fullData.orders.length} pedidos, ${fullData.clients.length} clientes...`);
+        console.log(`[Backup] Exportando ${totalOrders} pedidos, ${totalClients} clientes...`);
 
         const payload = {
             action: 'fullBackup',
@@ -331,23 +324,32 @@ async function openBackupsModal() {
     // Lock background scroll
     document.body.style.overflow = 'hidden';
 
-    // Modal Style Reset & Main Structure (Explicit Inline Styles)
+    // Modal Structure (Executive Pro Design)
     modal.innerHTML = `
-        <div class="modal-content" style="border-radius: 28px; overflow: hidden; padding: 0; box-shadow: 0 25px 60px rgba(0,0,0,0.3); max-width: 520px; width: 95%; background-color: #fff; margin: auto;">
+        <div class="modal-content" style="border-radius: 22px; overflow: hidden; padding: 0; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25); max-width: 520px; width: 95%; background-color: #ffffff; margin: auto; border: 1px solid #e2e8f0;">
             <!-- Header (Fixed at top) -->
-            <div style="background-color: #009ee3; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 10;">
-                <h2 style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin: 0; font-family: 'Inter', sans-serif;">Copias Disponibles</h2>
-                <button style="background: transparent; border: none; color: #ffffff; cursor: pointer; padding: 4px; display: flex;" onclick="closeBackupsModal()">
-                    <span class="material-icons-round" style="font-size: 24px;">close</span>
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 10;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center; color: #ffffff;">
+                        <span class="material-icons-round" style="font-size: 19px;">cloud_queue</span>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.05rem; font-weight: 800; color: #ffffff; margin: 0; letter-spacing: -0.01em;">Copias Disponibles</h2>
+                        <p style="font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.82); margin: 1px 0 0;">Historial en Google Drive</p>
+                    </div>
+                </div>
+                <button style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.22); color: #ffffff; cursor: pointer; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;" onclick="closeBackupsModal()">
+                    <span class="material-icons-round" style="font-size: 20px;">close</span>
                 </button>
             </div>
             
-            <!-- List Body Container with Internal Scroll (FIXED SCROLL) -->
-            <div id="backupsListContainer" style="padding: 1.75rem; max-height: 70vh; overflow-y: auto; background-color: #fff; scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;">
+            <!-- List Body Container with Internal Scroll -->
+            <div id="backupsListContainer" style="padding: 18px; max-height: 72vh; overflow-y: auto; background-color: #f8fafc; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
                 <!-- Loading State -->
-                <div style="display: flex; flex-direction: column; items-center; justify-content: center; text-align: center; padding-top: 4rem; padding-bottom: 4rem;">
-                    <p style="font-size: 1.1rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">Cargando copias desde Drive...</p>
-                    <p style="font-size: 0.85rem; color: #94a3b8; font-weight: 500;">Esto puede tardar unos segundos</p>
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 1rem;">
+                    <span class="material-icons-round" style="font-size: 36px; color: #0284c7; margin-bottom: 10px;">cloud_sync</span>
+                    <p style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 4px;">Consultando copias en Google Drive...</p>
+                    <p style="font-size: 0.78rem; color: #64748b; font-weight: 600; margin: 0;">Esto puede tardar unos segundos</p>
                 </div>
             </div>
         </div>
@@ -379,11 +381,9 @@ async function openBackupsModal() {
         const isSuccess = result.status === "success" || result.success;
 
         if (isSuccess) {
-            // Respuesta válida del servidor: puede tener lista vacía (p.ej. tras borrar la última copia)
             const files = Array.isArray(result.files) ? result.files : [];
             driveFiles = files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
         } else if (!result.files) {
-            // El primer endpoint no reconoció la acción: intentar endpoint alternativo
             response = await fetch(url + (url.includes('?') ? '&' : '?') + "action=getBackups");
             text = await response.text();
             try {
@@ -410,95 +410,68 @@ async function openBackupsModal() {
     }
 
     const container = document.getElementById('backupsListContainer');
-    const localBackups = JSON.parse(localStorage.getItem('app_backups') || '[]');
-
     let html = '';
 
     // --- SECCIÓN NUBE ---
     if (driveError) {
-        // Mostrar banner de error informativo en lugar de silenciar el fallo
         html += `
-            <div style="background-color: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 12px; align-items: flex-start;">
-                <span class="material-icons-round" style="color: #f97316; font-size: 22px; margin-top: 2px; flex-shrink: 0;">cloud_off</span>
+            <div style="background-color: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 16px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start;">
+                <span class="material-icons-round" style="color: #ea580c; font-size: 22px; margin-top: 2px; flex-shrink: 0;">cloud_off</span>
                 <div style="flex: 1;">
-                    <p style="font-size: 0.8rem; font-weight: 800; color: #9a3412; margin: 0 0 4px;">No se pudo conectar con Google Drive</p>
-                    <p style="font-size: 0.72rem; color: #c2410c; font-weight: 500; margin: 0; word-break: break-word;">${driveError}</p>
-                    <p style="font-size: 0.68rem; color: #9a3412; font-weight: 600; margin: 6px 0 0; opacity: 0.75;">Comprueba la URL del script en Ajustes o vuelve a intentarlo.</p>
-                    <button onclick="openBackupsModal()" style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; background-color: #f97316; color: #fff; border: none; border-radius: 10px; padding: 7px 14px; font-size: 0.72rem; font-weight: 800; cursor: pointer;">
-                        <span class="material-icons-round" style="font-size: 15px;">refresh</span> Reintentar
+                    <p style="font-size: 0.82rem; font-weight: 800; color: #9a3412; margin: 0 0 4px;">No se pudo conectar con Google Drive</p>
+                    <p style="font-size: 0.75rem; color: #c2410c; font-weight: 600; margin: 0; word-break: break-word;">${driveError}</p>
+                    <button onclick="openBackupsModal()" style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; background-color: #0284c7; color: #fff; border: none; border-radius: 10px; padding: 8px 14px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                        <span class="material-icons-round" style="font-size: 16px;">refresh</span> Reintentar
                     </button>
                 </div>
             </div>
         `;
     } else if (!driveFiles || driveFiles.length === 0) {
         html += `
-            <div style="text-align: center; padding: 2rem 0 1rem; opacity: 0.4;">
-                <span class="material-icons-round" style="font-size: 48px; color: #94a3b8;">cloud_done</span>
-                <p style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-top: 0.5rem;">No hay copias en Google Drive</p>
+            <div style="text-align: center; padding: 2.5rem 1rem; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px;">
+                <span class="material-icons-round" style="font-size: 42px; color: #94a3b8;">cloud_done</span>
+                <p style="font-size: 0.88rem; font-weight: 800; color: #334155; margin: 8px 0 2px;">No hay copias en Google Drive</p>
+                <p style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin: 0;">Usa el botón «Guardar Ahora» para crear tu primera copia en la nube.</p>
             </div>
         `;
     } else {
         html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <p style="font-size: 0.65rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Copias en la Nube</p>
-                <button onclick="handleDeleteMultipleRemoteFiles()" id="btnBulkDelete" style="display: none; align-items: center; gap: 4px; background-color: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 2px;">
+                <span style="font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em;">Copias en la Nube (${driveFiles.length})</span>
+                <button onclick="handleDeleteMultipleRemoteFiles()" id="btnBulkDelete" style="display: none; align-items: center; gap: 5px; background-color: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; padding: 6px 12px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; cursor: pointer;">
                     <span class="material-icons-round" style="font-size: 16px;">delete_sweep</span>
                     <span id="bulkDeleteCount">Borrar</span>
                 </button>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
                 ${driveFiles.map(f => {
-                    const sizeStr = f.size ? `${(f.size / 1024).toFixed(1)} KB` : "—";
+                    const sizeKB = f.size ? (f.size / 1024) : 0;
+                    const sizeStr = f.size ? `${sizeKB.toFixed(1)} KB` : "—";
+                    const isSmallWarning = sizeKB > 0 && sizeKB < 10;
                     return `
-                    <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                        <input type="checkbox" class="backup-checkbox" value="${f.id}" data-name="${f.name}" onchange="toggleBulkDeleteBtn()" style="width: 22px; height: 22px; accent-color: #ef4444; cursor: pointer; flex-shrink: 0; margin-right: 8px;">
-                        <div style="flex: 1 1 150px; padding-right: 0.5rem;">
-                            <p style="font-size: 0.875rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2;">${f.name}</p>
-                            <p style="font-size: 0.725rem; color: #64748b; font-weight: 600; margin-top: 6px;">
-                                ${new Date(f.date).toLocaleDateString()} - ${sizeStr}
+                    <div class="sys-backup-item">
+                        <input type="checkbox" class="backup-checkbox" value="${f.id}" data-name="${f.name}" onchange="toggleBulkDeleteBtn()" style="width: 19px; height: 19px; accent-color: #0284c7; cursor: pointer; flex-shrink: 0;">
+                        <div class="sys-backup-meta">
+                            <p class="sys-backup-name">${f.name}</p>
+                            <p class="sys-backup-sub">
+                                <span>${new Date(f.date).toLocaleDateString('es-ES')}</span>
+                                <span class="sys-backup-size-pill" style="${isSmallWarning ? 'background:#fef2f2; color:#dc2626; border-color:#fecaca;' : ''}">${sizeStr}</span>
                             </p>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <button onclick="handleDeleteRemoteFile('${f.id}', '${f.name}')" 
-                                    style="width: 40px; height: 40px; border-radius: 50%; background-color: #fee2e2; border: none; color: #ef4444; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                                <span class="material-icons-round" style="font-size: 20px;">delete_outline</span>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                            <button onclick="handleDeleteRemoteFile('${f.id}', '${f.name}')" title="Eliminar copia"
+                                    style="width: 36px; height: 36px; border-radius: 10px; background-color: #fef2f2; border: 1.5px solid #fecaca; color: #dc2626; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                                <span class="material-icons-round" style="font-size: 18px;">delete_outline</span>
                             </button>
                             <button onclick="handleRemoteRestore('${f.id}', '${f.name}')" 
-                                    style="display: flex; align-items: center; gap: 8px; background-color: #9333ea; color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.3);">
-                                <span class="material-icons-round" style="font-size: 18px;">cloud_download</span>
+                                    style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%); color: #ffffff; border: none; padding: 9px 14px; border-radius: 10px; font-size: 0.76rem; font-weight: 800; cursor: pointer; box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);">
+                                <span class="material-icons-round" style="font-size: 16px;">cloud_download</span>
                                 <span>Restaurar</span>
                             </button>
                         </div>
                     </div>
                     `;
                 }).join('')}
-            </div>
-            <div style="height: 1.5rem;"></div>
-        `;
-    }
-
-    // --- SECCIÓN LOCAL (siempre visible si hay copias) ---
-    if (localBackups.length > 0) {
-        html += `
-            <p style="font-size: 0.65rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; ${driveFiles && driveFiles.length > 0 ? 'border-top: 1px solid #f1f5f9; padding-top: 1.5rem;' : ''}">Copias Locales</p>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                ${localBackups.map(b => `
-                    <div style="padding: 1.25rem; border: 1.5px solid #f1f5f9; border-radius: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; background-color: #ffffff;">
-                        <div style="flex: 1 1 150px;">
-                            <p style="font-size: 0.825rem; font-weight: 800; color: #1e293b; margin: 0;">${new Date(b.date).toLocaleString()}</p>
-                            <p style="font-size: 0.65rem; color: #10b981; font-weight: 800; text-transform: uppercase; margin-top: 4px;">Sincronizado localmente</p>
-                        </div>
-                        <button style="background-color: #9333ea; color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">Local</button>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    } else if (!driveFiles && !driveError) {
-        // Sin nube y sin local
-        html = `
-            <div style="text-align: center; padding-top: 4rem; padding-bottom: 4rem; opacity: 0.3;">
-                <span class="material-icons-round" style="font-size: 64px;">cloud_off</span>
-                <p style="font-weight: 800; margin-top: 1rem;">No se encontraron copias</p>
             </div>
         `;
     }
@@ -796,27 +769,36 @@ function injectManagementYearsModal() {
     if (document.getElementById('yearsModal')) return;
     const html = `
         <div id="yearsModal" class="modal-overlay">
-            <div class="modal-content" style="border-radius: 28px;">
-                <div class="modal-header">
-                    <h2 class="text-xl font-black">Añadir Nuevo Año</h2>
-                    <button class="icon-btn text-white" onclick="closeManagementYearsModal()">
-                        <span class="material-icons-round">close</span>
+            <div class="modal-content" style="border-radius: 22px; overflow: hidden; padding: 0; max-width: 420px; width: 92%; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);">
+                <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center; color: #ffffff;">
+                            <span class="material-icons-round" style="font-size: 19px;">date_range</span>
+                        </div>
+                        <h2 style="font-size: 1.02rem; font-weight: 800; color: #ffffff; margin: 0;">Añadir Nuevo Año</h2>
+                    </div>
+                    <button style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.22); color: #ffffff; cursor: pointer; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;" onclick="closeManagementYearsModal()">
+                        <span class="material-icons-round" style="font-size: 20px;">close</span>
                     </button>
                 </div>
-                <div class="modal-body p-10">
-                    <p class="text-sm text-slate-500 mb-6 font-medium leading-relaxed">
-                        Introduce el año que deseas habilitar en el sistema. Se crearán tablas de historial vacías para ventas y facturación.
+                <div style="padding: 20px; background: #ffffff;">
+                    <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 14px; font-weight: 600; line-height: 1.45;">
+                        Introduce el año que deseas habilitar en el sistema para el registro de pedidos y facturación.
                     </p>
-                    <label class="premium-form-label">AÑO (YYYY)</label>
-                    <input type="number" id="newYearInput" class="premium-form-input" 
-                           value="${new Date().getFullYear() + 1}" placeholder="Ej: 2027">
-                    
-                    <div class="flex gap-4 mt-8">
-                        <button class="btn-link-cancel flex-1" onclick="closeManagementYearsModal()">
+                    <div class="sys-field-group" style="margin-bottom: 16px;">
+                        <label class="sys-field-label" for="newYearInput">Año contable (YYYY)</label>
+                        <input type="number" id="newYearInput" class="sys-input-control" style="font-size: 1rem;"
+                               value="${new Date().getFullYear() + 1}" placeholder="Ej: 2027">
+                    </div>
+                    <div class="sys-actions-grid">
+                        <button class="sys-btn-secondary" onclick="closeManagementYearsModal()">
                             <span class="material-icons-round">close</span>
-                            Cancelar
+                            <span>Cancelar</span>
                         </button>
-                        <button class="flex-1 btn-premium-save" onclick="handleAddNewYear()">Crear Año</button>
+                        <button class="sys-btn-primary" onclick="handleAddNewYear()">
+                            <span class="material-icons-round">check</span>
+                            <span>Habilitar Año</span>
+                        </button>
                     </div>
                 </div>
             </div>

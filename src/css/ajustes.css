@@ -1,282 +1,387 @@
-/* Ajustes Premium Styles - Remodelación Integral */
+/* ==========================================================================
+   VISTA BACKUPS Y AJUSTES — DISEÑO EJECUTIVO UNIFICADO (SIN PARCHES)
+   ========================================================================== */
 
 .ajustes-container {
-    padding: 1.25rem 1.5rem;
-    padding-bottom: 120px;
-    background-color: #ffffff;
-    min-height: 100vh;
+    padding: 16px 16px 120px 16px;
+    background-color: var(--bg-app, #f1f5f9);
+    flex: 0 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.ajustes-card {
+/* Tarjeta Ejecutiva Unificada */
+.sys-pro-card {
     background: #ffffff;
-    border-radius: 28px;
-    padding: 1.75rem;
-    margin-bottom: 1.75rem;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-    border: 1.5px solid #f1f5f9;
+    border-radius: 20px;
+    padding: 18px;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex-shrink: 0;
 }
 
-.ajustes-header {
+.sys-card-head {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.75rem;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.ajustes-icon-box {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
+.sys-card-head-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.sys-icon-box {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: #0284c7;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
-.bg-purple-lite { background-color: #f5f3ff; color: #7c3aed; }
-.bg-blue-lite { background-color: #eff6ff; color: #3b82f6; }
-.bg-rose-lite { background-color: #fff1f2; color: #f43f5e; }
-.bg-green-lite { background-color: #f0fdf4; color: #22c55e; }
-.bg-slate-lite { background-color: #f8fafc; color: #64748b; }
+.sys-icon-box .material-icons-round {
+    font-size: 21px;
+}
 
-.ajustes-title {
-    font-size: 1.15rem;
-    font-weight: 900;
+.sys-card-title {
+    font-size: 15px;
+    font-weight: 800;
     color: #0f172a;
     margin: 0;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.2px;
+    line-height: 1.25;
 }
 
-.ajustes-subtitle {
-    font-size: 0.8rem;
+.sys-card-subtitle {
+    font-size: 12px;
     color: #64748b;
-    margin-top: 4px;
-    line-height: 1.4;
+    margin: 2px 0 0 0;
     font-weight: 500;
+    line-height: 1.35;
 }
 
-/* Divisiones de sección */
-.ajustes-section-label {
-    font-size: 0.65rem;
-    font-weight: 900;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 1rem;
-    display: block;
-    padding-left: 0.5rem;
-}
-
-/* Grid de Botones */
-.btn-grid {
+/* Botonera Ejecutiva */
+.sys-btn-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 10px;
 }
 
-.btn-ajuste {
-    display: flex;
-    flex-direction: row;
+.sys-btn-primary {
+    height: 46px;
+    padding: 0 14px;
+    border-radius: 13px;
+    border: none;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 0.85rem 1rem;
-    border-radius: 16px;
-    border: none;
-    font-weight: 800;
-    font-size: 0.8rem;
+    gap: 8px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.btn-ajuste span.material-icons-round {
-    font-size: 20px;
+.sys-btn-primary .material-icons-round {
+    font-size: 19px;
 }
 
-.btn-ajuste:active { transform: scale(0.96); opacity: 0.9; }
+.sys-btn-primary:active {
+    transform: scale(0.97);
+}
 
-.btn-nube-primary { background-color: #9333ea; color: white; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.2); }
-.btn-nube-secondary { background-color: #f3e8ff; color: #9333ea; }
-.btn-local-primary { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
-.btn-local-secondary { background-color: #dbeafe; color: #2563eb; }
-
-/* Status Display */
-.status-box-lite {
-    margin-top: 1.5rem;
-    background-color: #f8fafc;
-    border-radius: 18px;
-    padding: 1rem 1.25rem;
-    display: flex;
+.sys-btn-secondary {
+    height: 46px;
+    padding: 0 14px;
+    border-radius: 13px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #1e293b;
+    font-size: 13px;
+    font-weight: 800;
+    display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
-    border: 1px solid #f1f5f9;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
-.status-box-lite .material-icons-round { color: #94a3b8; }
-.status-box-lite p { margin: 0; font-size: 0.75rem; color: #64748b; font-weight: 600; line-height: 1.5; }
-.status-box-lite strong { color: #334155; }
+.sys-btn-secondary .material-icons-round {
+    font-size: 19px;
+    color: #0284c7;
+}
 
-/* URL Input & Controls */
-.premium-input-card {
+.sys-btn-secondary:hover {
     background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 1rem;
-    margin-top: 0.5rem;
+    border-color: #94a3b8;
 }
 
-.premium-input-label {
-    font-size: 0.6rem;
-    font-weight: 900;
-    color: #94a3b8;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-    display: block;
+.sys-btn-secondary:active {
+    transform: scale(0.97);
 }
 
-.url-input {
-    width: 100%;
-    background: transparent;
-    border: none;
-    font-size: 0.8rem;
-    color: #334155;
-    font-family: inherit;
-    font-weight: 700;
-    outline: none;
-}
-
-.conn-footer {
-    display: flex;
-    justify-content: space-between;
+.sys-btn-soft {
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1.5px solid #bae6fd;
+    background: #f0f9ff;
+    color: #0369a1;
+    font-size: 12.5px;
+    font-weight: 800;
+    display: inline-flex;
     align-items: center;
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px dashed #e2e8f0;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.sys-btn-soft .material-icons-round {
+    font-size: 18px;
+    color: #0284c7;
+}
+
+.sys-btn-soft:hover {
+    background: #e0f2fe;
+}
+
+.sys-btn-soft:active {
+    transform: scale(0.97);
+}
+
+/* Barra informativa de Auto-Backup */
+.sys-info-strip {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sys-info-strip-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #475569;
+    font-weight: 600;
+}
+
+.sys-info-strip-left .material-icons-round {
+    font-size: 18px;
+    color: #0284c7;
+}
+
+.sys-info-strip-badge {
+    font-size: 11px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+
+/* Campos de formulario e inputs en Ajustes */
+.sys-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sys-field-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-left: 2px;
+}
+
+.sys-input-control,
+.sys-select-control {
+    width: 100%;
+    min-height: 44px;
+    padding: 9px 13px;
+    border-radius: 12px;
+    border: 1.5px solid #cbd5e1;
+    background: #f8fafc;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sys-input-control:focus,
+.sys-select-control:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+/* Pie de estado de conexión */
+.sys-conn-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
 }
 
 .sync-status-indicator {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.75rem;
+    font-size: 11.5px;
     font-weight: 800;
     text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .btn-test-conn {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
     border-radius: 10px;
     padding: 6px 12px;
     font-weight: 800;
-    font-size: 0.7rem;
-    color: #64748b;
-    display: flex;
+    font-size: 11.5px;
+    color: #334155;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.btn-force-sync {
-    width: 100%;
-    background-color: #0f172a;
-    color: white;
-    border: none;
-    border-radius: 18px;
-    padding: 1rem;
+.btn-test-conn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.btn-test-conn:active {
+    transform: scale(0.96);
+}
+
+/* Gestión de Años */
+.btn-add-year-pro {
+    background: #f0f9ff;
+    color: #0284c7;
+    border: 1.5px solid #bae6fd;
+    padding: 7px 13px;
+    border-radius: 11px;
     font-weight: 800;
-    font-size: 0.85rem;
-    display: flex;
+    font-size: 12px;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
+    gap: 5px;
     cursor: pointer;
-    margin-top: 1.5rem;
-    box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2);
+    transition: all 0.15s ease;
+    flex-shrink: 0;
 }
 
-/* Acciones Integradas (Años) */
-.integrated-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+.btn-add-year-pro:hover {
+    background: #e0f2fe;
 }
 
-.btn-add-action {
-    background-color: #22c55e;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-weight: 800;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2);
+.btn-add-year-pro:active {
+    transform: scale(0.96);
 }
 
 .years-pill-cloud {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
     gap: 8px;
 }
 
 .pill-year {
-    background-color: white;
-    color: #475569;
-    padding: 8px 0;
+    background-color: #f8fafc;
+    color: #334155;
+    padding: 9px 0;
     text-align: center;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    border-radius: 11px;
+    font-size: 13px;
     font-weight: 800;
-    border: 1.5px solid #f1f5f9;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    border: 1.5px solid #e2e8f0;
 }
 
-/* Alerta Premium */
-.ajustes-banner-alert {
-    background-color: #fff9eb;
-    border: 1px solid #fef3c7;
-    border-radius: 20px;
-    padding: 1.5rem;
+.pill-year.is-current-year {
+    background-color: #f0f9ff;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+/* Tarjeta de elemento en el Modal de Copias Disponibles */
+.sys-backup-item {
+    padding: 13px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-top: 1rem;
+    justify-content: space-between;
+    gap: 10px;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    transition: border-color 0.15s ease;
 }
 
-.alert-icon-box {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background-color: #fef3c7;
+.sys-backup-item:hover {
+    border-color: #cbd5e1;
+}
+
+.sys-backup-meta {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: #d97706;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
 }
 
-.alert-content p { 
-    margin: 0; 
-    font-size: 0.75rem; 
-    color: #92400e; 
-    font-weight: 700;
-    line-height: 1.4;
+.sys-backup-size-pill {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
 }
 
-/* Versión */
+/* Pie de versión discreto */
 .app-version-footer {
     text-align: center;
-    padding: 2rem 0;
-    opacity: 0.4;
+    padding: 10px 0 4px 0;
 }
 
 .app-version-footer p {
-    font-size: 0.65rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
+    font-size: 11px;
+    font-weight: 700;
     color: #94a3b8;
+    margin: 0;
 }
