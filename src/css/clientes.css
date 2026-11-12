@@ -772,7 +772,7 @@
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
     margin-bottom: 8px !important;
-    display: flex !important;
+    display: flex;
     align-items: center !important;
     justify-content: space-between !important;
     gap: 10px !important;

@@ -500,9 +500,10 @@ window.toggleVoiceDictation = function(targetId, btnEl, onCompleteCallback = nul
         if (wasSameBtn) return;
     }
 
+    const isTextarea = targetEl.tagName === 'TEXTAREA';
     const recognition = new SpeechRec();
     recognition.lang = 'es-ES';
-    recognition.interimResults = false;
+    recognition.interimResults = !isTextarea;
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
@@ -544,19 +545,26 @@ window.toggleVoiceDictation = function(targetId, btnEl, onCompleteCallback = nul
     window._activeSpeechBtn = btnEl;
 
     recognition.onresult = (event) => {
-        const transcript = event.results?.[0]?.[0]?.transcript || '';
+        let transcript = '';
+        let hasFinal = false;
+        if (event.results) {
+            for (let i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0]?.transcript || '';
+                if (event.results[i].isFinal) hasFinal = true;
+            }
+        }
         if (transcript.trim()) {
-            const cleanText = transcript.trim().replace(/\.+$/, '');
-            const isTextarea = targetEl.tagName === 'TEXTAREA';
+            const cleanText = transcript.trim().replace(/[.,;!?]+$/, '');
 
             if (isTextarea) {
+                if (!hasFinal) return;
                 const capitalized = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
                 const currentVal = (targetEl.value || '').trim();
                 targetEl.value = currentVal
                     ? (currentVal.endsWith('.') || currentVal.endsWith(',') ? `${currentVal} ${capitalized}` : `${currentVal}. ${capitalized}`)
                     : capitalized;
             } else {
-                // En buscadores e inputs de una línea, escribir el texto limpio directamente
+                // En buscadores e inputs de una línea, escribir el texto limpio directamente en tiempo real
                 targetEl.value = cleanText;
             }
 
@@ -571,10 +579,10 @@ window.toggleVoiceDictation = function(targetId, btnEl, onCompleteCallback = nul
                 window.filterAlerts();
             } else if (targetId === 'mapSearchInput') {
                 if (typeof window.toggleMapClearBtn === 'function') window.toggleMapClearBtn();
-                if (typeof window.searchLocation === 'function') window.searchLocation();
+                if (hasFinal && typeof window.searchLocation === 'function') window.searchLocation();
             }
 
-            if (typeof onCompleteCallback === 'function') {
+            if (hasFinal && typeof onCompleteCallback === 'function') {
                 onCompleteCallback(targetEl.value);
             }
         }
@@ -1264,6 +1272,12 @@ window.enhanceClearableInputs = function(root = document) {
         if (el.readOnly || el.disabled) return;
         if (el.id === 'orderId' || el.id === 'rankSearch') return;
         if (
+            el.classList.contains('v-input-premium') ||
+            el.classList.contains('v7-input') ||
+            el.classList.contains('v7-factura-input') ||
+            el.closest('.analysis-table-wrapper') ||
+            el.closest('.v7-obj-table') ||
+            el.closest('.v7-factura-table') ||
             el.closest('.search-container') ||
             el.closest('.pro-search-bar') ||
             el.closest('.client-search-wrapper') ||

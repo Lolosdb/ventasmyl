@@ -207,8 +207,8 @@ async function renderAlertas(isBack = false) {
         <div class="pro-search-bar mb-4">
             <span class="material-icons-round pro-search-icon">search</span>
             <input type="text" id="alertSearchInput" class="pro-search-input" placeholder="Buscar por tienda, población o provincia..." 
+                   oninput="filterAlerts()"
                    onkeyup="filterAlerts()"
-                   oninput="toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn')"
                    onkeydown="if(event.key==='Enter') this.blur()">
             <div class="pro-search-actions">
                 <button type="button" id="clearAlertSearchBtn" class="pro-search-clear-btn" 
@@ -272,12 +272,13 @@ window.filterAlerts = function() {
     
     toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn');
     
-    const filter = input.value.toLowerCase().trim();
+    const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const filter = norm(input.value);
     const cards = document.querySelectorAll('#alertsListContainer .alert-card');
     
     cards.forEach(card => {
-        const searchData = card.getAttribute('data-search') || '';
-        if (searchData.includes(filter)) {
+        const searchData = norm(card.getAttribute('data-search') || '');
+        if (!filter || searchData.includes(filter)) {
             card.style.display = '';
         } else {
             card.style.display = 'none';
@@ -368,6 +369,7 @@ async function renderVentas(isBack = false) {
                                         <input type="text" 
                                                class="v-input-premium ${growthClass} ${y === currentYear ? 'v-input-current' : ''}" 
                                                value="${val === 0 ? '-' : formatCurrency(Math.round(val)).replace(' \u20ac', '')}"
+                                               onfocus="this.select()"
                                                onchange="handleSalesUpdate(${y}, ${mIdx}, this.value)">
                                     </div>
                                 `;
@@ -665,13 +667,13 @@ async function renderObjetivos(isBack = false) {
                     <div class="v7-obj-row">
                         <div class="v7-month-name">${m}</div>
                         <div class="v7-col-val">
-                            <input type="text" class="v7-input v7-val-3" value="${formatCurrency(Math.round(goals.data3[i])).replace(' €', '')}" onchange="handleGoalUpdate(3, ${i}, this.value)">
+                            <input type="text" class="v7-input v7-val-3" value="${formatCurrency(Math.round(goals.data3[i])).replace(' €', '')}" onfocus="this.select()" onchange="handleGoalUpdate(3, ${i}, this.value)">
                         </div>
                         <div class="v7-col-val">
-                            <input type="text" class="v7-input v7-val-4" value="${formatCurrency(Math.round(goals.data4[i])).replace(' €', '')}" onchange="handleGoalUpdate(4, ${i}, this.value)">
+                            <input type="text" class="v7-input v7-val-4" value="${formatCurrency(Math.round(goals.data4[i])).replace(' €', '')}" onfocus="this.select()" onchange="handleGoalUpdate(4, ${i}, this.value)">
                         </div>
                         <div class="v7-col-val">
-                            <input type="text" class="v7-input v7-val-5" value="${formatCurrency(Math.round(goals.data5[i])).replace(' €', '')}" onchange="handleGoalUpdate(5, ${i}, this.value)">
+                            <input type="text" class="v7-input v7-val-5" value="${formatCurrency(Math.round(goals.data5[i])).replace(' €', '')}" onfocus="this.select()" onchange="handleGoalUpdate(5, ${i}, this.value)">
                         </div>
                     </div>
                 `).join('')}

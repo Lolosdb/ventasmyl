@@ -74,7 +74,7 @@ async function renderPedidos(isBack = false) {
             <div class="pedidos-search-wrap">
                 <div class="pro-search-bar pedidos-search-bar">
                     <span class="material-icons-round pro-search-icon">search</span>
-                    <input type="text" id="searchPedidosInput" class="pro-search-input" placeholder="Buscar por Nº de pedido o Tienda..." onkeyup="filterPedidos()" oninput="toggleClearSearch('searchPedidosInput', 'clearPedidosSearchBtn')" onkeydown="if(event.key==='Enter') this.blur()">
+                    <input type="text" id="searchPedidosInput" class="pro-search-input" placeholder="Buscar por Nº de pedido o Tienda..." oninput="filterPedidos()" onkeyup="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
                     <div class="pro-search-actions">
                         <button type="button" id="clearPedidosSearchBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearPedidosSearch()" title="Borrar búsqueda">
                             <span class="material-icons-round">close</span>
@@ -197,7 +197,8 @@ function setPedidosStatusFilter(status) {
 
 function filterPedidos() {
     const input = document.getElementById('searchPedidosInput');
-    const filter = (input ? input.value : '').toLowerCase();
+    const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const filter = norm(input ? input.value : '');
     const activeStatus = window.currentPedidosStatusFilter || 'all';
     
     // Usar utilidad global para el botón X
@@ -208,7 +209,7 @@ function filterPedidos() {
 
     const rows = document.querySelectorAll('.pedido-row');
     rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
+        const text = norm(row.innerText);
         const rowStatus = row.getAttribute('data-status') || 'almacen';
         const matchText = !filter || text.includes(filter);
         const matchStatus = activeStatus === 'all' || rowStatus === activeStatus;

@@ -4,8 +4,8 @@
  * y teselas del mapa visitadas para funcionar al 100% sin cobertura móvil.
  */
 
-const CACHE_NAME = 'app-ventas-shell-v8.8';
-const RUNTIME_CACHE = 'app-ventas-runtime-v8.8';
+const CACHE_NAME = 'app-ventas-shell-v9.0';
+const RUNTIME_CACHE = 'app-ventas-runtime-v9.0';
 
 const CORE_ASSETS = [
     './',

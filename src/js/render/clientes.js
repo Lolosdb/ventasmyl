@@ -65,9 +65,9 @@ async function renderClientes(isBack = false) {
             <input type="text" id="clientSearchInput" 
                    class="pro-search-input"
                    placeholder="Buscar por nombre, código o población..." 
+                   oninput="filterClients(this.value)" 
                    onkeyup="filterClients(this.value)" 
-                   onkeydown="if(event.key==='Enter') this.blur()"
-                   oninput="toggleClearSearch('clientSearchInput', 'clearSearchBtn')">
+                   onkeydown="if(event.key==='Enter') this.blur()">
             <div class="pro-search-actions">
                 <button type="button" id="clearSearchBtn" class="pro-search-clear-btn" 
                         style="display: none;" 
@@ -92,14 +92,16 @@ async function renderClientes(isBack = false) {
         contentHtml += '<div class="text-center p-8 text-secondary">No hay clientes registrados</div>';
     } else {
         clients.forEach(client => { if(!client) return;
-            const searchCode = String(client.code || '').toLowerCase();
-            const searchName = String(client.name || '').toLowerCase();
-            const searchLoc = String(client.location || '').toLowerCase();
+            const searchCode = String(client.code || '').toLowerCase().replace(/"/g, '&quot;');
+            const searchName = String(client.name || '').toLowerCase().replace(/"/g, '&quot;');
+            const searchLoc = String(client.location || '').toLowerCase().replace(/"/g, '&quot;');
+            const searchContact = String(client.contact || '').toLowerCase().replace(/"/g, '&quot;');
+            const searchProv = String(client.province || '').toLowerCase().replace(/"/g, '&quot;');
             contentHtml += `
                 <div class="client-card pro-client-item" 
                      onclick="openClientDetailModal('${String(client.code || '').replace(/'/g, "\\'")}')"
-                     data-name="${searchCode} ${searchName}" 
-                     data-location="${searchLoc}">
+                     data-name="${searchCode} ${searchName} ${searchContact}" 
+                     data-location="${searchLoc} ${searchProv}">
                     <div class="pro-client-item-body">
                         <div class="pro-client-item-top">
                             <span class="pro-client-code-badge">#${client.code || '---'}</span>
@@ -146,16 +148,32 @@ async function renderClientes(isBack = false) {
     if (window.activeCurrentNav) window.activeCurrentNav('clientes');
 }
 
+function _normSearchStr(str) {
+    return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
 function filterClients(query) {
-    const q = query.toLowerCase();
+    const inputEl = document.getElementById('clientSearchInput');
+    const rawQuery = (query !== undefined && query !== null) ? query : (inputEl ? inputEl.value : '');
+    const q = _normSearchStr(rawQuery);
     
     // Usar utilidad global para el botón X
     toggleClearSearch('clientSearchInput', 'clearSearchBtn');
 
     document.querySelectorAll('.client-card').forEach(card => {
-        const name = card.getAttribute('data-name');
-        const loc = card.getAttribute('data-location');
-        card.style.display = (name.includes(q) || loc.includes(q)) ? 'flex' : 'none';
+        const name = _normSearchStr(card.getAttribute('data-name'));
+        const loc = _normSearchStr(card.getAttribute('data-location'));
+        const text = !q ? '' : _normSearchStr(card.textContent);
+        const matches = !q || name.includes(q) || loc.includes(q) || text.includes(q);
+        if (matches) {
+            card.style.setProperty('display', 'flex', 'important');
+        } else {
+            card.style.setProperty('display', 'none', 'important');
+        }
     });
 }
 
