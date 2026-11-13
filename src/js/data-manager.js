@@ -988,6 +988,20 @@ class DataManager {
         return updated;
     }
 
+    async updateVisitNote(noteId, newNoteText, newAlertDate = '') {
+        const notes = await this.getVisitNotes();
+        const cleanText = String(newNoteText || '').trim() || 'Visita registrada (sin comentario)';
+        const cleanAlert = String(newAlertDate || '').trim();
+        const updated = notes.map(n => n.id === noteId ? {
+            ...n,
+            note: cleanText,
+            alertDate: cleanAlert,
+            updatedAt: new Date().toISOString()
+        } : n);
+        await this.saveVisitNotesList(updated);
+        return updated;
+    }
+
     async snoozeVisitNoteAlert(noteId, daysToAdd = 7) {
         const notes = await this.getVisitNotes();
         const nextDate = new Date();

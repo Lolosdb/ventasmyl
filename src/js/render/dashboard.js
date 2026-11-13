@@ -1258,7 +1258,20 @@ async function renderVisitNotesList() {
                     <span class="vn-note-date">${noteDate}</span>
                 </div>
 
-                <div class="vn-note-text">${_escapeDashHtml(n.note || '')}</div>
+                <div id="vn-text-${safeId}" class="vn-note-text">${_escapeDashHtml(n.note || '')}</div>
+
+                <div id="vn-edit-${safeId}" class="vn-edit-box" style="display: none;">
+                    <textarea id="vn-edit-text-${safeId}" class="vn-edit-textarea" rows="2">${_escapeDashHtml(n.note || '')}</textarea>
+                    <div class="vn-edit-date-row">
+                        <label for="vn-edit-date-${safeId}">Alerta:</label>
+                        <input type="date" id="vn-edit-date-${safeId}" class="vn-edit-date" value="${_escapeDashHtml(n.alertDate || '')}">
+                        <button type="button" class="vn-act-btn" onclick="document.getElementById('vn-edit-date-${safeId}').value=''" title="Quitar fecha de alerta">✕</button>
+                    </div>
+                    <div class="vn-edit-actions">
+                        <button type="button" class="vn-act-btn" onclick="cancelEditVisitNote('${safeId}')">Cancelar</button>
+                        <button type="button" class="vn-act-btn vn-act-save" onclick="saveEditVisitNote('${safeId}')">Guardar</button>
+                    </div>
+                </div>
 
                 <div class="vn-note-footer">
                     <div class="vn-note-badges">${alertBadgeHtml}</div>
@@ -1266,6 +1279,9 @@ async function renderVisitNotesList() {
                         ${(!n.done && n.alertDate) ? `<button type="button" class="vn-act-btn vn-act-snooze" onclick="snoozeVisitNoteFromModal('${safeId}', 7, 'visit')" title="Posponer 7 días">+7d</button>` : ''}
                         <button type="button" class="vn-act-btn ${n.done ? 'vn-act-reopen' : 'vn-act-done'}" onclick="toggleVisitNoteStatus('${safeId}', 'visit')">
                             ${n.done ? 'Reabrir' : '✓ Hecha'}
+                        </button>
+                        <button type="button" class="vn-act-btn vn-act-edit" onclick="startEditVisitNote('${safeId}')" title="Editar nota o alerta">
+                            <span class="material-icons-round">edit</span>
                         </button>
                         <button type="button" class="vn-act-btn vn-act-del" onclick="deleteVisitNoteFromModal('${safeId}')" title="Eliminar nota">
                             <span class="material-icons-round">delete_outline</span>
@@ -1408,6 +1424,34 @@ async function deleteVisitNoteFromModal(noteId) {
     }
 }
 
+function startEditVisitNote(noteId) {
+    const textEl = document.getElementById(`vn-text-${noteId}`);
+    const editBox = document.getElementById(`vn-edit-${noteId}`);
+    const textarea = document.getElementById(`vn-edit-text-${noteId}`);
+    if (textEl) textEl.style.display = 'none';
+    if (editBox) editBox.style.display = 'flex';
+    if (textarea) textarea.focus();
+}
+
+function cancelEditVisitNote(noteId) {
+    const textEl = document.getElementById(`vn-text-${noteId}`);
+    const editBox = document.getElementById(`vn-edit-${noteId}`);
+    if (editBox) editBox.style.display = 'none';
+    if (textEl) textEl.style.display = 'block';
+}
+
+async function saveEditVisitNote(noteId) {
+    const textarea = document.getElementById(`vn-edit-text-${noteId}`);
+    const dateInput = document.getElementById(`vn-edit-date-${noteId}`);
+    const newText = textarea ? textarea.value : '';
+    const newAlertDate = dateInput ? dateInput.value : '';
+    await dataManager.updateVisitNote(noteId, newText, newAlertDate);
+    await renderVisitNotesList();
+    if (window.currentView === 'dash' && typeof renderDash === 'function') {
+        await renderDash(true);
+    }
+}
+
 function openClientFromVisitNote(clientCode, modalIdToClose) {
     if (modalIdToClose) {
         const m = document.getElementById(modalIdToClose);
@@ -1428,6 +1472,9 @@ window.closeStartupVisitAlertsModal = closeStartupVisitAlertsModal;
 window.toggleVisitNoteStatus = toggleVisitNoteStatus;
 window.snoozeVisitNoteFromModal = snoozeVisitNoteFromModal;
 window.deleteVisitNoteFromModal = deleteVisitNoteFromModal;
+window.startEditVisitNote = startEditVisitNote;
+window.cancelEditVisitNote = cancelEditVisitNote;
+window.saveEditVisitNote = saveEditVisitNote;
 window.openClientFromVisitNote = openClientFromVisitNote;
 
 
