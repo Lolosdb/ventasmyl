@@ -80,17 +80,12 @@ async function renderDash(isBack = false) {
     ).join(' · ');
 
     contentHtml += `
-        <div class="dash-section-header mb-6" style="padding: 0 1.5rem;">
+        <div class="dash-section-header mb-6" style="padding: 0 1.25rem;">
             <div class="dash-top-controls-row">
-                <div style="display: flex; flex-direction: column; gap: 2px; margin-top: -4px; min-width: 0;">
+                <div style="display: flex; flex-direction: column; gap: 2px; margin-top: -2px; min-width: 0;">
                     <h1 class="text-3xl font-black text-slate-900 leading-tight" style="margin: 0;">Dash</h1>
                     <span class="font-bold text-slate-500 tracking-widest" style="white-space: nowrap; font-size: 11px;">${monthName} ${year}</span>
                 </div>
-                <button type="button" class="dash-visit-notes-btn" onclick="openVisitNotesModal()" title="Ver notas de visita y alertas">
-                    <span class="material-icons-round">edit_note</span>
-                    <span>Notas visita</span>
-                    ${dueVisitAlerts.length > 0 ? `<span class="dash-visit-alert-badge">${dueVisitAlerts.length}</span>` : ''}
-                </button>
                 <div class="date-selector-container">
                     <button class="nav-date-btn" onclick="changeDashMonth(-1)" title="Mes anterior">
                         <span class="material-icons-round">chevron_left</span>
@@ -102,14 +97,19 @@ async function renderDash(isBack = false) {
                 </div>
             </div>
             
-            <div style="display: flex; gap: 12px; margin-bottom: 0.5rem;">
-                <button class="action-card-pill" onclick="renderDepartamentos()">
+            <div class="dash-quick-actions-grid">
+                <button type="button" class="dash-quick-card" onclick="renderDepartamentos()">
                     <span class="material-icons-round" style="color: #3b82f6;">groups</span>
                     <span>Departamentos</span>
                 </button>
-                <button class="action-card-pill" onclick="openCalendarModal()">
+                <button type="button" class="dash-quick-card" onclick="openCalendarModal()">
                     <span class="material-icons-round" style="color: #f59e0b;">calendar_month</span>
                     <span>Calendario</span>
+                </button>
+                <button type="button" class="dash-quick-card" onclick="openVisitNotesModal()">
+                    ${dueVisitAlerts.length > 0 ? `<span class="dash-quick-badge">${dueVisitAlerts.length}</span>` : ''}
+                    <span class="material-icons-round" style="color: #0284c7;">edit_note</span>
+                    <span>Notas visita</span>
                 </button>
             </div>
 
@@ -1203,13 +1203,14 @@ async function renderVisitNotesList() {
 
     const allNotes = await dataManager.getVisitNotes();
     const todayISO = _getTodayLocalISODash();
-    const q = _visitNotesSearch.trim().toLowerCase();
+    const normFn = window.normalizeTextKey || (s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim());
+    const q = normFn(_visitNotesSearch);
 
     const filtered = allNotes.filter(n => {
         if (_visitNotesFilter === 'alerts' && (n.done || !n.alertDate)) return false;
         if (_visitNotesFilter === 'done' && !n.done) return false;
         if (q) {
-            const hay = `${n.clientName || ''} ${n.clientCode || ''} ${n.note || ''}`.toLowerCase();
+            const hay = normFn(`${n.clientName || ''} ${n.clientCode || ''} ${n.note || ''}`);
             if (!hay.includes(q)) return false;
         }
         return true;
@@ -1260,33 +1261,39 @@ async function renderVisitNotesList() {
 
                 <div id="vn-text-${safeId}" class="vn-note-text">${_escapeDashHtml(n.note || '')}</div>
 
+                ${alertBadgeHtml ? `<div class="vn-note-badges">${alertBadgeHtml}</div>` : ''}
+
                 <div id="vn-edit-${safeId}" class="vn-edit-box" style="display: none;">
                     <textarea id="vn-edit-text-${safeId}" class="vn-edit-textarea" rows="2">${_escapeDashHtml(n.note || '')}</textarea>
                     <div class="vn-edit-date-row">
                         <label for="vn-edit-date-${safeId}">Alerta:</label>
                         <input type="date" id="vn-edit-date-${safeId}" class="vn-edit-date" value="${_escapeDashHtml(n.alertDate || '')}">
-                        <button type="button" class="vn-act-btn" onclick="document.getElementById('vn-edit-date-${safeId}').value=''" title="Quitar fecha de alerta">✕</button>
+                        <button type="button" class="vn-edit-clear-date" onclick="document.getElementById('vn-edit-date-${safeId}').value=''" title="Quitar fecha de alerta">✕</button>
                     </div>
                     <div class="vn-edit-actions">
-                        <button type="button" class="vn-act-btn" onclick="cancelEditVisitNote('${safeId}')">Cancelar</button>
-                        <button type="button" class="vn-act-btn vn-act-save" onclick="saveEditVisitNote('${safeId}')">Guardar</button>
+                        <button type="button" class="vn-edit-btn vn-edit-cancel" onclick="cancelEditVisitNote('${safeId}')">Cancelar</button>
+                        <button type="button" class="vn-edit-btn vn-edit-save" onclick="saveEditVisitNote('${safeId}')">Guardar</button>
                     </div>
                 </div>
 
-                <div class="vn-note-footer">
-                    <div class="vn-note-badges">${alertBadgeHtml}</div>
-                    <div class="vn-note-actions">
-                        ${(!n.done && n.alertDate) ? `<button type="button" class="vn-act-btn vn-act-snooze" onclick="snoozeVisitNoteFromModal('${safeId}', 7, 'visit')" title="Posponer 7 días">+7d</button>` : ''}
-                        <button type="button" class="vn-act-btn ${n.done ? 'vn-act-reopen' : 'vn-act-done'}" onclick="toggleVisitNoteStatus('${safeId}', 'visit')">
-                            ${n.done ? 'Reabrir' : '✓ Hecha'}
-                        </button>
-                        <button type="button" class="vn-act-btn vn-act-edit" onclick="startEditVisitNote('${safeId}')" title="Editar nota o alerta">
-                            <span class="material-icons-round">edit</span>
-                        </button>
-                        <button type="button" class="vn-act-btn vn-act-del" onclick="deleteVisitNoteFromModal('${safeId}')" title="Eliminar nota">
-                            <span class="material-icons-round">delete_outline</span>
-                        </button>
-                    </div>
+                <div class="vn-note-actions">
+                    ${(!n.done && n.alertDate) ? `
+                    <button type="button" class="vn-act-btn vn-act-snooze" onclick="snoozeVisitNoteFromModal('${safeId}', 7, 'visit')" title="Posponer 7 días">
+                        <span class="material-icons-round">update</span>
+                        <span>+7d</span>
+                    </button>` : ''}
+                    <button type="button" class="vn-act-btn ${n.done ? 'vn-act-reopen' : 'vn-act-done'}" onclick="toggleVisitNoteStatus('${safeId}', 'visit')">
+                        <span class="material-icons-round">${n.done ? 'replay' : 'check_circle'}</span>
+                        <span>${n.done ? 'Reabrir' : 'Hecha'}</span>
+                    </button>
+                    <button type="button" class="vn-act-btn vn-act-edit" onclick="startEditVisitNote('${safeId}')" title="Editar nota o alerta">
+                        <span class="material-icons-round">edit</span>
+                        <span>Editar</span>
+                    </button>
+                    <button type="button" class="vn-act-btn vn-act-del" onclick="deleteVisitNoteFromModal('${safeId}')" title="Eliminar nota">
+                        <span class="material-icons-round">delete_outline</span>
+                        <span>Borrar</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -1360,12 +1367,16 @@ async function openStartupVisitAlertsModal(dueAlerts = null) {
                                 </span>
                             </div>
                             <div class="vn-note-text">${_escapeDashHtml(n.note || '')}</div>
-                            <div class="vn-note-footer">
-                                <span class="vn-note-date">Visita del ${_formatShortDashDate(n.date)}</span>
-                                <div class="vn-note-actions">
-                                    <button type="button" class="vn-act-btn vn-act-snooze" onclick="snoozeVisitNoteFromModal('${safeId}', 7, 'startup')">+7d</button>
-                                    <button type="button" class="vn-act-btn vn-act-done" onclick="toggleVisitNoteStatus('${safeId}', 'startup')">✓ Hecha</button>
-                                </div>
+                            <div class="vn-note-meta-line">Visita del ${_formatShortDashDate(n.date)}</div>
+                            <div class="vn-note-actions vn-note-actions-row">
+                                <button type="button" class="vn-act-btn vn-act-row vn-act-snooze" onclick="snoozeVisitNoteFromModal('${safeId}', 7, 'startup')">
+                                    <span class="material-icons-round">update</span>
+                                    <span>Posponer +7d</span>
+                                </button>
+                                <button type="button" class="vn-act-btn vn-act-row vn-act-done" onclick="toggleVisitNoteStatus('${safeId}', 'startup')">
+                                    <span class="material-icons-round">check_circle</span>
+                                    <span>Hecha</span>
+                                </button>
                             </div>
                         </div>
                     `;

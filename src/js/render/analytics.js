@@ -162,6 +162,24 @@ async function renderTotales(isBack = false) {
 }
 
 // --- ALERTAS ---
+let _alertsFilterMode = 'all'; // 'all' | 'overdue' | 'ok'
+
+function _escapeAlertHtml(val) {
+    return String(val ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function _formatAlertShortDate(dateISO) {
+    if (!dateISO) return '--/--/--';
+    const d = new Date(dateISO);
+    if (Number.isNaN(d.getTime())) return '--/--/--';
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+}
+
 async function renderAlertas(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('alertas', isBack);
     const app = document.getElementById('app');
@@ -177,9 +195,10 @@ async function renderAlertas(isBack = false) {
         if (new Date(o.dateISO).getFullYear() !== currentYear) return;
         const c = dataManager.resolveClientForOrder(o, lookup);
         const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
-        if (!lastPurchase[key] || o.dateISO > lastPurchase[key].dateISO) {
+        if (!lastPurchase[key] || o.dateISO >= lastPurchase[key].dateISO) {
             lastPurchase[key] = {
                 dateISO: o.dateISO,
+                amount: parseFloat(o.amount) || 0,
                 client: c,
                 fallbackShop: o.shop
             };
@@ -191,20 +210,37 @@ async function renderAlertas(isBack = false) {
         const d = new Date(item.dateISO);
         const days = Math.ceil(Math.abs(now - d) / (1000 * 60 * 60 * 24));
         const c = item.client;
+        const primaryPhone = c ? (c.phone || c.phone2 || '') : '';
         return {
             shop: c ? c.name : item.fallbackShop,
             days,
-            phone: c ? c.phone : '',
+            lastDateISO: item.dateISO,
+            lastAmount: item.amount,
+            phone: primaryPhone,
+            hasNotes: Boolean(c && c.notes && String(c.notes).trim().length > 0),
             location: c ? c.location : '',
             province: c ? c.province : '',
             code: c ? c.code : null
         };
     }).sort((a,b) => b.days - a.days);
 
-    let contentHtml = '<main style="padding: 1rem 1.5rem; padding-bottom: 100px;">';
+    const overdueCount = entries.filter(e => e.days > 45).length;
+    const okCount = entries.length - overdueCount;
+
+    const callSvg = `
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="#ffffff" aria-hidden="true">
+            <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z"/>
+        </svg>`;
+
+    const whatsappSvg = `
+        <svg viewBox="0 0 32 32" width="23" height="23" fill="#ffffff" aria-hidden="true">
+            <path d="M16 3C8.82 3 3 8.82 3 16c0 2.48.7 4.8 1.91 6.77L3.4 28.6l6-1.48A12.93 12.93 0 0 0 16 29c7.18 0 13-5.82 13-13S23.18 3 16 3zm7.58 18.23c-.32.9-1.87 1.72-2.6 1.83-.66.1-1.5.14-2.42-.15-.56-.18-1.28-.42-2.2-.82-3.87-1.67-6.4-5.58-6.6-5.84-.2-.26-1.57-2.09-1.57-3.99s.99-2.83 1.35-3.22c.35-.39.77-.49 1.03-.49.26 0 .51 0 .74.01.24.01.56-.09.87.67.32.77 1.09 2.66 1.18 2.86.1.19.16.42.03.68-.13.26-.2.42-.39.64-.19.23-.41.51-.58.68-.19.19-.4.4-.17.79.23.39 1.01 1.66 2.17 2.69 1.49 1.33 2.75 1.74 3.14 1.94.39.19.62.16.85-.1.23-.26.97-1.13 1.23-1.52.26-.39.52-.32.87-.19.35.13 2.25 1.06 2.64 1.25.39.19.64.29.74.45.1.16.1.94-.22 1.84z"/>
+        </svg>`;
+
+    let contentHtml = '<main class="alerts-view-main">';
     
     contentHtml += `
-        <div class="pro-search-bar mb-4">
+        <div class="pro-search-bar alerts-search-bar">
             <span class="material-icons-round pro-search-icon">search</span>
             <input type="text" id="alertSearchInput" class="pro-search-input" placeholder="Buscar por tienda, población o provincia..." 
                    oninput="filterAlerts()"
@@ -224,66 +260,121 @@ async function renderAlertas(isBack = false) {
                 </button>
             </div>
         </div>
+
+        <div class="alerts-filter-grid">
+            <button type="button" class="alerts-filter-card is-all ${_alertsFilterMode === 'all' ? 'is-active' : ''}" data-filter="all" onclick="setAlertFilterMode('all')">
+                <span class="alerts-filter-count">${entries.length}</span>
+                <span class="alerts-filter-label">Todos</span>
+            </button>
+            <button type="button" class="alerts-filter-card is-overdue ${_alertsFilterMode === 'overdue' ? 'is-active' : ''}" data-filter="overdue" onclick="setAlertFilterMode('overdue')">
+                <span class="alerts-filter-count">${overdueCount}</span>
+                <span class="alerts-filter-label">+45 días</span>
+            </button>
+            <button type="button" class="alerts-filter-card is-ok ${_alertsFilterMode === 'ok' ? 'is-active' : ''}" data-filter="ok" onclick="setAlertFilterMode('ok')">
+                <span class="alerts-filter-count">${okCount}</span>
+                <span class="alerts-filter-label">Al día</span>
+            </button>
+        </div>
+
         <div id="alertsListContainer">
     `;
     
     if (entries.length === 0) {
-        contentHtml += '<div class="text-center p-12 text-slate-400 italic">Sin actividad de pedidos este año</div>';
+        contentHtml += '<div class="alerts-empty-state">Sin actividad de pedidos este año</div>';
     } else {
         entries.forEach(e => {
             const isDanger = e.days > 45;
-            const searchData = `${e.shop} ${e.location} ${e.province}`.toLowerCase().replace(/"/g, '');
+            const statusKey = isDanger ? 'overdue' : 'ok';
+            const searchData = _escapeAlertHtml(`${e.shop} ${e.location} ${e.province}`.toLowerCase());
+            const cleanCallPhone = String(e.phone || '').replace(/\s+/g, '');
+            const cleanWaPhone = String(e.phone || '').replace(/[^0-9]/g, '');
+            const hasPhone = cleanCallPhone.length > 0;
+            const lastDateStr = _formatAlertShortDate(e.lastDateISO);
+            const lastAmountStr = e.lastAmount > 0 ? ` · ${formatCurrency(Math.round(e.lastAmount))}` : '';
+            const safeCodeArg = e.code ? String(e.code).replace(/'/g, "\\'") : '';
+
             contentHtml += `
                 <div class="alert-card ${isDanger ? 'red-theme' : 'green-theme'}" 
+                     data-status="${statusKey}"
                      data-search="${searchData}"
-                     onclick="if('${e.code}' !== 'null') openClientDetailModal('${e.code}')">
+                     onclick="${safeCodeArg ? `openClientDetailModal('${safeCodeArg}')` : ''}">
                     
                     <div class="alert-card-info">
-                        <h3 class="alert-card-title">${e.shop}</h3>
-                        <div class="alert-card-details">
-                            <p class="alert-card-location">${e.location || 'SIN UBICACIÓN'}</p>
-                            <div class="alert-card-badge">Hace ${e.days} días</div>
+                        <div class="alert-card-top">
+                            <h3 class="alert-card-title">${_escapeAlertHtml(e.shop)}</h3>
+                            ${e.hasNotes ? '<span class="material-icons-round alert-card-pin" title="Tiene nota fija">push_pin</span>' : ''}
+                        </div>
+                        <div class="alert-card-meta">
+                            <span class="alert-card-location">${_escapeAlertHtml(e.location || 'SIN UBICACIÓN')}</span>
+                            <span class="alert-card-dot">·</span>
+                            <span class="alert-card-last">Últ: ${lastDateStr}${lastAmountStr}</span>
+                        </div>
+                        <div class="alert-card-status-row">
+                            <span class="alert-card-badge">
+                                <span class="alert-status-dot"></span>
+                                ${isDanger ? `Hace ${e.days} días (+45d)` : `Al día · Hace ${e.days} días`}
+                            </span>
                         </div>
                     </div>
 
                     <div class="alert-card-actions">
-                        <button class="btn-alert-v7 call shadow-sm"
-                                onclick="event.stopPropagation(); window.location.href='tel:${(e.phone || '').replace(/\s+/g, '')}'" title="Llamar">
-                            <span class="material-icons-round">call</span> 
+                        <button type="button"
+                                class="btn-alert-circle btn-alert-call ${hasPhone ? '' : 'is-disabled'}"
+                                onclick="event.stopPropagation(); ${hasPhone ? `window.location.href='tel:${cleanCallPhone}'` : ''}"
+                                title="${hasPhone ? 'Llamar' : 'Sin teléfono'}">
+                            ${callSvg}
                         </button>
-                        <button class="btn-alert-v7 whatsapp shadow-sm"
-                                onclick="event.stopPropagation(); window.openAppWhatsApp('${(e.phone || '').replace(/[^0-9]/g, '')}')" title="WhatsApp">
-                            <span class="material-icons-round">chat</span> 
+                        <button type="button"
+                                class="btn-alert-circle btn-alert-whatsapp ${hasPhone ? '' : 'is-disabled'}"
+                                onclick="event.stopPropagation(); ${hasPhone ? `window.openAppWhatsApp('${cleanWaPhone}')` : ''}"
+                                title="${hasPhone ? 'WhatsApp' : 'Sin teléfono'}">
+                            ${whatsappSvg}
                         </button>
                     </div>
                 </div>
             `;
         });
+        contentHtml += '<div id="alertsNoMatchMsg" class="alerts-empty-state" style="display: none;">No hay clientes que coincidan con este filtro</div>';
     }
 
     contentHtml += '</div></main>';
     contentHtml += renderBottomNav('alertas');
-    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
+    app.innerHTML = headerHtml + contentHtml;
+    filterAlerts();
+    if (window.restoreScroll) window.restoreScroll();
 }
+
+window.setAlertFilterMode = function(mode) {
+    _alertsFilterMode = mode || 'all';
+    document.querySelectorAll('.alerts-filter-card').forEach(btn => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-filter') === _alertsFilterMode);
+    });
+    filterAlerts();
+};
 
 window.filterAlerts = function() {
     const input = document.getElementById('alertSearchInput');
-    if (!input) return;
-    
-    toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn');
+    if (input) toggleClearSearch('alertSearchInput', 'clearAlertSearchBtn');
     
     const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-    const filter = norm(input.value);
+    const filter = input ? norm(input.value) : '';
     const cards = document.querySelectorAll('#alertsListContainer .alert-card');
+    let visibleCount = 0;
     
     cards.forEach(card => {
         const searchData = norm(card.getAttribute('data-search') || '');
-        if (!filter || searchData.includes(filter)) {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
+        const status = card.getAttribute('data-status') || '';
+        const matchesSearch = !filter || searchData.includes(filter);
+        const matchesStatus = _alertsFilterMode === 'all' || status === _alertsFilterMode;
+        const show = matchesSearch && matchesStatus;
+        card.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
     });
+
+    const noMatchEl = document.getElementById('alertsNoMatchMsg');
+    if (noMatchEl) {
+        noMatchEl.style.display = cards.length > 0 && visibleCount === 0 ? 'block' : 'none';
+    }
 };
 
 window.clearAlertSearch = function() {
@@ -533,10 +624,12 @@ async function openRankingModal(sortBy = 'sales', searchTerm = '') {
     // Asignar posición original antes de filtrar
     ranking = ranking.map((r, i) => ({ ...r, originalRank: i + 1 }));
     
-    // Filtrado por buscador
+    // Filtrado por buscador (ignorando tildes)
     if (searchTerm) {
-        const lowerSearch = searchTerm.toLowerCase();
-        ranking = ranking.filter(r => r.name.toLowerCase().includes(lowerSearch));
+        const normSearch = normalizeTextKey(searchTerm);
+        if (normSearch) {
+            ranking = ranking.filter(r => normalizeTextKey(r.name).includes(normSearch));
+        }
     }
     
     modal.innerHTML = `

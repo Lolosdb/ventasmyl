@@ -6,60 +6,86 @@ window.currentLeafletMap = null;
 window.isRouteMode = false;
 window.selectedRoutePoints = [];
 window.userLocationMarker = null;
+window._mapClusterGroup = null;
+window._mapMarkerItems = [];
+window._mapStatusFilter = window._mapStatusFilter || 'all';
+
+function _escapeMapHtml(val) {
+    return String(val ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function _normMapSearch(str) {
+    if (typeof window.normalizeTextKey === 'function') return window.normalizeTextKey(str);
+    return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
 
 async function renderMapa(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('mapa', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Mapa de Clientes');
+    const activeFilter = window._mapStatusFilter || 'all';
 
     let contentHtml = '<main class="map-view-main">';
 
-    // Barra de búsqueda superior con espaciado limpio y equilibrado
+    // Buscador + filtros interactivos por color (leyenda siempre visible)
     contentHtml += `
-        <div class="map-top-search-wrap">
+        <div class="map-top-controls">
             <div class="pro-search-bar map-search-bar">
                 <span class="material-icons-round pro-search-icon">search</span>
-                <input type="text" id="mapSearchInput" class="pro-search-input" placeholder="Buscar localidad..." 
+                <input type="text" id="mapSearchInput" class="pro-search-input" placeholder="Buscar tienda o localidad..." 
                        onkeydown="if(event.key==='Enter') searchLocation()" oninput="toggleMapClearBtn()" onkeyup="toggleMapClearBtn()">
                 <div class="pro-search-actions">
                     <button type="button" id="clearMapSearchBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearMapSearch()" title="Borrar búsqueda">
                         <span class="material-icons-round">close</span>
                     </button>
-                    <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('mapSearchInput', this)" title="Buscar localidad por voz">
+                    <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('mapSearchInput', this, () => searchLocation())" title="Buscar localidad por voz">
                         <span class="material-icons-round">mic</span>
                     </button>
                 </div>
             </div>
+
+            <div class="map-filter-row" id="mapFilterRow">
+                <button type="button" class="map-filter-chip is-all ${activeFilter === 'all' ? 'is-active' : ''}" data-map-filter="all" onclick="setMapStatusFilter('all')">
+                    <span class="map-chip-count" id="mapCountAll">-</span>
+                    <span class="map-chip-label">Todos</span>
+                </button>
+                <button type="button" class="map-filter-chip is-active-status ${activeFilter === 'active' ? 'is-active' : ''}" data-map-filter="active" onclick="setMapStatusFilter('active')">
+                    <span class="map-chip-count" id="mapCountActive">-</span>
+                    <span class="map-chip-label"><span class="legend-dot dot-active"></span>Al día</span>
+                </button>
+                <button type="button" class="map-filter-chip is-overdue ${activeFilter === 'overdue' ? 'is-active' : ''}" data-map-filter="overdue" onclick="setMapStatusFilter('overdue')">
+                    <span class="map-chip-count" id="mapCountOverdue">-</span>
+                    <span class="map-chip-label"><span class="legend-dot dot-inactive"></span>+45 días</span>
+                </button>
+                <button type="button" class="map-filter-chip is-none ${activeFilter === 'none' ? 'is-active' : ''}" data-map-filter="none" onclick="setMapStatusFilter('none')">
+                    <span class="map-chip-count" id="mapCountNone">-</span>
+                    <span class="map-chip-label"><span class="legend-dot dot-no-orders"></span>Sin ped.</span>
+                </button>
+            </div>
         </div>
     `;
 
-    // Lienzo del mapa enmarcado con controles flotantes unificados
+    // Lienzo del mapa limpio con controles flotantes esenciales
     contentHtml += `
         <div class="map-canvas-wrapper">
             <div id="map-container"></div>
 
-            <!-- Controles flotantes unificados y elegantes -->
             <div class="map-fabs">
-                <!-- Leyenda Popover -->
-                <div id="mapLegendPopover" class="map-legend-popover">
-                    <div class="map-legend-title">Estado de Clientes</div>
-                    <div class="legend-item"><span class="legend-dot dot-active"></span><span class="legend-label">Activos (&le; 45 días)</span></div>
-                    <div class="legend-item"><span class="legend-dot dot-inactive"></span><span class="legend-label">Inactivos (&gt; 45 días)</span></div>
-                    <div class="legend-item"><span class="legend-dot dot-no-orders"></span><span class="legend-label">Sin compras este año</span></div>
-                </div>
+                <!-- Clientes Cerca -->
+                <button type="button" class="map-fab-btn map-fab-nearby" onclick="window.openNearbyRadarModal()" id="btnNearbyRadar" title="¿Quién tengo cerca ahora?">
+                    <span class="material-icons-round">person_pin_circle</span>
+                </button>
 
-                <!-- Cápsula 1: Herramientas de Consulta (Leyenda + Radar Cercanos) -->
-                <div class="map-control-group">
-                    <button type="button" class="map-control-btn" onclick="toggleMapLegend()" id="btnMapLegend" title="Ver leyenda de colores">
-                        <span class="material-icons-round">info</span>
-                    </button>
-                    <div class="map-control-divider"></div>
-                    <button type="button" class="map-control-btn" onclick="window.openNearbyRadarModal()" id="btnNearbyRadar" title="¿Quién tengo cerca ahora?">
-                        <span class="material-icons-round">radar</span>
-                    </button>
-                </div>
-
-                <!-- Cápsula 2: Control de Zoom (+ / -) -->
+                <!-- Control de Zoom (+ / -) -->
                 <div class="map-control-group">
                     <button type="button" class="map-control-btn" onclick="window.zoomIn()" title="Acercar mapa">
                         <span class="material-icons-round">add</span>
@@ -70,7 +96,7 @@ async function renderMapa(isBack = false) {
                     </button>
                 </div>
 
-                <!-- Botón Principal GPS: Mi Ubicación -->
+                <!-- Mi Ubicación GPS -->
                 <button type="button" class="map-fab-btn map-fab-location" onclick="centerMapOnUser(true)" title="Centrar en mi ubicación actual">
                     <span class="material-icons-round">my_location</span>
                 </button>
@@ -95,20 +121,20 @@ async function initLeafletMap() {
     const map = L.map('map-container', { zoomControl: false }).setView([43.36, -5.85], 9);
     window.currentLeafletMap = map;
     window.userLocationMarker = null;
+    window._mapMarkerItems = [];
 
     if (window.lastUserCoords) {
         updateUserMarker(window.lastUserCoords.lat, window.lastUserCoords.lng);
     }
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Mapa base limpio estilo moderno (CartoDB Voyager)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
     }).addTo(map);
 
-    // L.control.zoom({ position: 'bottomleft' }).addTo(map); // Eliminado para usar botones personalizados fab-btn
-
     try {
-        // Asegurar que las modales existan
         if (window.injectClientModals) window.injectClientModals();
         if (window.injectPedidoModals) window.injectPedidoModals();
         
@@ -117,19 +143,17 @@ async function initLeafletMap() {
         const now = new Date();
         const year = now.getFullYear();
 
-        // Grupo de clusters con zoom inteligente y sin "palitos"
         const markers = L.markerClusterGroup({
-            spiderfyOnMaxZoom: false,    // Desactiva los palitos
+            spiderfyOnMaxZoom: false,
             showCoverageOnHover: false,
-            zoomToBoundsOnClick: false,  // Controlamos nosotros el evento para el zoom forzado
-            maxClusterRadius: 2,         // Sensibilidad máxima para separar puntos
-            disableClusteringAtZoom: 14  // Que aparezcan los puntos mucho antes de la vista de calle
+            zoomToBoundsOnClick: false,
+            maxClusterRadius: 26,
+            disableClusteringAtZoom: 14
         });
+        window._mapClusterGroup = markers;
 
-        // Evento personalizado para zoom con encuadre perfecto
         markers.on('clusterclick', function (a) {
             const bounds = a.layer.getBounds();
-            // maxZoom: 17 garantiza ver calles sin acercarse excesivamente
             window.currentLeafletMap.fitBounds(bounds, {
                 padding: [50, 50],
                 maxZoom: 17,
@@ -139,6 +163,9 @@ async function initLeafletMap() {
         });
 
         const seenCoords = new Map();
+        let countActive = 0;
+        let countOverdue = 0;
+        let countNone = 0;
 
         clients.forEach(c => {
             if (!c.lat || !c.lng) return;
@@ -146,79 +173,139 @@ async function initLeafletMap() {
             let lng = parseFloat(String(c.lng).replace(',', '.'));
             if (isNaN(lat) || isNaN(lng)) return;
 
-            // Micro-desplazamiento para puntos en la misma ubicación (Jitter)
             const coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
             if (seenCoords.has(coordKey)) {
                 const count = seenCoords.get(coordKey);
                 seenCoords.set(coordKey, count + 1);
-                // Desplazamiento muy pequeño (~10-15 metros) para separar visualmente
                 lat += (Math.random() - 0.5) * 0.00016; 
                 lng += (Math.random() - 0.5) * 0.00016;
             } else {
                 seenCoords.set(coordKey, 1);
             }
 
-            // Cálculo de días desde último pedido (usando vínculo por código de cliente o nombre normalizado)
             const cOrders = orders.filter(o => dataManager.isOrderForClient(o, c) && o.year === year);
-            let daysAgo = 999;
-            let color = '#3b82f6'; // Azul: Sin pedidos
+            let daysAgo = null;
+            let statusKey = 'none';
+            let color = '#3b82f6';
+            let statusBadgeHtml = '<span class="popup-status-pill is-none">Sin compras este año</span>';
             
             if (cOrders.length > 0) {
                 const lastDate = new Date(Math.max(...cOrders.map(o => new Date(o.dateISO).getTime())));
                 daysAgo = Math.ceil(Math.abs(now - lastDate) / (1000 * 60 * 60 * 24));
-                color = daysAgo <= 45 ? '#22c55e' : '#ef4444';
+                if (daysAgo <= 45) {
+                    statusKey = 'active';
+                    color = '#16a34a';
+                    countActive++;
+                    statusBadgeHtml = `<span class="popup-status-pill is-active">Al día · hace ${daysAgo}d</span>`;
+                } else {
+                    statusKey = 'overdue';
+                    color = '#ef4444';
+                    countOverdue++;
+                    statusBadgeHtml = `<span class="popup-status-pill is-overdue">+45d · hace ${daysAgo}d</span>`;
+                }
+            } else {
+                countNone++;
             }
 
             const marker = L.circleMarker([lat, lng], {
-                radius: 11, // Aumentado para mejor táctil
+                radius: 9.5,
                 fillColor: color,
-                color: 'white',
-                weight: 2,
+                color: '#ffffff',
+                weight: 2.5,
                 fillOpacity: 1
             });
 
             const safeCode = String(c.code || '').replace(/'/g, "\\'");
             const visitTag = c.lastVisitDate
-                ? `<div style="font-size: 10px; font-weight: 800; color: #6d28d9; background: #f5f3ff; border-radius: 999px; padding: 2px 8px; margin: -8px auto 10px; width: fit-content;">👁️ Visitado ${new Date(c.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</div>`
+                ? `<span class="popup-visit-pill"><span class="material-icons-round">visibility</span>${new Date(c.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</span>`
+                : '';
+            const pinTag = (c.notes && String(c.notes).trim())
+                ? '<span class="popup-pin-pill" title="Tiene nota fija"><span class="material-icons-round">push_pin</span>Nota</span>'
                 : '';
 
             marker.bindPopup(`
-                <div class="text-center">
-                    <h3 class="popup-title">${c.name}</h3>
-                    <p class="popup-subtitle">${c.location || ''}</p>
-                    ${visitTag}
-                    <div class="flex flex-col gap-2">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                            <button class="popup-btn btn-detail"
+                <div class="popup-card-wrap">
+                    <h3 class="popup-title">${_escapeMapHtml(c.name || 'Cliente')}</h3>
+                    <p class="popup-subtitle">${_escapeMapHtml(c.location || '')}</p>
+                    <div class="popup-badges-row">
+                        ${statusBadgeHtml}
+                        ${visitTag}
+                        ${pinTag}
+                    </div>
+                    <div class="popup-actions-stack">
+                        <div class="popup-actions-grid">
+                            <button type="button" class="popup-btn btn-detail"
                                     onclick="event.stopPropagation(); window.openClientDetailModal('${safeCode}')">
-                                <span class="material-icons-round">account_circle</span> FICHA
+                                <span class="material-icons-round">account_circle</span>
+                                <span>Ficha</span>
                             </button>
-                            <button class="popup-btn btn-go-direct"
+                            <button type="button" class="popup-btn btn-go-direct"
                                     onclick="event.stopPropagation(); window.open('https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}', '_blank')">
-                                <span class="material-icons-round">near_me</span> IR
+                                <span class="material-icons-round">directions</span>
+                                <span>Ir</span>
                             </button>
                         </div>
-                        <button class="popup-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);"
+                        <button type="button" class="popup-btn btn-popup-order"
                                 onclick="event.stopPropagation(); window.openNewOrderForClient('${safeCode}')">
-                            <span class="material-icons-round">add_shopping_cart</span> ➕ NUEVO PEDIDO
+                            <span class="material-icons-round">add_shopping_cart</span>
+                            <span>Nuevo pedido</span>
                         </button>
-                        <button class="popup-btn" style="background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe;"
+                        <button type="button" class="popup-btn btn-popup-visit"
                                 onclick="event.stopPropagation(); window.quickCheckInVisit('${safeCode}')">
-                            <span class="material-icons-round">visibility</span> 👁️ VISITADO HOY
+                            <span class="material-icons-round">visibility</span>
+                            <span>Visitado hoy</span>
                         </button>
                     </div>
                 </div>
-            `, { closeButton: false, minWidth: 195 });
+            `, { closeButton: false, minWidth: 210 });
 
-            markers.addLayer(marker);
+            window._mapMarkerItems.push({
+                marker,
+                status: statusKey,
+                name: c.name || '',
+                location: c.location || '',
+                province: c.province || '',
+                lat,
+                lng
+            });
         });
 
+        const totalMarkers = window._mapMarkerItems.length;
+        const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = String(val); };
+        setTxt('mapCountAll', totalMarkers);
+        setTxt('mapCountActive', countActive);
+        setTxt('mapCountOverdue', countOverdue);
+        setTxt('mapCountNone', countNone);
+
         map.addLayer(markers);
-        
+        applyMapStatusFilter();
+
         // Auto-localizar al inicio
         setTimeout(() => centerMapOnUser(false), 500);
 
     } catch (e) { console.error("Error en mapa", e); }
+}
+
+function applyMapStatusFilter() {
+    const markers = window._mapClusterGroup;
+    if (!markers) return;
+    const mode = window._mapStatusFilter || 'all';
+    markers.clearLayers();
+    const toAdd = [];
+    window._mapMarkerItems.forEach(item => {
+        if (mode === 'all' || item.status === mode) {
+            toAdd.push(item.marker);
+        }
+    });
+    if (toAdd.length > 0) markers.addLayers(toAdd);
+}
+
+function setMapStatusFilter(mode) {
+    window._mapStatusFilter = mode || 'all';
+    document.querySelectorAll('#mapFilterRow .map-filter-chip').forEach(btn => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-map-filter') === window._mapStatusFilter);
+    });
+    applyMapStatusFilter();
 }
 
 /**
@@ -348,20 +435,63 @@ function toggleMapClearBtn() {
 
 async function searchLocation() {
     const input = document.getElementById('mapSearchInput');
-    const query = input.value.trim();
+    const query = (input ? input.value : '').trim();
     if (!query) return;
     
     // Ocultar teclado en móviles
-    input.blur();
+    if (input) input.blur();
 
+    // 1. Buscar primero en clientes locales (tienda, población o provincia, ignorando tildes)
+    const normQ = _normMapSearch(query);
+    if (normQ && Array.isArray(window._mapMarkerItems) && window._mapMarkerItems.length > 0 && window.currentLeafletMap) {
+        const localMatches = window._mapMarkerItems.filter(item => {
+            const hay = _normMapSearch(`${item.name} ${item.location} ${item.province}`);
+            return hay.includes(normQ);
+        });
+
+        if (localMatches.length === 1) {
+            const m = localMatches[0];
+            if (window._mapStatusFilter !== 'all' && m.status !== window._mapStatusFilter) {
+                setMapStatusFilter('all');
+            }
+            window.currentLeafletMap.flyTo([m.lat, m.lng], 16, { animate: true, duration: 0.7 });
+            setTimeout(() => {
+                if (window._mapClusterGroup && typeof window._mapClusterGroup.zoomToShowLayer === 'function') {
+                    window._mapClusterGroup.zoomToShowLayer(m.marker, () => m.marker.openPopup());
+                } else {
+                    m.marker.openPopup();
+                }
+            }, 450);
+            showToast(`📍 ${m.name}`);
+            return;
+        }
+
+        if (localMatches.length > 1) {
+            if (window._mapStatusFilter !== 'all') {
+                const anyInFilter = localMatches.some(m => m.status === window._mapStatusFilter);
+                if (!anyInFilter) setMapStatusFilter('all');
+            }
+            const bounds = L.latLngBounds(localMatches.map(m => [m.lat, m.lng]));
+            window.currentLeafletMap.fitBounds(bounds, {
+                padding: [45, 45],
+                maxZoom: 15,
+                animate: true,
+                duration: 0.7
+            });
+            showToast(`📍 Mostrando ${localMatches.length} clientes en "${query.toUpperCase()}"`);
+            return;
+        }
+    }
+
+    // 2. Respaldo online con Nominatim si no hay coincidencias locales
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
         const data = await res.json();
-        if (data.length > 0) {
+        if (data.length > 0 && window.currentLeafletMap) {
             const { lat, lon } = data[0];
             window.currentLeafletMap.flyTo([lat, lon], 14);
         } else alert("No se encontró la ubicación");
-    } catch (e) { alert("Error en el buscador"); }
+    } catch (e) { alert("Error en el buscador (sin conexión)"); }
 }
 
 function clearMapSearch() {
@@ -403,20 +533,6 @@ function centerMapOnUser(doFly = true) {
     );
 }
 
-function toggleMapLegend() {
-    const popover = document.getElementById('mapLegendPopover');
-    const btn = document.getElementById('btnMapLegend');
-    const isOpen = popover.classList.contains('open');
-    
-    if (isOpen) {
-        popover.classList.remove('open');
-        btn.classList.remove('active');
-    } else {
-        popover.classList.add('open');
-        btn.classList.add('active');
-    }
-}
-
 function showToast(message) {
     let toast = document.querySelector('.map-toast');
     if (!toast) {
@@ -447,7 +563,7 @@ window.searchLocation = searchLocation;
 window.clearMapSearch = clearMapSearch;
 window.toggleMapClearBtn = toggleMapClearBtn;
 window.centerMapOnUser = centerMapOnUser;
-window.toggleMapLegend = toggleMapLegend;
+window.setMapStatusFilter = setMapStatusFilter;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
 window.showToast = showToast;

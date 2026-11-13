@@ -1,38 +1,117 @@
-/* Alertas View Styles - Rediseño V7 Super Compact (Fila Única) */
+/* Alertas View Styles - Diseño Limpio & Móvil Vertical */
 
-:root {
-    --alert-green: #10b981;
-    --alert-green-bg: #f0fdf4;
-    --alert-green-border: #d1fae5;
-    
-    --alert-red: #f43f5e;
-    --alert-red-bg: #fff1f2;
-    --alert-red-border: #fee2e2;
+.alerts-view-main {
+    padding: 12px 14px 104px;
 }
 
+.alerts-search-bar {
+    margin-bottom: 10px;
+}
+
+/* Barra resumen + filtros interactivos */
+.alerts-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.alerts-filter-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 8px 6px;
+    min-height: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    transition: transform 0.14s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.alerts-filter-card:active {
+    transform: scale(0.96);
+}
+
+.alerts-filter-count {
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.1;
+    color: #0f172a;
+}
+
+.alerts-filter-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+}
+
+.alerts-filter-card.is-overdue .alerts-filter-count {
+    color: #dc2626;
+}
+
+.alerts-filter-card.is-ok .alerts-filter-count {
+    color: #16a34a;
+}
+
+.alerts-filter-card.is-all.is-active {
+    background: #0284c7;
+    border-color: #0284c7;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
+}
+
+.alerts-filter-card.is-all.is-active .alerts-filter-count,
+.alerts-filter-card.is-all.is-active .alerts-filter-label {
+    color: #ffffff;
+}
+
+.alerts-filter-card.is-overdue.is-active {
+    background: #fef2f2;
+    border-color: #ef4444;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.14);
+}
+
+.alerts-filter-card.is-overdue.is-active .alerts-filter-label {
+    color: #b91c1c;
+}
+
+.alerts-filter-card.is-ok.is-active {
+    background: #f0fdf4;
+    border-color: #10b981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.14);
+}
+
+.alerts-filter-card.is-ok.is-active .alerts-filter-label {
+    color: #15803d;
+}
+
+/* Tarjetas de Cliente */
 .alert-card {
-    background: white;
-    border-radius: 18px;
-    margin-bottom: 0.65rem;
-    padding: 10px 14px;
-    border: 1px solid #f1f5f9;
+    background: #ffffff;
+    border-radius: 16px;
+    margin-bottom: 9px;
+    padding: 11px 12px 11px 16px;
+    border: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.14s ease, background-color 0.15s ease;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .alert-card:active {
-    transform: scale(0.98);
+    transform: scale(0.985);
     background: #f8fafc;
 }
 
-/* Barra lateral sutil integrada */
+/* Barra lateral de color rápida para distinguir al instante */
 .alert-card::before {
     content: '';
     position: absolute;
@@ -40,21 +119,23 @@
     top: 0;
     bottom: 0;
     width: 6px;
-    background: var(--alert-green);
-}
-
-.alert-card.red-theme::before {
-    background: var(--alert-red);
-}
-
-.alert-card.green-theme {
-    background: var(--alert-green-bg);
-    border-color: var(--alert-green-border);
+    background: #10b981;
 }
 
 .alert-card.red-theme {
-    background: var(--alert-red-bg);
-    border-color: var(--alert-red-border);
+    border-color: #fecaca;
+}
+
+.alert-card.red-theme::before {
+    background: #ef4444;
+}
+
+.alert-card.green-theme {
+    border-color: #bbf7d0;
+}
+
+.alert-card.green-theme::before {
+    background: #10b981;
 }
 
 .alert-card-info {
@@ -65,97 +146,145 @@
     gap: 4px;
 }
 
-.alert-card-title {
-    font-size: 15px;
-    font-weight: 950;
-    color: #1e293b;
-    margin: 0;
-    line-height: 1.2;
-    text-transform: uppercase;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.alert-card-details {
+.alert-card-top {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
     min-width: 0;
 }
 
-.alert-card-location {
-    font-size: 11px;
+.alert-card-title {
+    font-size: 14.5px;
     font-weight: 800;
-    color: #94a3b8;
+    color: #0f172a;
     margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 0 1 auto;
 }
 
-/* Badge de tiempo centrado y compacto */
-.alert-card-badge {
-    padding: 2px 8px;
-    border-radius: 8px;
-    font-size: 9.5px;
-    font-weight: 900;
-    background: white;
-    border: 1px solid rgba(0,0,0,0.06);
+.alert-card-pin {
+    font-size: 15px !important;
+    color: #d97706;
+    flex-shrink: 0;
+}
+
+.alert-card-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
     color: #64748b;
+    line-height: 1.25;
+}
+
+.alert-card-location {
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+}
+
+.alert-card-dot {
+    color: #94a3b8;
+}
+
+.alert-card-last {
+    color: #64748b;
+}
+
+.alert-card-status-row {
+    display: flex;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.alert-card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    border: 1px solid transparent;
     white-space: nowrap;
+}
+
+.alert-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
     flex-shrink: 0;
 }
 
 .red-theme .alert-card-badge {
-    color: var(--alert-red);
-    border-color: var(--alert-red-border);
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.red-theme .alert-status-dot {
+    background: #ef4444;
 }
 
 .green-theme .alert-card-badge {
-    color: var(--alert-green);
-    border-color: var(--alert-green-border);
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #15803d;
 }
 
-/* Acciones en Horizontal a la Derecha */
+.green-theme .alert-status-dot {
+    background: #10b981;
+}
+
+/* Acciones Circulares Corporativas */
 .alert-card-actions {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 10px;
     flex-shrink: 0;
 }
 
-.btn-alert-v7 {
-    width: 48px;
-    height: 42px;
-    border-radius: 12px;
-    display: flex;
+.btn-alert-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: none;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    flex-shrink: 0;
+    transition: transform 0.14s ease, opacity 0.15s ease;
 }
 
-.btn-alert-v7:active {
-    transform: scale(0.9);
+.btn-alert-circle:active {
+    transform: scale(0.92);
 }
 
-.btn-alert-v7 .material-icons-round {
-    font-size: 22px;
+.btn-alert-call {
+    background: #1a73e8;
+    box-shadow: 0 3px 10px rgba(26, 115, 232, 0.25);
 }
 
-.btn-alert-v7.call {
-    background: #eff6ff;
-    color: #3b82f6;
-    border: 1px solid #dbeafe;
+.btn-alert-whatsapp {
+    background: #25d366;
+    box-shadow: 0 3px 10px rgba(37, 211, 102, 0.25);
 }
 
-.btn-alert-v7.whatsapp {
-    background: #f0fdf4;
-    color: #10b981;
-    border: 1px solid #d1fae5;
+.btn-alert-circle.is-disabled {
+    opacity: 0.32;
+    pointer-events: none;
+    box-shadow: none;
+}
+
+.alerts-empty-state {
+    text-align: center;
+    padding: 36px 16px;
+    color: #64748b;
+    font-size: 13.5px;
+    font-weight: 600;
 }

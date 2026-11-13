@@ -31,15 +31,15 @@ async function renderClientes(isBack = false) {
             </div>
 
             <div class="pro-toolbar-sync-row">
-                <button type="button" class="pro-sync-btn" onclick="document.getElementById('clientImportInput').click()">
+                <button type="button" class="pro-sync-btn is-excel" onclick="document.getElementById('clientImportInput').click()">
                     <span class="material-icons-round">upload_file</span>
                     <span>Importar Excel</span>
                 </button>
-                <button type="button" class="pro-sync-btn" onclick="handleDriveImport()">
+                <button type="button" class="pro-sync-btn is-drive-down" onclick="handleDriveImport()">
                     <span class="material-icons-round">cloud_download</span>
                     <span>Bajar Drive</span>
                 </button>
-                <button type="button" class="pro-sync-btn" onclick="handleDriveExportClients()">
+                <button type="button" class="pro-sync-btn is-drive-up" onclick="handleDriveExportClients()">
                     <span class="material-icons-round">cloud_upload</span>
                     <span>Subir Drive</span>
                 </button>
@@ -85,56 +85,99 @@ async function renderClientes(isBack = false) {
     `;
 
     const clients = await dataManager.getClients();
-    clients.sort((a, b) => { const lA = (a && a.location) ? String(a.location) : ""; const lB = (b && b.location) ? String(b.location) : ""; return lA.localeCompare(lB); });
+    clients.sort((a, b) => {
+        const lA = (a && a.location) ? String(a.location).trim() : '';
+        const lB = (b && b.location) ? String(b.location).trim() : '';
+        const locCmp = lA.localeCompare(lB, 'es', { sensitivity: 'base' });
+        if (locCmp !== 0) return locCmp;
+        const nA = (a && a.name) ? String(a.name).trim() : '';
+        const nB = (b && b.name) ? String(b.name).trim() : '';
+        return nA.localeCompare(nB, 'es', { sensitivity: 'base' });
+    });
 
     contentHtml += '<div id="clientsList" class="clients-list">';
     if (clients.length === 0) {
         contentHtml += '<div class="text-center p-8 text-secondary">No hay clientes registrados</div>';
     } else {
-        clients.forEach(client => { if(!client) return;
-            const searchCode = String(client.code || '').toLowerCase().replace(/"/g, '&quot;');
-            const searchName = String(client.name || '').toLowerCase().replace(/"/g, '&quot;');
-            const searchLoc = String(client.location || '').toLowerCase().replace(/"/g, '&quot;');
-            const searchContact = String(client.contact || '').toLowerCase().replace(/"/g, '&quot;');
-            const searchProv = String(client.province || '').toLowerCase().replace(/"/g, '&quot;');
+        const locGroups = [];
+        const locGroupMap = new Map();
+        clients.forEach(client => {
+            if (!client) return;
+            const rawLoc = String(client.location || '').trim();
+            const groupKey = _normSearchStr(rawLoc) || '__sin_ubicacion__';
+            if (!locGroupMap.has(groupKey)) {
+                const group = {
+                    label: rawLoc ? rawLoc.toUpperCase() : 'SIN UBICACIÓN',
+                    items: []
+                };
+                locGroupMap.set(groupKey, group);
+                locGroups.push(group);
+            }
+            locGroupMap.get(groupKey).items.push(client);
+        });
+
+        locGroups.forEach(group => {
             contentHtml += `
-                <div class="client-card pro-client-item" 
-                     onclick="openClientDetailModal('${String(client.code || '').replace(/'/g, "\\'")}')"
-                     data-name="${searchCode} ${searchName} ${searchContact}" 
-                     data-location="${searchLoc} ${searchProv}">
-                    <div class="pro-client-item-body">
-                        <div class="pro-client-item-top">
-                            <span class="pro-client-code-badge">#${client.code || '---'}</span>
-                            <span class="pro-client-name">${client.name || 'Sin Nombre'}</span>
-                        </div>
-                        <div class="pro-client-meta-row">
-                            <span class="pro-meta-pill pro-meta-loc">
-                                <span class="material-icons-round">place</span>
-                                ${client.location || 'Sin ubicación'}
-                            </span>
-                            ${client.contact ? `
-                                <span class="pro-meta-pill pro-meta-contact">
-                                    <span class="material-icons-round">person</span>
-                                    ${client.contact}
-                                </span>
-                            ` : ''}
-                            ${client.lastVisitDate ? `
-                                <span class="pro-meta-pill pro-meta-visit" title="Última visita registrada">
-                                    <span class="material-icons-round">visibility</span>
-                                    ${new Date(client.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
-                                </span>
-                            ` : ''}
-                            ${client.pendingSync ? `
-                                <span class="pro-meta-pill pro-meta-sync" title="Pendiente de subir a Drive">
-                                    <span class="material-icons-round">cloud_queue</span>
-                                    Pendiente
-                                </span>
-                            ` : ''}
-                        </div>
+                <div class="pro-loc-group">
+                    <div class="pro-loc-divider">
+                        <span class="pro-loc-divider-left">
+                            <span class="material-icons-round">place</span>
+                            <span>${escapeClientHtml(group.label)}</span>
+                        </span>
+                        <span class="pro-loc-divider-count" data-total-count="${group.items.length}">${group.items.length}</span>
                     </div>
-                    <span class="material-icons-round pro-client-chevron">chevron_right</span>
-                </div>
             `;
+
+            group.items.forEach(client => {
+                const searchCode = String(client.code || '').toLowerCase().replace(/"/g, '&quot;');
+                const searchName = String(client.name || '').toLowerCase().replace(/"/g, '&quot;');
+                const searchLoc = String(client.location || '').toLowerCase().replace(/"/g, '&quot;');
+                const searchContact = String(client.contact || '').toLowerCase().replace(/"/g, '&quot;');
+                const searchProv = String(client.province || '').toLowerCase().replace(/"/g, '&quot;');
+                const hasFixedNotes = Boolean(client.notes && String(client.notes).trim().length > 0);
+
+                contentHtml += `
+                    <div class="client-card pro-client-item" 
+                         onclick="openClientDetailModal('${String(client.code || '').replace(/'/g, "\\'")}')"
+                         data-name="${searchCode} ${searchName} ${searchContact}" 
+                         data-location="${searchLoc} ${searchProv}">
+                        <div class="pro-client-item-body">
+                            <div class="pro-client-item-top">
+                                <span class="pro-client-code-badge">${escapeClientHtml(client.code || '---')}</span>
+                                <span class="pro-client-name">${escapeClientHtml(client.name || 'Sin Nombre')}</span>
+                                ${hasFixedNotes ? '<span class="material-icons-round pro-client-note-pin" title="Tiene nota fija">push_pin</span>' : ''}
+                            </div>
+                            <div class="pro-client-meta-row">
+                                <span class="pro-meta-pill pro-meta-loc">
+                                    <span class="material-icons-round">place</span>
+                                    ${escapeClientHtml(client.location || 'Sin ubicación')}
+                                </span>
+                                ${client.contact ? `
+                                    <span class="pro-meta-pill pro-meta-contact">
+                                        <span class="material-icons-round">person</span>
+                                        ${escapeClientHtml(client.contact)}
+                                    </span>
+                                ` : ''}
+                                ${client.lastVisitDate ? `
+                                    <span class="pro-meta-pill pro-meta-visit" title="Última visita registrada">
+                                        <span class="material-icons-round">visibility</span>
+                                        ${new Date(client.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+                                    </span>
+                                ` : ''}
+                                ${client.pendingSync ? `
+                                    <span class="pro-meta-pill pro-meta-sync" title="Pendiente de subir a Drive">
+                                        <span class="material-icons-round">cloud_queue</span>
+                                        Pendiente
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <span class="material-icons-round pro-client-chevron">chevron_right</span>
+                    </div>
+                `;
+            });
+
+            contentHtml += '</div>';
         });
     }
     contentHtml += '</div>';
@@ -164,15 +207,26 @@ function filterClients(query) {
     // Usar utilidad global para el botón X
     toggleClearSearch('clientSearchInput', 'clearSearchBtn');
 
-    document.querySelectorAll('.client-card').forEach(card => {
-        const name = _normSearchStr(card.getAttribute('data-name'));
-        const loc = _normSearchStr(card.getAttribute('data-location'));
-        const text = !q ? '' : _normSearchStr(card.textContent);
-        const matches = !q || name.includes(q) || loc.includes(q) || text.includes(q);
-        if (matches) {
-            card.style.setProperty('display', 'flex', 'important');
-        } else {
-            card.style.setProperty('display', 'none', 'important');
+    document.querySelectorAll('#clientsList .pro-loc-group').forEach(group => {
+        let visibleInGroup = 0;
+        group.querySelectorAll('.client-card').forEach(card => {
+            const name = _normSearchStr(card.getAttribute('data-name'));
+            const loc = _normSearchStr(card.getAttribute('data-location'));
+            const text = !q ? '' : _normSearchStr(card.textContent);
+            const matches = !q || name.includes(q) || loc.includes(q) || text.includes(q);
+            if (matches) {
+                card.style.setProperty('display', 'flex', 'important');
+                visibleInGroup++;
+            } else {
+                card.style.setProperty('display', 'none', 'important');
+            }
+        });
+
+        group.style.display = visibleInGroup > 0 ? '' : 'none';
+        const countEl = group.querySelector('.pro-loc-divider-count');
+        if (countEl) {
+            const total = countEl.getAttribute('data-total-count') || String(visibleInGroup);
+            countEl.textContent = q ? `${visibleInGroup}/${total}` : total;
         }
     });
 }
@@ -351,6 +405,9 @@ async function openClientDetailModal(clientCode) {
             <ellipse cx="16" cy="24" rx="4.8" ry="5.6" fill="none" stroke="#ffffff" stroke-width="2.6"/>
         </svg>`;
 
+    const savedNoteText = String(client.notes || '').trim();
+    const hasSavedNotes = savedNoteText.length > 0;
+
     content.innerHTML = `
         <!-- CABECERA COMPACTA -->
         <div class="cd-header">
@@ -368,6 +425,38 @@ async function openClientDetailModal(clientCode) {
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
+        </div>
+
+        <!-- NOTA FIJA VISIBLE SIN SCROLL (SOLO SI HAY NOTA) -->
+        <div id="clientPinnedNoteBar" class="cd-pinned-note-bar" style="${hasSavedNotes ? '' : 'display: none;'}">
+            <div id="clientPinnedNoteRead" class="cd-pinned-note-read">
+                <span class="material-icons-round cd-pinned-note-icon">push_pin</span>
+                <div id="clientPinnedNoteText" class="cd-pinned-note-text">${escapeClientHtml(savedNoteText)}</div>
+                <button type="button" class="cd-pinned-edit-btn" onclick="startEditClientQuickNotes()" title="Editar nota fija">
+                    <span class="material-icons-round">edit</span>
+                    <span>Editar</span>
+                </button>
+            </div>
+
+            <div id="clientPinnedNoteEdit" class="cd-pinned-note-edit" style="display: none;">
+                <textarea id="clientPinnedNotesInput" rows="3" class="cd-notes-textarea"
+                          data-no-clear="true"
+                          data-saved-notes="${escapeClientHtml(client.notes || '')}"
+                          placeholder="Escribe o dicta la nota fija (déjalo vacío para borrarla)...">${escapeClientHtml(client.notes || '')}</textarea>
+                <div class="cd-notes-toolbar">
+                    <button type="button" class="cd-notes-mic-btn" onclick="window.toggleVoiceDictation('clientPinnedNotesInput', this, () => saveQuickClientNotes('${safeCode}', true, 'top'))" title="Dictar nota por voz">
+                        <span class="material-icons-round">mic</span>
+                        <span>Dictar</span>
+                    </button>
+                    <button type="button" class="cd-notes-cancel-btn" onclick="cancelEditClientQuickNotes()">
+                        Cancelar
+                    </button>
+                    <button type="button" class="cd-notes-save-btn" onclick="saveQuickClientNotes('${safeCode}', false, 'top')">
+                        Guardar
+                    </button>
+                </div>
+            </div>
+            <div id="pinnedNoteSavedStatus" class="pro-notes-saved-msg" style="display: none; margin-top: 4px;">✅ Nota fija guardada</div>
         </div>
 
         <!-- CUERPO SCROLLABLE -->
@@ -505,7 +594,7 @@ async function openClientDetailModal(clientCode) {
                 </button>
                 <button type="button" class="cd-btn-visit" onclick="toggleQuickVisitBox()">
                     <span class="material-icons-round">visibility</span>
-                    <span>Registrar visita</span>
+                    <span>Visita / Alerta</span>
                 </button>
             </div>
 
@@ -555,22 +644,27 @@ async function openClientDetailModal(clientCode) {
                 </div>
             </div>
 
-            <!-- NOTAS PERMANENTES -->
-            <div class="cd-notes-section">
-                <div class="cd-notes-title">Notas</div>
+            <!-- NOTAS PERMANENTES (SOLO CUANDO NO HAY NOTA FIJA) -->
+            <div id="clientBottomNotesSection" class="cd-notes-section" style="${hasSavedNotes ? 'display: none;' : ''}">
+                <div class="cd-notes-header">
+                    <div class="cd-notes-title">Notas fijas</div>
+                </div>
                 <div class="cd-notes-box">
                     <textarea id="clientQuickNotesInput" rows="2" class="cd-notes-textarea"
-                              placeholder="Escribe o dicta notas fijas (ej. prefiere entregas por la mañana...)">${escapeClientHtml(client.notes || '')}</textarea>
+                              data-no-clear="true"
+                              data-saved-notes="${escapeClientHtml(client.notes || '')}"
+                              placeholder="Escribe o dicta notas fijas (ej. solo recibe por las mañanas...)">${escapeClientHtml(client.notes || '')}</textarea>
                     <div class="cd-notes-toolbar">
-                        <button type="button" class="cd-notes-mic-btn" onclick="window.toggleVoiceDictation('clientQuickNotesInput', this, () => saveQuickClientNotes('${safeCode}', true))" title="Dictar nota por voz">
+                        <button type="button" class="cd-notes-mic-btn" onclick="window.toggleVoiceDictation('clientQuickNotesInput', this, () => saveQuickClientNotes('${safeCode}', true, 'bottom'))" title="Dictar nota por voz">
                             <span class="material-icons-round">mic</span>
+                            <span>Dictar</span>
                         </button>
-                        <button type="button" id="btnSaveQuickNotes" class="cd-notes-save-btn" onclick="saveQuickClientNotes('${safeCode}', false)">
+                        <button type="button" id="btnSaveQuickNotes" class="cd-notes-save-btn" onclick="saveQuickClientNotes('${safeCode}', false, 'bottom')">
                             Guardar
                         </button>
                     </div>
                 </div>
-                <div id="quickNotesSavedStatus" class="pro-notes-saved-msg" style="display: none;">✅ Nota guardada en la ficha del cliente</div>
+                <div id="quickNotesSavedStatus" class="pro-notes-saved-msg" style="display: none;">✅ Nota borrada de la ficha</div>
             </div>
         </div>
 
@@ -1135,18 +1229,89 @@ async function quickCheckInVisit(clientCode) {
     }
 }
 
-async function saveQuickClientNotes(clientCode, isAutoFromVoice = false) {
-    const input = document.getElementById('clientQuickNotesInput');
+function startEditClientQuickNotes() {
+    const readView = document.getElementById('clientPinnedNoteRead');
+    const editView = document.getElementById('clientPinnedNoteEdit');
+    const input = document.getElementById('clientPinnedNotesInput');
+
+    if (readView) readView.style.display = 'none';
+    if (editView) editView.style.display = 'flex';
+    if (input) {
+        input.value = input.dataset.savedNotes || '';
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+    }
+}
+
+function cancelEditClientQuickNotes() {
+    const readView = document.getElementById('clientPinnedNoteRead');
+    const editView = document.getElementById('clientPinnedNoteEdit');
+    const input = document.getElementById('clientPinnedNotesInput');
+    if (input) {
+        input.value = input.dataset.savedNotes || '';
+    }
+    if (editView) editView.style.display = 'none';
+    if (readView) readView.style.display = 'flex';
+}
+
+async function saveQuickClientNotes(clientCode, isAutoFromVoice = false, source = 'bottom') {
+    const inputId = source === 'top' ? 'clientPinnedNotesInput' : 'clientQuickNotesInput';
+    const input = document.getElementById(inputId);
     if (!input) return;
-    const res = await dataManager.saveClientQuickNotes(clientCode, input.value);
-    if (res.success) {
-        const badge = document.getElementById('quickNotesSavedStatus');
-        if (badge) {
-            badge.textContent = isAutoFromVoice
-                ? '🎙️ Dictado guardado automáticamente en la ficha'
-                : '✅ Nota guardada en la ficha del cliente';
-            badge.style.display = 'block';
-            setTimeout(() => { badge.style.display = 'none'; }, 3000);
+
+    const rawValue = input.value || '';
+    const trimmed = rawValue.trim();
+    const res = await dataManager.saveClientQuickNotes(clientCode, rawValue);
+    if (!res.success) return;
+
+    const pinnedBar = document.getElementById('clientPinnedNoteBar');
+    const pinnedRead = document.getElementById('clientPinnedNoteRead');
+    const pinnedEdit = document.getElementById('clientPinnedNoteEdit');
+    const pinnedText = document.getElementById('clientPinnedNoteText');
+    const pinnedInput = document.getElementById('clientPinnedNotesInput');
+    const bottomSection = document.getElementById('clientBottomNotesSection');
+    const bottomInput = document.getElementById('clientQuickNotesInput');
+
+    if (pinnedInput) {
+        pinnedInput.value = rawValue;
+        pinnedInput.dataset.savedNotes = rawValue;
+    }
+    if (bottomInput) {
+        bottomInput.value = rawValue;
+        bottomInput.dataset.savedNotes = rawValue;
+    }
+
+    if (trimmed.length > 0) {
+        if (pinnedText) pinnedText.textContent = trimmed;
+        if (pinnedEdit) pinnedEdit.style.display = 'none';
+        if (pinnedRead) pinnedRead.style.display = 'flex';
+        if (pinnedBar) pinnedBar.style.display = 'block';
+        if (bottomSection) bottomSection.style.display = 'none';
+
+        const topBadge = document.getElementById('pinnedNoteSavedStatus');
+        if (topBadge) {
+            topBadge.textContent = isAutoFromVoice
+                ? '🎙️ Dictado guardado en nota fija'
+                : '✅ Nota fija guardada';
+            topBadge.style.display = 'block';
+            setTimeout(() => { topBadge.style.display = 'none'; }, 3000);
+        }
+    } else {
+        if (pinnedText) pinnedText.textContent = '';
+        if (pinnedEdit) pinnedEdit.style.display = 'none';
+        if (pinnedRead) pinnedRead.style.display = 'flex';
+        if (pinnedBar) pinnedBar.style.display = 'none';
+        if (bottomSection) bottomSection.style.display = 'flex';
+
+        const bottomBadge = document.getElementById('quickNotesSavedStatus');
+        if (bottomBadge) {
+            bottomBadge.textContent = '✅ Nota borrada de la ficha';
+            bottomBadge.style.display = 'block';
+            setTimeout(() => { bottomBadge.style.display = 'none'; }, 3000);
+        }
+        if (typeof window.showToast === 'function') {
+            window.showToast('Nota fija eliminada de la ficha');
         }
     }
 }
@@ -1171,6 +1336,8 @@ window.setQuickVisitAlertOffset = setQuickVisitAlertOffset;
 window.syncQuickVisitOffsetHighlight = syncQuickVisitOffsetHighlight;
 window.confirmClientVisitCheckIn = confirmClientVisitCheckIn;
 window.quickCheckInVisit = quickCheckInVisit;
+window.startEditClientQuickNotes = startEditClientQuickNotes;
+window.cancelEditClientQuickNotes = cancelEditClientQuickNotes;
 window.saveQuickClientNotes = saveQuickClientNotes;
 window.copyClientField = copyClientField;
 window.openClientMapsRoute = openClientMapsRoute;

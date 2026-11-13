@@ -11,3 +11,8 @@
 
 - **No realices pruebas visuales en navegador** ni lances o manipules la aplicación en ejecución para probarla (para evitar alterar o borrar datos o copias de seguridad reales del usuario).
 - Cuando termines todo lo que se te pida en cada tarea, avisa al usuario, enumera de forma clara todos los cambios realizados (archivos y modificaciones concretas) y espera a que el usuario lo compruebe y te pase el reporte.
+
+## Diseño móvil (Smartphone vertical)
+
+- Esta aplicación está diseñada para usarse en **smartphone con orientación vertical**.
+- Prioriza siempre la comodidad visual y táctil: botones amplios y fáciles de pulsar con el pulgar, tipografía legible, jerarquía clara y evitar amontonar elementos en horizontal.

@@ -1,26 +1,116 @@
-/* Mapa View Styles - Diseño Ejecutivo Unificado */
+/* Mapa View Styles - Diseño Ejecutivo Limpio */
 
 .map-view-main {
     display: flex;
     flex-direction: column;
-    height: calc(100dvh - 144px);
-    padding: 14px 16px 12px 16px;
-    gap: 12px;
+    height: calc(100vh - 134px);
+    height: calc(100dvh - 134px);
+    padding: 10px 10px 8px 10px;
+    gap: 8px;
     position: relative;
     overflow: hidden;
 }
 
-.map-top-search-wrap {
+.map-top-controls {
     flex-shrink: 0;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .map-search-bar {
     margin-bottom: 0 !important;
-    min-height: 48px;
-    border-radius: 15px;
+    min-height: 44px;
+    border-radius: 14px;
     border: 1.5px solid #cbd5e1;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+}
+
+/* Chips interactivos de Leyenda + Filtro por Color */
+.map-filter-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.map-filter-chip {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    min-height: 44px;
+    padding: 5px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    transition: transform 0.14s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.map-filter-chip:active {
+    transform: scale(0.95);
+}
+
+.map-chip-count {
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.05;
+}
+
+.map-chip-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #475569;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.map-filter-chip.is-all.is-active {
+    background: #0f172a;
+    border-color: #0f172a;
+}
+
+.map-filter-chip.is-all.is-active .map-chip-count,
+.map-filter-chip.is-all.is-active .map-chip-label {
+    color: #ffffff;
+}
+
+.map-filter-chip.is-active-status.is-active {
+    background: #f0fdf4;
+    border-color: #16a34a;
+}
+
+.map-filter-chip.is-active-status.is-active .map-chip-count,
+.map-filter-chip.is-active-status.is-active .map-chip-label {
+    color: #15803d;
+}
+
+.map-filter-chip.is-overdue.is-active {
+    background: #fef2f2;
+    border-color: #ef4444;
+}
+
+.map-filter-chip.is-overdue.is-active .map-chip-count,
+.map-filter-chip.is-overdue.is-active .map-chip-label {
+    color: #b91c1c;
+}
+
+.map-filter-chip.is-none.is-active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+}
+
+.map-filter-chip.is-none.is-active .map-chip-count,
+.map-filter-chip.is-none.is-active .map-chip-label {
+    color: #1d4ed8;
 }
 
 .map-canvas-wrapper {
@@ -28,11 +118,13 @@
     min-height: 0;
     width: 100%;
     position: relative;
-    border-radius: 22px;
+    isolation: isolate;
+    z-index: 1;
+    border-radius: 18px;
     overflow: hidden;
     border: 1.5px solid #cbd5e1;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-    background: #e2e8f0;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+    background: #f1f5f9;
 }
 
 #map-container {
@@ -41,27 +133,27 @@
     z-index: 1;
 }
 
-/* Contenedor de Controles Flotantes (Armonioso y Ejecutivo) */
+/* Contenedor de Controles Flotantes */
 .map-fabs {
     position: absolute;
-    bottom: 18px;
-    right: 14px;
+    bottom: 14px;
+    right: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     z-index: 1000;
 }
 
-/* Cápsulas agrupadas de controles (Leyenda+Radar y Zoom +/-) */
+/* Cápsula de Zoom */
 .map-control-group {
-    width: 46px;
-    border-radius: 15px;
+    width: 42px;
+    border-radius: 13px;
     background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1.5px solid rgba(203, 213, 225, 0.95);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -69,7 +161,7 @@
 
 .map-control-btn {
     width: 100%;
-    height: 42px;
+    height: 38px;
     background: transparent;
     border: none;
     display: flex;
@@ -78,26 +170,12 @@
     color: #1e293b;
     cursor: pointer;
     padding: 0;
-    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .map-control-btn .material-icons-round {
-    font-size: 21px;
+    font-size: 20px;
     color: #334155;
-    transition: color 0.15s ease;
-}
-
-.map-control-btn:hover {
-    background: #f8fafc;
-}
-
-.map-control-btn:hover .material-icons-round,
-.map-control-btn.active .material-icons-round {
-    color: #0284c7;
-}
-
-.map-control-btn.active {
-    background: #f0f9ff;
 }
 
 .map-control-btn:active {
@@ -107,38 +185,43 @@
 
 .map-control-divider {
     height: 1px;
-    width: 72%;
+    width: 70%;
     margin: 0 auto;
     background: #e2e8f0;
 }
 
-/* Botón Principal Destacado: Mi Ubicación GPS */
+/* Botones flotantes individuales (Cercanos y Mi Ubicación) */
 .map-fab-btn {
     position: relative !important;
-    width: 46px;
-    height: 46px;
-    border-radius: 15px;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
     background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1.5px solid rgba(203, 213, 225, 0.95) !important;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14) !important;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12) !important;
+    transition: transform 0.15s ease;
     padding: 0;
+}
+
+.map-fab-nearby .material-icons-round {
+    font-size: 22px;
+    color: #16a34a;
 }
 
 .map-fab-location {
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
     border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
-    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.32) !important;
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.32) !important;
 }
 
 .map-fab-location .material-icons-round {
-    font-size: 22px;
+    font-size: 21px;
     color: #ffffff !important;
 }
 
@@ -151,107 +234,55 @@
     border: none !important;
 }
 
-/* Leyenda Desplegable Ejecutiva */
-.map-legend-popover {
-    position: absolute;
-    top: 0;
-    right: calc(100% + 12px);
-    min-width: 205px;
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1.5px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 14px 16px;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
-    z-index: 1100;
-    transform-origin: top right;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.map-legend-title {
-    font-size: 10.5px;
-    font-weight: 900;
-    color: #0f172a;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.map-legend-popover.open {
-    display: flex;
-    animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes popIn {
-    from { opacity: 0; transform: scale(0.7) translateY(20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
 .legend-dot {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.05);
-}
-
-.legend-label {
-    font-size: 0.75rem;
-    font-weight: 800;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    flex-shrink: 0;
 }
 
 /* Estados de los puntos */
-.dot-active { background-color: #22c55e; }
+.dot-active { background-color: #16a34a; }
 .dot-inactive { background-color: #ef4444; }
 .dot-no-orders { background-color: #3b82f6; }
 
-/* Estilos de Clustering Personalizados */
-.marker-cluster-small, 
-.marker-cluster-medium, 
+/* Clusters corporativos limpios */
+.marker-cluster-small,
+.marker-cluster-medium,
 .marker-cluster-large {
-    background-color: rgba(30, 41, 59, 0.6) !important;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background-color: rgba(2, 132, 199, 0.22) !important;
 }
 
 .marker-cluster-small div,
 .marker-cluster-medium div,
 .marker-cluster-large div {
-    background-color: rgba(30, 41, 59, 0.8) !important;
-    color: white !important;
+    background-color: #ffffff !important;
+    border: 2.5px solid #0284c7 !important;
+    color: #0369a1 !important;
     font-weight: 900 !important;
+    font-size: 12px !important;
     font-family: 'Inter', sans-serif !important;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .marker-cluster div span {
-    line-height: 30px;
+    line-height: 1 !important;
 }
 
-/* Rediseño Premium de Popups de Leaflet */
+/* Popups de Leaflet */
 .leaflet-popup-content-wrapper {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(8px);
-    border-radius: 20px !important;
+    background: #ffffff !important;
+    border-radius: 18px !important;
     padding: 0 !important;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
-    border: 1px solid rgba(255,255,255,0.2) !important;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16) !important;
+    border: 1px solid #e2e8f0 !important;
 }
 
 .leaflet-popup-content {
-    margin: 16px !important;
+    margin: 13px !important;
     width: auto !important;
     font-family: 'Inter', sans-serif !important;
 }
@@ -261,78 +292,157 @@
 }
 
 .leaflet-popup-tip {
-    background: rgba(255, 255, 255, 0.95) !important;
-    box-shadow: 0 5px 10px rgba(0,0,0,0.05) !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08) !important;
 }
 
-/* Animación de apertura del popup */
 .leaflet-popup {
-    animation: popupFadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: popupFadeIn 0.22s ease-out;
 }
 
 @keyframes popupFadeIn {
-    from { opacity: 0; transform: translateY(10px) scale(0.9); }
+    from { opacity: 0; transform: translateY(8px) scale(0.95); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.popup-card-wrap {
+    text-align: center;
+    min-width: 195px;
+}
+
+.popup-title {
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+    margin: 0 0 2px 0;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.popup-subtitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+}
+
+.popup-badges-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.popup-status-pill,
+.popup-visit-pill,
+.popup-pin-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2.5px 8px;
+    border-radius: 999px;
+}
+
+.popup-status-pill.is-active {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.popup-status-pill.is-overdue {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.popup-status-pill.is-none {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.popup-visit-pill {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+}
+
+.popup-pin-pill {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.popup-visit-pill .material-icons-round,
+.popup-pin-pill .material-icons-round {
+    font-size: 12px;
+}
+
+.popup-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.popup-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
 }
 
 /* Botones dentro del Popup */
 .popup-btn {
     width: 100%;
-    padding: 10px 15px;
-    border-radius: 12px;
+    min-height: 36px;
+    padding: 7px 10px;
+    border-radius: 10px;
     border: none;
     font-weight: 800;
     font-size: 11px;
     text-transform: uppercase;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 5px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.14s ease;
+}
+
+.popup-btn .material-icons-round {
+    font-size: 16px;
+}
+
+.popup-btn:active {
+    transform: scale(0.96);
 }
 
 .btn-detail {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-    color: white;
-    border: none;
-    box-shadow: 0 6px 15px rgba(14, 165, 233, 0.25);
-}
-
-.btn-detail:active {
-    background: #0284c7;
-    transform: scale(0.96);
-    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15);
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
 }
 
 .btn-go-direct {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-    color: white;
-    box-shadow: 0 6px 15px rgba(22, 163, 74, 0.25);
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
 }
 
-.btn-go-direct:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.15);
+.btn-popup-order {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);
 }
 
-.popup-title {
-    font-size: 15px;
-    font-weight: 950;
-    color: #0f172a;
-    margin: 4px 0 6px 0;
-    line-height: 1.1;
-    text-transform: uppercase;
-    letter-spacing: -0.2px;
-}
-
-.popup-subtitle {
-    font-size: 10px;
-    font-weight: 800;
-    color: #94a3b8;
-    margin: 0 0 16px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+.btn-popup-visit {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
 }
 
 /* Notificaciones Toast */
@@ -347,7 +457,7 @@
     border-radius: 50px;
     font-size: 13px;
     font-weight: 700;
-    z-index: 10000;
+    z-index: 1000000;
     opacity: 0;
     pointer-events: none;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);

@@ -1270,6 +1270,7 @@ window.enhanceClearableInputs = function(root = document) {
             return;
         }
         if (el.readOnly || el.disabled) return;
+        if (el.dataset && el.dataset.noClear === 'true') return;
         if (el.id === 'orderId' || el.id === 'rankSearch') return;
         if (
             el.classList.contains('v-input-premium') ||

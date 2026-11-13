@@ -25,48 +25,51 @@ async function renderPedidos(isBack = false) {
         return (b.displayId || 0) - (a.displayId || 0);
     });
 
-    let countAlmacen = 0, countTampo = 0, countServido = 0;
+    let countAlmacen = 0, countTampo = 0;
     sortedOrders.forEach(o => {
-        if (o.facturadoTodo) countServido++;
-        else if (o.noTampo) countTampo++;
-        else countAlmacen++;
+        if (!o.facturadoTodo) {
+            if (o.noTampo) countTampo++;
+            else countAlmacen++;
+        }
     });
 
-    const activeFilter = window.currentPedidosStatusFilter || 'all';
+    const activeFilter = (window.currentPedidosStatusFilter && window.currentPedidosStatusFilter !== 'servido')
+        ? window.currentPedidosStatusFilter
+        : 'all';
+    window.currentPedidosStatusFilter = activeFilter;
 
     let contentHtml = '<main class="pedidos-view-main">';
 
     // Parte fija superior bien distribuida: 1) Filtros de Estado -> 2) Buscador -> 3) Cabecera Tabla
     contentHtml += `
         <div class="pedidos-fixed-controls">
-            <!-- 1. Pestañas de Filtro Rápido por Estado (con aire respecto al encabezado azul) -->
+            <!-- 1. Pestañas de Filtro Rápido por Estado (3 columnas simétricas) -->
             <div id="pedidosStatusTabs" class="pedidos-status-tabs">
                 <button type="button" data-status-tab="all" onclick="setPedidosStatusFilter('all')"
                         class="pedidos-status-pill ${activeFilter === 'all' ? 'is-active' : ''}"
                         style="border-color: ${activeFilter === 'all' ? '#0f172a' : '#cbd5e1'}; background: ${activeFilter === 'all' ? '#0f172a' : '#ffffff'}; color: ${activeFilter === 'all' ? '#ffffff' : '#334155'};">
-                    <span>Todos</span>
-                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'all' ? 'rgba(255,255,255,0.18)' : '#f1f5f9'}; color: ${activeFilter === 'all' ? '#ffffff' : '#475569'};">${sortedOrders.length}</span>
+                    <span class="pedidos-pill-count" style="color: ${activeFilter === 'all' ? '#ffffff' : '#0f172a'};">${sortedOrders.length}</span>
+                    <span class="pedidos-pill-top">
+                        <span>Todos</span>
+                    </span>
                 </button>
                 <button type="button" data-status-tab="almacen" onclick="setPedidosStatusFilter('almacen')"
                         class="pedidos-status-pill ${activeFilter === 'almacen' ? 'is-active' : ''}"
                         style="border-color: ${activeFilter === 'almacen' ? '#f59e0b' : '#fde68a'}; background: ${activeFilter === 'almacen' ? '#f59e0b' : '#fffbeb'}; color: ${activeFilter === 'almacen' ? '#ffffff' : '#b45309'};">
-                    <span class="pedidos-status-dot" style="background: ${activeFilter === 'almacen' ? '#ffffff' : '#f59e0b'};"></span>
-                    <span>Almacén</span>
-                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'almacen' ? 'rgba(255,255,255,0.22)' : 'rgba(245,158,11,0.14)'}; color: ${activeFilter === 'almacen' ? '#ffffff' : '#b45309'};">${countAlmacen}</span>
+                    <span class="pedidos-pill-count" style="color: ${activeFilter === 'almacen' ? '#ffffff' : '#d97706'};">${countAlmacen}</span>
+                    <span class="pedidos-pill-top">
+                        <span class="pedidos-status-dot" style="background: ${activeFilter === 'almacen' ? '#ffffff' : '#f59e0b'};"></span>
+                        <span>Almacén</span>
+                    </span>
                 </button>
                 <button type="button" data-status-tab="tampo" onclick="setPedidosStatusFilter('tampo')"
                         class="pedidos-status-pill ${activeFilter === 'tampo' ? 'is-active' : ''}"
                         style="border-color: ${activeFilter === 'tampo' ? '#2563eb' : '#bfdbfe'}; background: ${activeFilter === 'tampo' ? '#2563eb' : '#eff6ff'}; color: ${activeFilter === 'tampo' ? '#ffffff' : '#1d4ed8'};">
-                    <span class="pedidos-status-dot" style="background: ${activeFilter === 'tampo' ? '#ffffff' : '#2563eb'};"></span>
-                    <span>Falta Tampo</span>
-                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'tampo' ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.12)'}; color: ${activeFilter === 'tampo' ? '#ffffff' : '#1d4ed8'};">${countTampo}</span>
-                </button>
-                <button type="button" data-status-tab="servido" onclick="setPedidosStatusFilter('servido')"
-                        class="pedidos-status-pill ${activeFilter === 'servido' ? 'is-active' : ''}"
-                        style="border-color: ${activeFilter === 'servido' ? '#16a34a' : '#bbf7d0'}; background: ${activeFilter === 'servido' ? '#16a34a' : '#f0fdf4'}; color: ${activeFilter === 'servido' ? '#ffffff' : '#15803d'};">
-                    <span class="pedidos-status-dot" style="background: ${activeFilter === 'servido' ? '#ffffff' : '#16a34a'};"></span>
-                    <span>Servidos</span>
-                    <span class="pedidos-pill-count" style="background: ${activeFilter === 'servido' ? 'rgba(255,255,255,0.22)' : 'rgba(22,163,74,0.12)'}; color: ${activeFilter === 'servido' ? '#ffffff' : '#15803d'};">${countServido}</span>
+                    <span class="pedidos-pill-count" style="color: ${activeFilter === 'tampo' ? '#ffffff' : '#2563eb'};">${countTampo}</span>
+                    <span class="pedidos-pill-top">
+                        <span class="pedidos-status-dot" style="background: ${activeFilter === 'tampo' ? '#ffffff' : '#2563eb'};"></span>
+                        <span>Falta Tampo</span>
+                    </span>
                 </button>
             </div>
 
@@ -146,11 +149,12 @@ async function renderPedidos(isBack = false) {
 }
 
 function setPedidosStatusFilter(status) {
-    window.currentPedidosStatusFilter = status || 'all';
+    const safeStatus = (status && status !== 'servido') ? status : 'all';
+    window.currentPedidosStatusFilter = safeStatus;
     const tabs = document.querySelectorAll('#pedidosStatusTabs [data-status-tab]');
     tabs.forEach(btn => {
         const tab = btn.getAttribute('data-status-tab');
-        const isActive = tab === window.currentPedidosStatusFilter;
+        const isActive = tab === safeStatus;
         btn.classList.toggle('is-active', isActive);
         const dot = btn.querySelector('.pedidos-status-dot');
         const badge = btn.querySelector('.pedidos-pill-count');
@@ -159,37 +163,19 @@ function setPedidosStatusFilter(status) {
             btn.style.background = isActive ? '#0f172a' : '#ffffff';
             btn.style.color = isActive ? '#ffffff' : '#334155';
             btn.style.borderColor = isActive ? '#0f172a' : '#cbd5e1';
-            if (badge) {
-                badge.style.background = isActive ? 'rgba(255,255,255,0.18)' : '#f1f5f9';
-                badge.style.color = isActive ? '#ffffff' : '#475569';
-            }
+            if (badge) badge.style.color = isActive ? '#ffffff' : '#0f172a';
         } else if (tab === 'almacen') {
             btn.style.background = isActive ? '#f59e0b' : '#fffbeb';
             btn.style.color = isActive ? '#ffffff' : '#b45309';
             btn.style.borderColor = isActive ? '#f59e0b' : '#fde68a';
             if (dot) dot.style.background = isActive ? '#ffffff' : '#f59e0b';
-            if (badge) {
-                badge.style.background = isActive ? 'rgba(255,255,255,0.22)' : 'rgba(245,158,11,0.14)';
-                badge.style.color = isActive ? '#ffffff' : '#b45309';
-            }
+            if (badge) badge.style.color = isActive ? '#ffffff' : '#d97706';
         } else if (tab === 'tampo') {
             btn.style.background = isActive ? '#2563eb' : '#eff6ff';
             btn.style.color = isActive ? '#ffffff' : '#1d4ed8';
             btn.style.borderColor = isActive ? '#2563eb' : '#bfdbfe';
             if (dot) dot.style.background = isActive ? '#ffffff' : '#2563eb';
-            if (badge) {
-                badge.style.background = isActive ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.12)';
-                badge.style.color = isActive ? '#ffffff' : '#1d4ed8';
-            }
-        } else if (tab === 'servido') {
-            btn.style.background = isActive ? '#16a34a' : '#f0fdf4';
-            btn.style.color = isActive ? '#ffffff' : '#15803d';
-            btn.style.borderColor = isActive ? '#16a34a' : '#bbf7d0';
-            if (dot) dot.style.background = isActive ? '#ffffff' : '#16a34a';
-            if (badge) {
-                badge.style.background = isActive ? 'rgba(255,255,255,0.22)' : 'rgba(22,163,74,0.12)';
-                badge.style.color = isActive ? '#ffffff' : '#15803d';
-            }
+            if (badge) badge.style.color = isActive ? '#ffffff' : '#2563eb';
         }
     });
     filterPedidos();
@@ -682,12 +668,37 @@ function closeExportPedidosModal() {
     document.getElementById('exportPedidosModal').classList.remove('open');
 }
 
+function _filterOrdersForExport(orders, lookup, start, end, shopQuery, locationQuery) {
+    const startD = new Date(start); startD.setHours(0, 0, 0, 0);
+    const endD = new Date(end); endD.setHours(23, 59, 59, 999);
+    const shopFilter = normalizeTextKey(shopQuery);
+    const locationFilter = normalizeTextKey(locationQuery);
+
+    return orders.filter(o => {
+        const d = new Date(o.dateISO || o.date);
+        if (!(d >= startD && d <= endD)) return false;
+
+        const c = dataManager.resolveClientForOrder(o, lookup) || {};
+        const displayShop = normalizeTextKey(c.name || o.shop || '');
+        const rawShop = normalizeTextKey(o.shop || '');
+
+        if (shopFilter && !displayShop.includes(shopFilter) && !rawShop.includes(shopFilter)) return false;
+
+        if (locationFilter) {
+            const loc = normalizeTextKey(c.location || '');
+            const prov = normalizeTextKey(c.province || '');
+            if (!loc.includes(locationFilter) && !prov.includes(locationFilter)) return false;
+        }
+        return true;
+    });
+}
+
 async function previewPedidosReport() {
     try {
         const start = document.getElementById('exportStartDate').value;
         const end = document.getElementById('exportEndDate').value;
-        const shopFilter = document.getElementById('exportFilterClient').value.toLowerCase().trim();
-        const locationFilter = document.getElementById('exportFilterLocation').value.toLowerCase().trim();
+        const shopFilter = document.getElementById('exportFilterClient').value;
+        const locationFilter = document.getElementById('exportFilterLocation').value;
 
         if (!start || !end) return alert("Selecciona fechas para previsualizar");
 
@@ -695,26 +706,8 @@ async function previewPedidosReport() {
         const clients = await dataManager.getClients();
         const lookup = dataManager.buildClientLookup(clients);
 
-        const startD = new Date(start); startD.setHours(0,0,0,0);
-        const endD = new Date(end); endD.setHours(23,59,59,999);
-
-        const filtered = orders.filter(o => {
-            const d = new Date(o.dateISO || o.date);
-            const dateMatch = d >= startD && d <= endD;
-            if (!dateMatch) return false;
-
-            const c = dataManager.resolveClientForOrder(o, lookup) || {};
-            const displayShop = (c.name || o.shop || '').toLowerCase();
-
-            if (shopFilter && !displayShop.includes(shopFilter) && !(o.shop || '').toLowerCase().includes(shopFilter)) return false;
-
-            if (locationFilter) {
-                const loc = (c.location || "").toLowerCase();
-                const prov = (c.province || "").toLowerCase();
-                if (!loc.includes(locationFilter) && !prov.includes(locationFilter)) return false;
-            }
-            return true;
-        }).sort((a,b) => (b.displayId || 0) - (a.displayId || 0));
+        const filtered = _filterOrdersForExport(orders, lookup, start, end, shopFilter, locationFilter)
+            .sort((a,b) => (b.displayId || 0) - (a.displayId || 0));
 
         const content = document.getElementById('previewPedidosContent');
         const modal = document.getElementById('previewPedidosModal');
@@ -768,8 +761,8 @@ async function executeExportXlsx() {
     try {
         const start = document.getElementById('exportStartDate').value;
         const end = document.getElementById('exportEndDate').value;
-        const shopFilter = document.getElementById('exportFilterClient').value.toLowerCase().trim();
-        const locationFilter = document.getElementById('exportFilterLocation').value.toLowerCase().trim();
+        const shopFilter = document.getElementById('exportFilterClient').value;
+        const locationFilter = document.getElementById('exportFilterLocation').value;
 
         if (!start || !end) return alert("Selecciona fechas para exportar");
 
@@ -777,26 +770,8 @@ async function executeExportXlsx() {
         const clients = await dataManager.getClients();
         const lookup = dataManager.buildClientLookup(clients);
 
-        const startD = new Date(start); startD.setHours(0,0,0,0);
-        const endD = new Date(end); endD.setHours(23,59,59,999);
-
-        const filtered = orders.filter(o => {
-            const d = new Date(o.dateISO || o.date);
-            const dateMatch = d >= startD && d <= endD;
-            if (!dateMatch) return false;
-
-            const c = dataManager.resolveClientForOrder(o, lookup) || {};
-            const displayShop = (c.name || o.shop || '').toLowerCase();
-
-            if (shopFilter && !displayShop.includes(shopFilter) && !(o.shop || '').toLowerCase().includes(shopFilter)) return false;
-
-            if (locationFilter) {
-                const loc = (c.location || "").toLowerCase();
-                const prov = (c.province || "").toLowerCase();
-                if (!loc.includes(locationFilter) && !prov.includes(locationFilter)) return false;
-            }
-            return true;
-        }).sort((a,b) => (a.displayId || 0) - (b.displayId || 0));
+        const filtered = _filterOrdersForExport(orders, lookup, start, end, shopFilter, locationFilter)
+            .sort((a,b) => (a.displayId || 0) - (b.displayId || 0));
 
         if (filtered.length === 0) return alert("No hay pedidos para este filtro");
 
