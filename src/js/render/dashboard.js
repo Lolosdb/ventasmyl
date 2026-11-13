@@ -45,6 +45,9 @@ async function renderDash(isBack = false) {
     
     const stats = await dataManager.getDashStats(selectedMonth, selectedYear);
     const goals = await dataManager.getDetailedGoals();
+    const dueVisitAlerts = typeof dataManager.getDueVisitAlerts === 'function'
+        ? await dataManager.getDueVisitAlerts()
+        : [];
     
     const monthSales = stats.ventasMes.total;
     const targetAmount = stats.ventasMes.objetivo;
@@ -72,13 +75,22 @@ async function renderDash(isBack = false) {
     const isToday = currentDashDate.getMonth() === new Date().getMonth() && 
                     currentDashDate.getFullYear() === new Date().getFullYear();
 
+    const dueAlertPreview = dueVisitAlerts.slice(0, 2).map(n =>
+        `${_escapeDashHtml(n.clientName)}: "${_escapeDashHtml(n.note)}"`
+    ).join(' · ');
+
     contentHtml += `
         <div class="dash-section-header mb-6" style="padding: 0 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.8rem;">
-                <div style="display: flex; flex-direction: column; gap: 2px; margin-top: -4px;">
-                      <h1 class="text-3xl font-black text-slate-900 leading-tight" style="margin: 0;">Dash</h1>
-                      <span class="font-bold text-slate-500 tracking-widest" style="white-space: nowrap; font-size: 11px;">${monthName} ${year}</span>
-                  </div>
+            <div class="dash-top-controls-row">
+                <div style="display: flex; flex-direction: column; gap: 2px; margin-top: -4px; min-width: 0;">
+                    <h1 class="text-3xl font-black text-slate-900 leading-tight" style="margin: 0;">Dash</h1>
+                    <span class="font-bold text-slate-500 tracking-widest" style="white-space: nowrap; font-size: 11px;">${monthName} ${year}</span>
+                </div>
+                <button type="button" class="dash-visit-notes-btn" onclick="openVisitNotesModal()" title="Ver notas de visita y alertas">
+                    <span class="material-icons-round">edit_note</span>
+                    <span>Notas visita</span>
+                    ${dueVisitAlerts.length > 0 ? `<span class="dash-visit-alert-badge">${dueVisitAlerts.length}</span>` : ''}
+                </button>
                 <div class="date-selector-container">
                     <button class="nav-date-btn" onclick="changeDashMonth(-1)" title="Mes anterior">
                         <span class="material-icons-round">chevron_left</span>
@@ -100,6 +112,21 @@ async function renderDash(isBack = false) {
                     <span>Calendario</span>
                 </button>
             </div>
+
+            ${dueVisitAlerts.length > 0 ? `
+            <div class="dash-visit-alert-banner" onclick="openVisitNotesModal()">
+                <div class="dash-visit-alert-icon">
+                    <span class="material-icons-round">notifications_active</span>
+                </div>
+                <div class="dash-visit-alert-body">
+                    <div class="dash-visit-alert-title">
+                        ${dueVisitAlerts.length === 1 ? '1 recordatorio de visita para hoy' : `${dueVisitAlerts.length} recordatorios de visita pendientes`}
+                    </div>
+                    <div class="dash-visit-alert-sub">${dueAlertPreview}${dueVisitAlerts.length > 2 ? ` (+${dueVisitAlerts.length - 2} más)` : ''}</div>
+                </div>
+                <span class="dash-visit-alert-cta">Ver</span>
+            </div>
+            ` : ''}
         </div>
     `;
 
@@ -378,6 +405,13 @@ async function renderDash(isBack = false) {
     setTimeout(() => {
         const splash = document.getElementById('splash-screen');
         if (splash) splash.classList.add('splash-hidden');
+
+        if (!window._startupVisitAlertsChecked) {
+            window._startupVisitAlertsChecked = true;
+            if (dueVisitAlerts.length > 0) {
+                openStartupVisitAlertsModal(dueVisitAlerts);
+            }
+        }
     }, 800);
 
     // Auto-scroll a la semana actual en el carrusel y habilitar arrastre con ratón
@@ -1087,6 +1121,314 @@ async function generateStrategicReport() {
 
 window.previewReport = previewReport;
 window.generateStrategicReport = generateStrategicReport;
+
+// --- NOTAS DE VISITA Y RECORDATORIOS ---
+let _visitNotesFilter = 'all';
+let _visitNotesSearch = '';
+
+function _escapeDashHtml(val) {
+    return String(val ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function _formatShortDashDate(dateVal) {
+    if (!dateVal) return '--/--/--';
+    const parts = String(dateVal).split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2].slice(0, 2)}/${parts[1]}/${parts[0].slice(-2)}`;
+    }
+    const d = new Date(dateVal);
+    if (Number.isNaN(d.getTime())) return '--/--/--';
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+}
+
+function _getTodayLocalISODash() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function openVisitNotesModal(filterMode = null, searchQuery = null) {
+    if (filterMode !== null) _visitNotesFilter = filterMode;
+    if (searchQuery !== null) _visitNotesSearch = searchQuery;
+
+    let modal = document.getElementById('visitNotesModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'visitNotesModal';
+        modal.className = 'modal-overlay';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content vn-modal-shell">
+            <div class="vn-modal-header">
+                <div class="vn-modal-title-wrap">
+                    <span class="material-icons-round">edit_note</span>
+                    <h2>Notas de Visita</h2>
+                </div>
+                <button type="button" class="vn-close-btn" onclick="closeVisitNotesModal()" aria-label="Cerrar">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+
+            <div class="vn-controls-bar">
+                <div class="vn-filter-tabs">
+                    <button type="button" class="vn-filter-tab ${_visitNotesFilter === 'all' ? 'is-active' : ''}" onclick="setVisitNotesFilter('all')">Todas</button>
+                    <button type="button" class="vn-filter-tab ${_visitNotesFilter === 'alerts' ? 'is-active' : ''}" onclick="setVisitNotesFilter('alerts')">Con alerta</button>
+                    <button type="button" class="vn-filter-tab ${_visitNotesFilter === 'done' ? 'is-active' : ''}" onclick="setVisitNotesFilter('done')">Completadas</button>
+                </div>
+                <div class="vn-search-box">
+                    <span class="material-icons-round">search</span>
+                    <input type="text" id="visitNotesSearchInput" value="${_escapeDashHtml(_visitNotesSearch)}"
+                           placeholder="Buscar tienda o nota..." oninput="filterVisitNotesList(this.value)">
+                </div>
+            </div>
+
+            <div id="visitNotesListContainer" class="vn-list-body"></div>
+        </div>
+    `;
+
+    modal.classList.add('open');
+    document.body.classList.add('no-scroll');
+    await renderVisitNotesList();
+}
+
+async function renderVisitNotesList() {
+    const container = document.getElementById('visitNotesListContainer');
+    if (!container) return;
+
+    const allNotes = await dataManager.getVisitNotes();
+    const todayISO = _getTodayLocalISODash();
+    const q = _visitNotesSearch.trim().toLowerCase();
+
+    const filtered = allNotes.filter(n => {
+        if (_visitNotesFilter === 'alerts' && (n.done || !n.alertDate)) return false;
+        if (_visitNotesFilter === 'done' && !n.done) return false;
+        if (q) {
+            const hay = `${n.clientName || ''} ${n.clientCode || ''} ${n.note || ''}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+        return true;
+    }).sort((a, b) => {
+        const keyA = a.createdAt || a.date || '';
+        const keyB = b.createdAt || b.date || '';
+        return String(keyB).localeCompare(String(keyA));
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="vn-empty-state">
+                <span class="material-icons-round">event_note</span>
+                <p>${allNotes.length === 0 ? 'Todavía no has guardado ninguna nota de visita.' : 'No hay notas que coincidan con este filtro.'}</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(n => {
+        const safeId = _escapeDashHtml(n.id);
+        const safeCode = String(n.clientCode || '').replace(/'/g, "\\'");
+        const noteDate = _formatShortDashDate(n.date);
+        let alertBadgeHtml = '';
+
+        if (n.alertDate) {
+            const alertShort = _formatShortDashDate(n.alertDate);
+            if (n.done) {
+                alertBadgeHtml = `<span class="vn-alert-badge vn-alert-done">✓ Alerta ${alertShort}</span>`;
+            } else if (n.alertDate < todayISO) {
+                alertBadgeHtml = `<span class="vn-alert-badge vn-alert-overdue">🔔 Vencida (${alertShort})</span>`;
+            } else if (n.alertDate === todayISO) {
+                alertBadgeHtml = `<span class="vn-alert-badge vn-alert-today">🔔 HOY (${alertShort})</span>`;
+            } else {
+                alertBadgeHtml = `<span class="vn-alert-badge vn-alert-future">🔔 ${alertShort}</span>`;
+            }
+        }
+
+        return `
+            <div class="vn-note-card ${n.done ? 'is-done' : ''}">
+                <div class="vn-note-top">
+                    <button type="button" class="vn-store-link" onclick="openClientFromVisitNote('${safeCode}', 'visitNotesModal')">
+                        <span>${_escapeDashHtml(n.clientName || 'Cliente')}</span>
+                        <span class="material-icons-round">open_in_new</span>
+                    </button>
+                    <span class="vn-note-date">${noteDate}</span>
+                </div>
+
+                <div class="vn-note-text">${_escapeDashHtml(n.note || '')}</div>
+
+                <div class="vn-note-footer">
+                    <div class="vn-note-badges">${alertBadgeHtml}</div>
+                    <div class="vn-note-actions">
+                        ${(!n.done && n.alertDate) ? `<button type="button" class="vn-act-btn vn-act-snooze" onclick="snoozeVisitNoteFromModal('${safeId}', 7, 'visit')" title="Posponer 7 días">+7d</button>` : ''}
+                        <button type="button" class="vn-act-btn ${n.done ? 'vn-act-reopen' : 'vn-act-done'}" onclick="toggleVisitNoteStatus('${safeId}', 'visit')">
+                            ${n.done ? 'Reabrir' : '✓ Hecha'}
+                        </button>
+                        <button type="button" class="vn-act-btn vn-act-del" onclick="deleteVisitNoteFromModal('${safeId}')" title="Eliminar nota">
+                            <span class="material-icons-round">delete_outline</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function closeVisitNotesModal() {
+    const modal = document.getElementById('visitNotesModal');
+    if (modal) modal.classList.remove('open');
+    document.body.classList.remove('no-scroll');
+}
+
+function setVisitNotesFilter(mode) {
+    _visitNotesFilter = mode;
+    document.querySelectorAll('.vn-filter-tab').forEach(btn => btn.classList.remove('is-active'));
+    openVisitNotesModal(mode, _visitNotesSearch);
+}
+
+function filterVisitNotesList(val) {
+    _visitNotesSearch = val || '';
+    renderVisitNotesList();
+}
+
+async function openStartupVisitAlertsModal(dueAlerts = null) {
+    const list = Array.isArray(dueAlerts) ? dueAlerts : await dataManager.getDueVisitAlerts();
+    if (!list || list.length === 0) {
+        closeStartupVisitAlertsModal();
+        return;
+    }
+
+    let modal = document.getElementById('startupVisitAlertsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'startupVisitAlertsModal';
+        modal.className = 'modal-overlay';
+        document.body.appendChild(modal);
+    }
+
+    const todayISO = _getTodayLocalISODash();
+
+    modal.innerHTML = `
+        <div class="modal-content vn-modal-shell vn-startup-shell">
+            <div class="vn-startup-header">
+                <div class="vn-modal-title-wrap">
+                    <span class="material-icons-round">notifications_active</span>
+                    <div>
+                        <h2>Recordatorios de Visita</h2>
+                        <p>${list.length === 1 ? 'Tienes 1 aviso pendiente para hoy' : `Tienes ${list.length} avisos pendientes`}</p>
+                    </div>
+                </div>
+                <button type="button" class="vn-close-btn" onclick="closeStartupVisitAlertsModal()" aria-label="Cerrar">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+
+            <div class="vn-list-body">
+                ${list.map(n => {
+                    const safeId = _escapeDashHtml(n.id);
+                    const safeCode = String(n.clientCode || '').replace(/'/g, "\\'");
+                    const isOverdue = n.alertDate < todayISO;
+                    const alertShort = _formatShortDashDate(n.alertDate);
+                    return `
+                        <div class="vn-note-card">
+                            <div class="vn-note-top">
+                                <button type="button" class="vn-store-link" onclick="openClientFromVisitNote('${safeCode}', 'startupVisitAlertsModal')">
+                                    <span>${_escapeDashHtml(n.clientName || 'Cliente')}</span>
+                                    <span class="material-icons-round">open_in_new</span>
+                                </button>
+                                <span class="vn-alert-badge ${isOverdue ? 'vn-alert-overdue' : 'vn-alert-today'}">
+                                    ${isOverdue ? `Vencida ${alertShort}` : `HOY ${alertShort}`}
+                                </span>
+                            </div>
+                            <div class="vn-note-text">${_escapeDashHtml(n.note || '')}</div>
+                            <div class="vn-note-footer">
+                                <span class="vn-note-date">Visita del ${_formatShortDashDate(n.date)}</span>
+                                <div class="vn-note-actions">
+                                    <button type="button" class="vn-act-btn vn-act-snooze" onclick="snoozeVisitNoteFromModal('${safeId}', 7, 'startup')">+7d</button>
+                                    <button type="button" class="vn-act-btn vn-act-done" onclick="toggleVisitNoteStatus('${safeId}', 'startup')">✓ Hecha</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <div class="vn-startup-footer">
+                <button type="button" class="vn-btn-secondary" onclick="closeStartupVisitAlertsModal(); openVisitNotesModal('alerts')">Ver todas las notas</button>
+                <button type="button" class="vn-btn-primary" onclick="closeStartupVisitAlertsModal()">Entendido</button>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('open');
+}
+
+function closeStartupVisitAlertsModal() {
+    const modal = document.getElementById('startupVisitAlertsModal');
+    if (modal) modal.classList.remove('open');
+}
+
+async function toggleVisitNoteStatus(noteId, source = 'visit') {
+    await dataManager.toggleVisitNoteDone(noteId);
+    if (source === 'startup') {
+        const remaining = await dataManager.getDueVisitAlerts();
+        if (remaining.length > 0) await openStartupVisitAlertsModal(remaining);
+        else closeStartupVisitAlertsModal();
+    } else {
+        await renderVisitNotesList();
+    }
+    if (window.currentView === 'dash' && typeof renderDash === 'function') {
+        await renderDash(true);
+    }
+}
+
+async function snoozeVisitNoteFromModal(noteId, days = 7, source = 'visit') {
+    await dataManager.snoozeVisitNoteAlert(noteId, days);
+    if (source === 'startup') {
+        const remaining = await dataManager.getDueVisitAlerts();
+        if (remaining.length > 0) await openStartupVisitAlertsModal(remaining);
+        else closeStartupVisitAlertsModal();
+    } else {
+        await renderVisitNotesList();
+    }
+    if (window.currentView === 'dash' && typeof renderDash === 'function') {
+        await renderDash(true);
+    }
+}
+
+async function deleteVisitNoteFromModal(noteId) {
+    if (!confirm('¿Eliminar esta nota de visita?')) return;
+    await dataManager.deleteVisitNote(noteId);
+    await renderVisitNotesList();
+    if (window.currentView === 'dash' && typeof renderDash === 'function') {
+        await renderDash(true);
+    }
+}
+
+function openClientFromVisitNote(clientCode, modalIdToClose) {
+    if (modalIdToClose) {
+        const m = document.getElementById(modalIdToClose);
+        if (m) m.classList.remove('open');
+        document.body.classList.remove('no-scroll');
+    }
+    if (clientCode && typeof window.openClientDetailModal === 'function') {
+        window.openClientDetailModal(clientCode);
+    }
+}
+
+window.openVisitNotesModal = openVisitNotesModal;
+window.closeVisitNotesModal = closeVisitNotesModal;
+window.setVisitNotesFilter = setVisitNotesFilter;
+window.filterVisitNotesList = filterVisitNotesList;
+window.openStartupVisitAlertsModal = openStartupVisitAlertsModal;
+window.closeStartupVisitAlertsModal = closeStartupVisitAlertsModal;
+window.toggleVisitNoteStatus = toggleVisitNoteStatus;
+window.snoozeVisitNoteFromModal = snoozeVisitNoteFromModal;
+window.deleteVisitNoteFromModal = deleteVisitNoteFromModal;
+window.openClientFromVisitNote = openClientFromVisitNote;
 
 
 

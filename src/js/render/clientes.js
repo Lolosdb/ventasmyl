@@ -181,6 +181,64 @@ function clearClientSearch() {
     clearSearchField('clientSearchInput', 'clearSearchBtn', () => filterClients(''));
 }
 
+function escapeClientHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatShortOrderDate(dateValue) {
+    if (!dateValue) return '--/--/--';
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return '--/--/--';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+}
+
+async function copyClientField(text, label, el) {
+    const clean = String(text || '').trim();
+    if (!clean) return;
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(clean);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = clean;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+        if (window.showToast) {
+            window.showToast(`${label} copiado: ${clean}`);
+        } else if (el) {
+            el.classList.add('cd-copied-flash');
+            setTimeout(() => el.classList.remove('cd-copied-flash'), 900);
+        }
+    } catch (e) {
+        console.warn('No se pudo copiar al portapapeles:', e);
+    }
+}
+
+function openClientMapsRoute(lat, lng, fallbackQuery) {
+    const hasCoords = Boolean(lat && lng);
+    if (hasCoords) {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat)},${encodeURIComponent(lng)}`, '_blank');
+        return;
+    }
+    const q = String(fallbackQuery || '').trim();
+    if (q) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank');
+    }
+}
+
 async function openClientDetailModal(clientCode) {
     injectClientModals();
     const client = await dataManager.getClientByCode(clientCode);
@@ -188,16 +246,31 @@ async function openClientDetailModal(clientCode) {
 
     const modal = document.getElementById('clientDetailModal');
     const content = document.getElementById('modal-client-content');
-    
-    // Historial (vinculado por código de cliente con soporte para pedidos antiguos por nombre normalizado)
+
+    // Historial completo (desde siempre, ordenado del más reciente al más antiguo)
     const orders = await dataManager.getOrders();
-    const clientOrders = orders.filter(o => dataManager.isOrderForClient(o, client)).sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
-    
-    let historyHtml = '<div class="pro-history-list">';
+    const clientOrders = orders
+        .filter(o => dataManager.isOrderForClient(o, client))
+        .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+
+    const currentYear = new Date().getFullYear();
+    const currentYearOrders = clientOrders.filter(o => {
+        const d = new Date(o.dateISO);
+        return !Number.isNaN(d.getTime()) && d.getFullYear() === currentYear;
+    });
+    const currentYearOrdersCount = currentYearOrders.length;
+    const currentYearTotalAmount = Math.round(
+        currentYearOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+    ).toLocaleString('de-DE') + ' €';
+    const allTimeTotalAmount = Math.round(
+        clientOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+    ).toLocaleString('de-DE') + ' €';
+
+    let historyHtml = '';
     if (clientOrders.length === 0) {
-        historyHtml += '<p class="pro-empty-state">Sin pedidos registrados todavía</p>';
+        historyHtml = '<p class="cd-empty-history">Sin pedidos registrados todavía</p>';
     } else {
-        clientOrders.forEach(o => {
+        historyHtml = clientOrders.map(o => {
             let statusLabel = 'ALMACÉN';
             let statusClass = 'status-almacen';
             if (o.facturadoTodo) {
@@ -209,82 +282,234 @@ async function openClientDetailModal(clientCode) {
             }
 
             const formattedAmount = Math.round(parseFloat(o.amount) || 0).toLocaleString('de-DE') + ' €';
+            const formattedDate = formatShortOrderDate(o.dateISO);
 
-            historyHtml += `
-                <div class="pro-history-row">
-                    <div class="pro-history-info">
-                        <span class="pro-history-amount">${formattedAmount}</span>
-                        <span class="pro-history-date">${new Date(o.dateISO).toLocaleDateString('es-ES')}</span>
+            return `
+                <div class="cd-history-row">
+                    <div class="cd-history-left">
+                        <span class="cd-history-date">${formattedDate}</span>
+                        <span class="cd-history-sep">·</span>
+                        <span class="cd-history-amount">${formattedAmount}</span>
                     </div>
-                    <div class="history-badge ${statusClass}">${statusLabel}</div>
+                    <span class="history-badge cd-history-badge ${statusClass}">${statusLabel}</span>
                 </div>
             `;
-        });
+        }).join('');
     }
-    historyHtml += '</div>';
 
     const safeCode = String(client.code || '').replace(/'/g, "\\'");
-    const lastVisitFormatted = client.lastVisitDate
-        ? new Date(client.lastVisitDate).toLocaleDateString('es-ES')
-        : '';
+    const lastVisitFormatted = client.lastVisitDate ? formatShortOrderDate(client.lastVisitDate) : '';
 
-    const waPref = window.getWhatsAppPref ? window.getWhatsAppPref() : 'business';
-    const waBadgeText = waPref === 'business' ? 'WA Business' : (waPref === 'personal' ? 'WA Personal' : 'Elegir al enviar');
-    const cleanPhone1 = (client.phone || '').replace(/\s+/g, '');
-    const cleanPhone2 = (client.phone2 || '').replace(/\s+/g, '');
+    const cleanPhone1 = (client.phone || '').replace(/[\s'"\\]/g, '');
+    const cleanPhone2 = (client.phone2 || '').replace(/[\s'"\\]/g, '');
+    const primaryCallPhone = cleanPhone1 || cleanPhone2;
     const cleanEmail = (client.email || '').trim();
+    const safeEmailArg = cleanEmail.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+    const cleanCp = String(client.cp ?? client.CP ?? client.codigoPostal ?? '').trim();
+    const cleanLocation = String(client.location || '').trim();
+    const cleanProvince = String(client.province || '').trim();
+    const locationWithCp = cleanLocation
+        ? `${cleanLocation}${cleanCp ? ` (${cleanCp})` : ''}`
+        : cleanCp;
+    const locationText = [locationWithCp, cleanProvince].filter(Boolean).join(' · ') || '---';
+
+    const mapsFallbackQuery = [client.address, cleanCp, cleanLocation, cleanProvince]
+        .filter(Boolean)
+        .join(', ');
+    const hasMapsTarget = Boolean((client.lat && client.lng) || mapsFallbackQuery);
+    const safeLat = String(client.lat || '').replace(/'/g, "\\'");
+    const safeLng = String(client.lng || '').replace(/'/g, "\\'");
+    const safeMapsQuery = mapsFallbackQuery.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+    const mapsSvg = `
+        <svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">
+            <path fill="#1a73e8" d="M24 4c-7.73 0-14 6.27-14 14 0 3.09 1.01 5.95 2.71 8.27L24 44l11.29-17.73A13.92 13.92 0 0 0 38 18c0-7.73-6.27-14-14-14z"/>
+            <path fill="#ea4335" d="M24 4c-5.21 0-9.75 2.85-12.16 7.08L20.1 18h7.8L36.16 11.08C33.75 6.85 29.21 4 24 4z"/>
+            <path fill="#fbbc04" d="M11.84 11.08A13.94 13.94 0 0 0 10 18c0 3.09 1.01 5.95 2.71 8.27L20.1 18l-8.26-6.92z"/>
+            <path fill="#34a853" d="M24 44l11.29-17.73A13.94 13.94 0 0 0 38 18c0-2.5-.66-4.85-1.84-6.92L24 25.5V44z"/>
+            <circle cx="24" cy="18" r="5.5" fill="#ffffff"/>
+        </svg>`;
+
+    const phoneSvg = `
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="#ffffff" aria-hidden="true">
+            <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z"/>
+        </svg>`;
+
+    const whatsappSvg = `
+        <svg viewBox="0 0 32 32" width="24" height="24" fill="#ffffff" aria-hidden="true">
+            <path d="M16 3C8.82 3 3 8.82 3 16c0 2.48.7 4.8 1.91 6.77L3.4 28.6l6-1.48A12.93 12.93 0 0 0 16 29c7.18 0 13-5.82 13-13S23.18 3 16 3zm7.58 18.23c-.32.9-1.87 1.72-2.6 1.83-.66.1-1.5.14-2.42-.15-.56-.18-1.28-.42-2.2-.82-3.87-1.67-6.4-5.58-6.6-5.84-.2-.26-1.57-2.09-1.57-3.99s.99-2.83 1.35-3.22c.35-.39.77-.49 1.03-.49.26 0 .51 0 .74.01.24.01.56-.09.87.67.32.77 1.09 2.66 1.18 2.86.1.19.16.42.03.68-.13.26-.2.42-.39.64-.19.23-.41.51-.58.68-.19.19-.4.4-.17.79.23.39 1.01 1.66 2.17 2.69 1.49 1.33 2.75 1.74 3.14 1.94.39.19.62.16.85-.1.23-.26.97-1.13 1.23-1.52.26-.39.52-.32.87-.19.35.13 2.25 1.06 2.64 1.25.39.19.64.29.74.45.1.16.1.94-.22 1.84z"/>
+        </svg>`;
+
+    const outlookSvg = `
+        <svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">
+            <rect x="17" y="10" width="23" height="28" rx="3" fill="#0364b8"/>
+            <path fill="#28a8ea" d="M40 16H17v18c0 2.21 1.79 4 4 4h15c2.21 0 4-1.79 4-4V16z"/>
+            <path fill="#0078d4" d="M17 16l11.5 8.2L40 16v-2.5c0-1.93-1.57-3.5-3.5-3.5h-16c-1.93 0-3.5 1.57-3.5 3.5V16z"/>
+            <path fill="#50d9ff" d="M17 16l11.5 8.2L40 16H17z" opacity="0.45"/>
+            <rect x="6" y="14" width="20" height="20" rx="3.5" fill="#0a58ca"/>
+            <ellipse cx="16" cy="24" rx="4.8" ry="5.6" fill="none" stroke="#ffffff" stroke-width="2.6"/>
+        </svg>`;
 
     content.innerHTML = `
-        <!-- CABECERA EJECUTIVA UNIFICADA -->
-        <div class="pro-modal-header">
-            <div class="pro-header-topbar">
-                <div class="pro-header-badges">
-                    <span class="pro-code-pill">CLIENTE #${client.code || '---'}</span>
-                    ${client.nif ? `<span class="pro-nif-pill">${client.nif}</span>` : ''}
-                </div>
-                <div class="pro-header-icon-actions">
-                    <button type="button" class="pro-header-icon-btn" onclick="openNewClientModal('${safeCode}')" title="Editar cliente">
-                        <span class="material-icons-round">edit</span>
-                    </button>
-                    <button type="button" class="pro-header-icon-btn pro-header-icon-danger" onclick="handleDeleteClient('${safeCode}')" title="Eliminar cliente">
-                        <span class="material-icons-round">delete_outline</span>
-                    </button>
-                    <button type="button" class="pro-header-icon-btn" onclick="closeClientDetailModal()" title="Cerrar">
-                        <span class="material-icons-round">close</span>
-                    </button>
-                </div>
+        <!-- CABECERA COMPACTA -->
+        <div class="cd-header">
+            <div class="cd-header-left">
+                <h2 class="cd-client-name">${escapeClientHtml(client.name || 'Sin Nombre')}</h2>
+                <div class="cd-contact-person">${escapeClientHtml(client.contact || 'Sin persona de contacto')}</div>
+                <div class="cd-contact-sub">Persona de contacto</div>
             </div>
-
-            <h2 class="pro-client-title">${client.name || 'Sin Nombre'}</h2>
-
-            <div class="pro-header-subrow">
-                <span class="pro-header-subitem">
-                    <span class="material-icons-round">place</span>
-                    <span>${client.location || 'Sin localidad'}${client.province ? ' · ' + client.province : ''}</span>
-                </span>
-                ${client.contact ? `
-                <span class="pro-header-subitem">
-                    <span class="material-icons-round">person</span>
-                    <span>${client.contact}</span>
-                </span>
-                ` : ''}
+            <div class="cd-header-right">
+                <div class="cd-code-block">
+                    <div class="cd-client-code">${escapeClientHtml(client.code || '---')}</div>
+                    <div class="cd-code-sub">Código de cliente</div>
+                </div>
+                <button type="button" class="cd-header-close-btn" onclick="closeClientDetailModal()" title="Cerrar ficha" aria-label="Cerrar ficha">
+                    <span class="material-icons-round">close</span>
+                </button>
             </div>
         </div>
-        
-        <div class="pro-modal-body">
-            <!-- BARRA DE ACCIONES PRINCIPALES SIMÉTRICA -->
-            <div class="pro-primary-actions-grid">
-                <button type="button" class="pro-btn-primary-action" onclick="window.openNewOrderForClient('${safeCode}')">
+
+        <!-- CUERPO SCROLLABLE -->
+        <div class="cd-body">
+            <!-- BLOQUE SUPERIOR: DATOS + BOTONES CORPORATIVOS -->
+            <div class="cd-top-split">
+                <div class="cd-info-list">
+                    <div class="cd-info-item">
+                        <span class="material-icons-round cd-info-icon">place</span>
+                        <div class="cd-info-text">
+                            <span class="cd-info-value">${escapeClientHtml(client.address || '---')}</span>
+                            <span class="cd-info-label">Dirección</span>
+                        </div>
+                    </div>
+
+                    <div class="cd-info-item">
+                        <span class="material-icons-round cd-info-icon">map</span>
+                        <div class="cd-info-text">
+                            <span class="cd-info-value">${escapeClientHtml(locationText)}</span>
+                            <span class="cd-info-label">Población</span>
+                        </div>
+                    </div>
+
+                    <div class="cd-info-item">
+                        <span class="material-icons-round cd-info-icon">badge</span>
+                        <div class="cd-info-text">
+                            <span class="cd-info-value">${escapeClientHtml(client.nif || '---')}</span>
+                            <span class="cd-info-label">NIF</span>
+                        </div>
+                    </div>
+
+                    <div class="cd-info-item">
+                        <span class="material-icons-round cd-info-icon">call</span>
+                        <div class="cd-info-text">
+                            ${cleanPhone1
+                                ? `<button type="button" class="cd-info-value cd-copyable" onclick="copyClientField('${cleanPhone1}', 'Teléfono', this)" title="Pulsa para copiar">${escapeClientHtml(client.phone)}</button>`
+                                : `<span class="cd-info-value cd-muted">---</span>`}
+                            <span class="cd-info-label">Teléfono</span>
+                            ${cleanPhone2 ? `
+                            <div class="cd-secondary-phone-row">
+                                <button type="button" class="cd-secondary-phone-link cd-copyable" onclick="copyClientField('${cleanPhone2}', 'Teléfono 2', this)" title="Pulsa para copiar">
+                                    Alt: ${escapeClientHtml(client.phone2)}
+                                </button>
+                                <button type="button" class="cd-mini-comm-btn cd-mini-call" onclick="window.location.href='tel:${cleanPhone2}'" title="Llamar al secundario">
+                                    <span class="material-icons-round">call</span>
+                                </button>
+                                <button type="button" class="cd-mini-comm-btn cd-mini-wa" onclick="window.openAppWhatsApp('${cleanPhone2}')" title="Whatsapp al secundario">
+                                    <span class="material-icons-round">chat</span>
+                                </button>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="cd-info-item">
+                        <span class="material-icons-round cd-info-icon">mail</span>
+                        <div class="cd-info-text">
+                            ${cleanEmail
+                                ? `<button type="button" class="cd-info-value cd-info-email cd-copyable" onclick="copyClientField('${safeEmailArg}', 'Mail', this)" title="Pulsa para copiar">${escapeClientHtml(cleanEmail)}</button>`
+                                : `<span class="cd-info-value cd-muted">---</span>`}
+                            <span class="cd-info-label">Mail</span>
+                        </div>
+                    </div>
+
+                    <div class="cd-info-item">
+                        <span class="material-icons-round cd-info-icon">schedule</span>
+                        <div class="cd-info-text">
+                            <span class="cd-info-value">${escapeClientHtml(client.schedule || '---')}</span>
+                            <span class="cd-info-label">Horario comercial</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMNA DERECHA: ICONOS CORPORATIVOS -->
+                <div class="cd-action-rail">
+                    <button type="button"
+                            class="cd-action-btn ${hasMapsTarget ? '' : 'is-disabled'}"
+                            onclick="${hasMapsTarget ? `openClientMapsRoute('${safeLat}', '${safeLng}', '${safeMapsQuery}')` : ''}"
+                            title="Cómo llegar en Google Maps">
+                        <span class="cd-action-circle cd-circle-maps">${mapsSvg}</span>
+                        <span class="cd-action-label">Cómo llegar</span>
+                    </button>
+
+                    <button type="button"
+                            class="cd-action-btn ${primaryCallPhone ? '' : 'is-disabled'}"
+                            onclick="${primaryCallPhone ? `window.location.href='tel:${primaryCallPhone}'` : ''}"
+                            title="Llamar por teléfono">
+                        <span class="cd-action-circle cd-circle-phone">${phoneSvg}</span>
+                        <span class="cd-action-label">Llamar</span>
+                    </button>
+
+                    <button type="button"
+                            class="cd-action-btn ${primaryCallPhone ? '' : 'is-disabled'}"
+                            onclick="${primaryCallPhone ? `window.openAppWhatsApp('${primaryCallPhone}')` : ''}"
+                            title="Abrir Whatsapp">
+                        <span class="cd-action-circle cd-circle-wa">${whatsappSvg}</span>
+                        <span class="cd-action-label">Whatsapp</span>
+                    </button>
+
+                    <button type="button"
+                            class="cd-action-btn ${cleanEmail ? '' : 'is-disabled'}"
+                            onclick="${cleanEmail ? `window.openAppEmail('${safeEmailArg}')` : ''}"
+                            title="Abrir Mail">
+                        <span class="cd-action-circle cd-circle-outlook">${outlookSvg}</span>
+                        <span class="cd-action-label">Mail</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- HISTORIAL DE PEDIDOS CON SCROLL VERTICAL -->
+            <div class="cd-history-card">
+                <div class="cd-history-head">
+                    <span class="cd-history-title">Historial de Pedidos</span>
+                    <div class="cd-history-summary">
+                        <div class="cd-summary-chip cd-summary-year">
+                            <span class="cd-summary-label">${currentYear}:</span>
+                            <span class="cd-summary-value">${currentYearOrdersCount} ped. · ${currentYearTotalAmount}</span>
+                        </div>
+                        <div class="cd-summary-chip cd-summary-total">
+                            <span class="cd-summary-label">Total:</span>
+                            <span class="cd-summary-value">${clientOrders.length} ped. · ${allTimeTotalAmount}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="cd-history-scroll">
+                    ${historyHtml}
+                </div>
+            </div>
+
+            <!-- BOTONES PRINCIPALES -->
+            <div class="cd-primary-actions">
+                <button type="button" class="cd-btn-new-order" onclick="window.openNewOrderForClient('${safeCode}')">
                     <span class="material-icons-round">add_shopping_cart</span>
-                    <span>Nuevo Pedido</span>
+                    <span>Nuevo pedido</span>
                 </button>
-                <button type="button" class="pro-btn-secondary-action" onclick="toggleQuickVisitBox()">
+                <button type="button" class="cd-btn-visit" onclick="toggleQuickVisitBox()">
                     <span class="material-icons-round">visibility</span>
-                    <span>Registrar Visita</span>
+                    <span>Registrar visita</span>
                 </button>
             </div>
 
-            <!-- Panel desplegable para Check-in de Visita sin pedido -->
+            <!-- CAJÓN DESPLEGABLE PARA VISITA SIN PEDIDO -->
             <div id="quickVisitBox" class="pro-visit-drawer" style="display: none;">
                 <div class="pro-section-head" style="margin-bottom: 8px;">
                     <div class="pro-section-title">
@@ -297,188 +522,63 @@ async function openClientDetailModal(clientCode) {
                     </button>
                 </div>
                 <input type="text" id="clientVisitNoteInput" class="pro-clean-input"
-                       value="${(client.lastVisitNote || '').replace(/"/g, '&quot;')}"
-                       placeholder="Nota opcional (ej. pasar en 15 días, tiene stock...)">
+                       value=""
+                       placeholder="Ej. Visitar en 15 días, avisar cuando entren platos...">
+
+                <div class="cd-visit-alert-row">
+                    <div class="cd-visit-alert-top">
+                        <span class="cd-visit-alert-label">
+                            <span class="material-icons-round">notifications_active</span>
+                            <span>Alerta (opcional)</span>
+                        </span>
+                        <div class="cd-visit-quick-pills">
+                            <button type="button" class="cd-visit-offset-btn" data-days="7" onclick="setQuickVisitAlertOffset(7, this)">+7d</button>
+                            <button type="button" class="cd-visit-offset-btn" data-days="15" onclick="setQuickVisitAlertOffset(15, this)">+15d</button>
+                            <button type="button" class="cd-visit-offset-btn" data-days="30" onclick="setQuickVisitAlertOffset(30, this)">+1m</button>
+                            <button type="button" class="cd-visit-offset-btn cd-visit-offset-clear" onclick="setQuickVisitAlertOffset(0, this)" title="Quitar fecha">✕</button>
+                        </div>
+                    </div>
+                    <input type="date" id="clientVisitAlertDateInput" class="cd-visit-date-input" onchange="syncQuickVisitOffsetHighlight()">
+                </div>
+
                 <button type="button" class="pro-btn-confirm-visit" onclick="confirmClientVisitCheckIn('${safeCode}')">
                     <span class="material-icons-round">check_circle</span>
                     <span>Guardar Visita de Hoy</span>
                 </button>
+                <div id="quickVisitSavedMsg" class="pro-notes-saved-msg" style="display: none;">✅ Nota de visita guardada</div>
             </div>
 
-            ${lastVisitFormatted ? `
-            <div id="lastVisitInfoBanner" class="pro-visit-status-bar">
+            <div id="lastVisitInfoBanner" class="cd-visit-banner" style="${lastVisitFormatted ? '' : 'display: none;'}">
                 <span class="material-icons-round">event_available</span>
-                <div class="pro-visit-status-text">
-                    <span><strong>Última visita:</strong> ${lastVisitFormatted}</span>
-                    ${client.lastVisitNote ? `<span class="pro-visit-note-quote">· "${client.lastVisitNote}"</span>` : ''}
-                </div>
-            </div>
-            ` : ''}
-
-            <!-- SECCIÓN 1: CONTACTO DIRECTO (TELÉFONO, WHATSAPP BUSINESS Y CORREO) -->
-            <div class="pro-section-card">
-                <div class="pro-section-head">
-                    <div class="pro-section-title">
-                        <span class="material-icons-round">contact_phone</span>
-                        <span>Contacto y Comunicación</span>
-                    </div>
-                    <button type="button" class="pro-comm-pref-chip" onclick="window.openCommPrefsModal('${safeCode}')" title="Configurar desde qué WhatsApp o Correo enviar">
-                        <span class="material-icons-round" style="font-size: 13px; color: #10b981;">storefront</span>
-                        <span>${waBadgeText}</span>
-                        <span class="material-icons-round" style="font-size: 13px; color: #94a3b8;">tune</span>
-                    </button>
-                </div>
-
-                <!-- Teléfono Principal -->
-                <div class="pro-contact-row">
-                    <div class="pro-contact-icon-box">
-                        <span class="material-icons-round">phone</span>
-                    </div>
-                    <div class="pro-contact-info">
-                        <span class="pro-field-label">Teléfono Principal</span>
-                        ${cleanPhone1
-                            ? `<a href="tel:${cleanPhone1}" class="pro-contact-value-link">${client.phone}</a>`
-                            : `<span class="pro-field-empty">No registrado</span>`}
-                    </div>
-                    ${cleanPhone1 ? `
-                    <div class="pro-contact-actions">
-                        <button type="button" class="pro-icon-action pro-action-call" onclick="window.location.href='tel:${cleanPhone1}'" title="Llamar por teléfono">
-                            <span class="material-icons-round">call</span>
-                        </button>
-                        <button type="button" class="pro-icon-action pro-action-wa" onclick="window.openAppWhatsApp('${cleanPhone1}')" title="Enviar por ${waBadgeText}">
-                            <span class="material-icons-round">chat</span>
-                            ${waPref === 'business' ? `<span class="pro-wa-b-tag">B</span>` : ''}
-                        </button>
-                    </div>
-                    ` : ''}
-                </div>
-
-                ${cleanPhone2 ? `
-                <!-- Teléfono Secundario -->
-                <div class="pro-contact-row pro-row-divider">
-                    <div class="pro-contact-icon-box">
-                        <span class="material-icons-round">phone_forwarded</span>
-                    </div>
-                    <div class="pro-contact-info">
-                        <span class="pro-field-label">Teléfono Secundario</span>
-                        <a href="tel:${cleanPhone2}" class="pro-contact-value-link">${client.phone2}</a>
-                    </div>
-                    <div class="pro-contact-actions">
-                        <button type="button" class="pro-icon-action pro-action-call" onclick="window.location.href='tel:${cleanPhone2}'" title="Llamar por teléfono">
-                            <span class="material-icons-round">call</span>
-                        </button>
-                        <button type="button" class="pro-icon-action pro-action-wa" onclick="window.openAppWhatsApp('${cleanPhone2}')" title="Enviar por ${waBadgeText}">
-                            <span class="material-icons-round">chat</span>
-                            ${waPref === 'business' ? `<span class="pro-wa-b-tag">B</span>` : ''}
-                        </button>
-                    </div>
-                </div>
-                ` : ''}
-
-                <!-- Correo Electrónico -->
-                <div class="pro-contact-row pro-row-divider">
-                    <div class="pro-contact-icon-box">
-                        <span class="material-icons-round">mail_outline</span>
-                    </div>
-                    <div class="pro-contact-info">
-                        <span class="pro-field-label">Correo Electrónico</span>
-                        ${cleanEmail
-                            ? `<a href="javascript:void(0)" onclick="window.openAppEmail('${cleanEmail.replace(/'/g, "\\'")}')" class="pro-email-value-link">${cleanEmail}</a>`
-                            : `<span class="pro-field-empty">No registrado</span>`}
-                    </div>
-                    ${cleanEmail ? `
-                    <div class="pro-contact-actions">
-                        <button type="button" class="pro-icon-action pro-action-mail" onclick="window.openAppEmail('${cleanEmail.replace(/'/g, "\\'")}')" title="Enviar correo electrónico">
-                            <span class="material-icons-round">send</span>
-                        </button>
-                    </div>
-                    ` : ''}
-                </div>
-
-                <!-- Persona de Contacto y Horario -->
-                <div class="pro-contact-meta-grid pro-row-divider">
-                    <div>
-                        <span class="pro-field-label">Persona de Contacto</span>
-                        <p class="pro-field-text">${client.contact || '---'}</p>
-                    </div>
-                    <div>
-                        <span class="pro-field-label">Horario Comercial</span>
-                        <p class="pro-field-text">${client.schedule || '---'}</p>
-                    </div>
+                <div id="lastVisitInfoBannerText" class="cd-visit-banner-text">
+                    ${lastVisitFormatted ? `<strong>Última visita:</strong> ${lastVisitFormatted}${client.lastVisitNote ? ` <span class="cd-visit-quote">· "${escapeClientHtml(client.lastVisitNote)}"</span>` : ''}` : ''}
                 </div>
             </div>
 
-            <!-- SECCIÓN 2: UBICACIÓN Y NAVEGACIÓN GPS -->
-            <div class="pro-section-card">
-                <div class="pro-section-head">
-                    <div class="pro-section-title">
-                        <span class="material-icons-round">location_on</span>
-                        <span>Ubicación y Logística</span>
-                    </div>
-                    ${(client.lat && client.lng) ? `
-                    <button type="button" class="pro-btn-gps-route" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${client.lat},${client.lng}', '_blank')">
-                        <span class="material-icons-round" style="font-size: 16px;">directions</span>
-                        <span>Cómo llegar</span>
-                    </button>
-                    ` : ''}
-                </div>
-
-                <div class="pro-location-grid">
-                    <div class="pro-location-main">
-                        <span class="pro-field-label">Dirección</span>
-                        <p class="pro-field-text">${client.address || '---'}</p>
-                    </div>
-                    <div class="pro-location-subgrid">
-                        <div>
-                            <span class="pro-field-label">Población</span>
-                            <p class="pro-field-text">${client.location || '---'}${client.cp ? ` (${client.cp})` : ''}</p>
-                        </div>
-                        <div>
-                            <span class="pro-field-label">Provincia</span>
-                            <p class="pro-field-text">${client.province || '---'}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECCIÓN 3: NOTAS PERMANENTES DEL CLIENTE -->
-            <div class="pro-section-card">
-                <div class="pro-section-head">
-                    <div class="pro-section-title">
-                        <span class="material-icons-round">description</span>
-                        <span>Notas Permanentes</span>
-                    </div>
-                    <div class="pro-notes-actions">
-                        <button type="button" class="pro-mini-pill-btn" onclick="window.toggleVoiceDictation('clientQuickNotesInput', this, () => saveQuickClientNotes('${safeCode}', true))">
+            <!-- NOTAS PERMANENTES -->
+            <div class="cd-notes-section">
+                <div class="cd-notes-title">Notas</div>
+                <div class="cd-notes-box">
+                    <textarea id="clientQuickNotesInput" rows="2" class="cd-notes-textarea"
+                              placeholder="Escribe o dicta notas fijas (ej. prefiere entregas por la mañana...)">${escapeClientHtml(client.notes || '')}</textarea>
+                    <div class="cd-notes-toolbar">
+                        <button type="button" class="cd-notes-mic-btn" onclick="window.toggleVoiceDictation('clientQuickNotesInput', this, () => saveQuickClientNotes('${safeCode}', true))" title="Dictar nota por voz">
                             <span class="material-icons-round">mic</span>
-                            <span>Dictar</span>
                         </button>
-                        <button type="button" id="btnSaveQuickNotes" class="pro-mini-pill-btn pro-mini-pill-primary" onclick="saveQuickClientNotes('${safeCode}', false)">
-                            <span class="material-icons-round">save</span>
-                            <span>Guardar</span>
+                        <button type="button" id="btnSaveQuickNotes" class="cd-notes-save-btn" onclick="saveQuickClientNotes('${safeCode}', false)">
+                            Guardar
                         </button>
                     </div>
                 </div>
-                <textarea id="clientQuickNotesInput" rows="2" class="pro-notes-textarea"
-                          placeholder="Escribe o dicta notas fijas (ej. prefiere imanes de resina, hablar con María por la mañana...)">${client.notes || ''}</textarea>
                 <div id="quickNotesSavedStatus" class="pro-notes-saved-msg" style="display: none;">✅ Nota guardada en la ficha del cliente</div>
             </div>
+        </div>
 
-            <!-- SECCIÓN 4: HISTORIAL DE PEDIDOS -->
-            <div class="pro-section-card">
-                <div class="pro-section-head">
-                    <div class="pro-section-title">
-                        <span class="material-icons-round">history</span>
-                        <span>Historial de Pedidos</span>
-                    </div>
-                    <span class="pro-count-badge">${clientOrders.length}</span>
-                </div>
-                ${historyHtml}
-            </div>
-            
-            <div class="pro-modal-footer">
-                <button type="button" class="btn-footer-close" onclick="closeClientDetailModal()">Cerrar Ficha</button>
-            </div>
+        <!-- PIE FIJO: EDITAR / BORRAR / CERRAR -->
+        <div class="cd-footer">
+            <button type="button" class="cd-footer-btn cd-footer-edit" onclick="openNewClientModal('${safeCode}')">Editar</button>
+            <button type="button" class="cd-footer-btn cd-footer-delete" onclick="handleDeleteClient('${safeCode}')">Borrar</button>
+            <button type="button" class="cd-footer-btn cd-footer-close" onclick="closeClientDetailModal()">Cerrar</button>
         </div>
     `;
 
@@ -943,13 +1043,73 @@ function toggleQuickVisitBox() {
     }
 }
 
+function setQuickVisitAlertOffset(days, btnEl) {
+    const dateInput = document.getElementById('clientVisitAlertDateInput');
+    if (!dateInput) return;
+
+    document.querySelectorAll('.cd-visit-offset-btn').forEach(b => b.classList.remove('is-active'));
+
+    if (!days || days <= 0) {
+        dateInput.value = '';
+        return;
+    }
+
+    const d = new Date();
+    if (days === 30) {
+        d.setMonth(d.getMonth() + 1);
+    } else {
+        d.setDate(d.getDate() + days);
+    }
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    if (btnEl) btnEl.classList.add('is-active');
+}
+
+function syncQuickVisitOffsetHighlight() {
+    document.querySelectorAll('.cd-visit-offset-btn').forEach(b => b.classList.remove('is-active'));
+}
+
 async function confirmClientVisitCheckIn(clientCode) {
     const noteEl = document.getElementById('clientVisitNoteInput');
+    const alertEl = document.getElementById('clientVisitAlertDateInput');
     const note = noteEl ? noteEl.value.trim() : '';
-    const res = await dataManager.recordClientVisit(clientCode, note);
+    const alertDate = alertEl ? alertEl.value.trim() : '';
+
+    const res = await dataManager.recordClientVisit(clientCode, note, null, alertDate);
     if (res.success) {
-        await openClientDetailModal(clientCode);
+        // Limpiar caja y fecha para permitir añadir múltiples notas seguidas
+        if (noteEl) {
+            noteEl.value = '';
+            noteEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (alertEl) alertEl.value = '';
+        syncQuickVisitOffsetHighlight();
+
+        const savedEl = document.getElementById('quickVisitSavedMsg');
+        if (savedEl) {
+            savedEl.textContent = alertDate
+                ? `✅ Visita guardada · Alerta programada para el ${formatShortOrderDate(alertDate)}`
+                : '✅ Visita guardada en Notas de visita';
+            savedEl.style.display = 'block';
+            clearTimeout(savedEl._hideTimer);
+            savedEl._hideTimer = setTimeout(() => { savedEl.style.display = 'none'; }, 3500);
+        }
+
+        const bannerEl = document.getElementById('lastVisitInfoBanner');
+        const bannerTextEl = document.getElementById('lastVisitInfoBannerText');
+        if (bannerEl && bannerTextEl && res.client) {
+            const formattedDate = formatShortOrderDate(res.client.lastVisitDate);
+            const noteHtml = res.client.lastVisitNote
+                ? ` <span class="cd-visit-quote">· "${escapeClientHtml(res.client.lastVisitNote)}"</span>`
+                : '';
+            bannerTextEl.innerHTML = `<strong>Última visita:</strong> ${formattedDate}${noteHtml}`;
+            bannerEl.style.display = 'flex';
+        }
+
         if (window.currentView === 'clientes') renderClientes(true);
+        else if (window.currentView === 'dash' && typeof renderDash === 'function') renderDash(true);
     } else {
         alert("No se pudo registrar la visita: " + (res.message || ''));
     }
@@ -1007,9 +1167,13 @@ window.getCurrentCoordinates = getCurrentCoordinates;
 window.handleFormNavigation = handleFormNavigation;
 window.injectClientModals = injectClientModals;
 window.toggleQuickVisitBox = toggleQuickVisitBox;
+window.setQuickVisitAlertOffset = setQuickVisitAlertOffset;
+window.syncQuickVisitOffsetHighlight = syncQuickVisitOffsetHighlight;
 window.confirmClientVisitCheckIn = confirmClientVisitCheckIn;
 window.quickCheckInVisit = quickCheckInVisit;
 window.saveQuickClientNotes = saveQuickClientNotes;
+window.copyClientField = copyClientField;
+window.openClientMapsRoute = openClientMapsRoute;
 
 
 

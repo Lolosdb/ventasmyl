@@ -512,7 +512,7 @@ class DataManager {
                         contact: getValue(row, 'CONTACTO'),
                         location: getValue(row, 'POBLACION', 'POBLACIÓN', 'CIUDAD'),
                         province: getValue(row, 'PROVINCIA'),
-                        cp: getValue(row, 'CP', 'C.P.', 'CODIGO POSTAL', 'CÓDIGO POSTAL'),
+                        cp: getValue(row, 'CP', 'C.P.', 'C.P', 'C. P.', 'CODIGO POSTAL', 'CÓDIGO POSTAL', 'COD POSTAL', 'COD. POSTAL'),
                         phone: String(getValue(row, 'TELEFONO', 'TELÉFONO', 'MOVIL') || '').replace(/^['´]+/, '').trim(),
                         phone2: String(getValue(row, 'TELEFONO 2', 'TELÉFONO 2', 'MOVIL 2') || '').replace(/^['´]+/, '').trim(),
                         schedule: getValue(row, 'HORARIO', 'HORARIOS', 'SCHEDULE'),
@@ -635,7 +635,7 @@ class DataManager {
             else if (['CONTACTO'].includes(clean)) map.contact = idx;
             else if (['POBLACION', 'POBLACIÓN', 'CIUDAD'].includes(clean)) map.location = idx;
             else if (['PROVINCIA'].includes(clean)) map.province = idx;
-            else if (['CP', 'C.P.'].includes(clean)) map.cp = idx;
+            else if (['CP', 'C.P.', 'C.P', 'C. P.', 'CODIGO POSTAL', 'CÓDIGO POSTAL', 'COD POSTAL', 'COD. POSTAL'].includes(clean)) map.cp = idx;
             else if (['TELEFONO', 'TELÉFONO', 'MOVIL'].includes(clean)) map.phone = idx;
             else if (['TELEFONO 2', 'TELÉFONO 2', 'MOVIL 2'].includes(clean)) map.phone2 = idx;
             else if (['HORARIO', 'HORARIOS', 'SCHEDULE'].includes(clean)) map.schedule = idx;
@@ -956,34 +956,103 @@ class DataManager {
         return { success: true, client: updatedClient };
     }
 
-    async recordClientVisit(clientCode, visitNote = '', visitDateISO = null) {
+    _getLocalDateISO(dateObj = new Date()) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    async getVisitNotes() {
+        const stored = await this.db.get('config', 'visit_notes');
+        return Array.isArray(stored?.data) ? stored.data : [];
+    }
+
+    async saveVisitNotesList(notes) {
+        const list = Array.isArray(notes) ? notes : [];
+        await this.db.put('config', { key: 'visit_notes', data: list });
+        return list;
+    }
+
+    async toggleVisitNoteDone(noteId) {
+        const notes = await this.getVisitNotes();
+        const updated = notes.map(n => n.id === noteId ? { ...n, done: !n.done, updatedAt: new Date().toISOString() } : n);
+        await this.saveVisitNotesList(updated);
+        return updated;
+    }
+
+    async deleteVisitNote(noteId) {
+        const notes = await this.getVisitNotes();
+        const updated = notes.filter(n => n.id !== noteId);
+        await this.saveVisitNotesList(updated);
+        return updated;
+    }
+
+    async snoozeVisitNoteAlert(noteId, daysToAdd = 7) {
+        const notes = await this.getVisitNotes();
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + Number(daysToAdd || 7));
+        const nextISO = this._getLocalDateISO(nextDate);
+        const updated = notes.map(n => n.id === noteId ? { ...n, alertDate: nextISO, done: false, updatedAt: new Date().toISOString() } : n);
+        await this.saveVisitNotesList(updated);
+        return updated;
+    }
+
+    async getDueVisitAlerts(referenceDateISO = null) {
+        const todayISO = referenceDateISO || this._getLocalDateISO();
+        const notes = await this.getVisitNotes();
+        return notes
+            .filter(n => !n.done && n.alertDate && String(n.alertDate).trim() !== '' && n.alertDate <= todayISO)
+            .sort((a, b) => String(a.alertDate).localeCompare(String(b.alertDate)));
+    }
+
+    async recordClientVisit(clientCode, visitNote = '', visitDateISO = null, alertDateISO = '') {
         const client = await this.getClientByCode(clientCode);
         if (!client) return { success: false, message: "Cliente no encontrado" };
 
-        const dateISO = visitDateISO || new Date().toISOString().split('T')[0];
+        const dateISO = visitDateISO || this._getLocalDateISO();
         const cleanNote = String(visitNote || '').trim();
+        const cleanAlertDate = String(alertDateISO || '').trim();
+        const nowISO = new Date().toISOString();
+
         const history = Array.isArray(client.visitHistory) ? [...client.visitHistory] : [];
         history.unshift({
             date: dateISO,
             note: cleanNote,
-            timestamp: new Date().toISOString()
+            alertDate: cleanAlertDate,
+            timestamp: nowISO
         });
 
         const updatedClient = {
             ...client,
             lastVisitDate: dateISO,
             lastVisitNote: cleanNote,
-            visitHistory: history.slice(0, 15),
+            visitHistory: history,
             pendingSync: true,
-            updatedAt: new Date().toISOString()
+            updatedAt: nowISO
         };
 
         await this.db.put('clients', updatedClient);
         await this.enqueueClientSyncOp({ type: 'upsert', originalCode: client.code, data: updatedClient });
 
+        // Guardar también en el listado global de notas de visita (y alertas)
+        const visitNotes = await this.getVisitNotes();
+        const newNoteEntry = {
+            id: `vn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            clientCode: String(client.code || ''),
+            clientName: client.name || 'Sin Nombre',
+            date: dateISO,
+            note: cleanNote || 'Visita registrada (sin comentario)',
+            alertDate: cleanAlertDate,
+            done: false,
+            createdAt: nowISO
+        };
+        visitNotes.unshift(newNoteEntry);
+        await this.saveVisitNotesList(visitNotes);
+
         // Sincronizar en segundo plano sin bloquear la UI
         this.flushPendingClientSync().catch(() => {});
-        return { success: true, client: updatedClient };
+        return { success: true, client: updatedClient, visitNoteEntry: newNoteEntry };
     }
 
     async deleteClientFromDrive(url, filename, clientCode) {
@@ -1509,6 +1578,13 @@ class DataManager {
                 XLSX.utils.book_append_sheet(wb, wsDepts, "Departamentos");
             }
 
+            // 2.2 Visit Notes & Alerts Sheet
+            const visitNotes = await this.getVisitNotes();
+            if (visitNotes && visitNotes.length > 0) {
+                const wsVisitNotes = XLSX.utils.json_to_sheet(visitNotes);
+                XLSX.utils.book_append_sheet(wb, wsVisitNotes, "NotasVisita");
+            }
+
             // 3. Goal & History (Config) + Preferencias WhatsApp/Mail
             const goals = await this.db.get('config', 'goals');
             const salesHistory = await this.db.get('config', 'sales_history');
@@ -1556,6 +1632,12 @@ class DataManager {
             if (departments && departments.length > 0) {
                 const wsDepts = XLSX.utils.json_to_sheet(departments);
                 XLSX.utils.book_append_sheet(wb, wsDepts, "Departamentos");
+            }
+
+            const visitNotes = await this.getVisitNotes();
+            if (visitNotes && visitNotes.length > 0) {
+                const wsVisitNotes = XLSX.utils.json_to_sheet(visitNotes);
+                XLSX.utils.book_append_sheet(wb, wsVisitNotes, "NotasVisita");
             }
 
             const goals = await this.db.get('config', 'goals');
@@ -1670,6 +1752,19 @@ class DataManager {
                         if (departments.length > 0) {
                             await this.db.clearStore('departments');
                             await this.db.bulkPut('departments', departments);
+                        }
+                    }
+
+                    // 2.2 Import Visit Notes
+                    if (wb.SheetNames.includes("NotasVisita")) {
+                        const ws = wb.Sheets["NotasVisita"];
+                        const importedNotes = XLSX.utils.sheet_to_json(ws);
+                        if (Array.isArray(importedNotes) && importedNotes.length > 0) {
+                            const normalized = importedNotes.map(n => ({
+                                ...n,
+                                done: n.done === true || n.done === 'true' || n.done === 1
+                            }));
+                            await this.saveVisitNotesList(normalized);
                         }
                     }
 
