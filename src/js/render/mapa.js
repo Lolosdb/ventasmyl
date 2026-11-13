@@ -127,11 +127,10 @@ async function initLeafletMap() {
         updateUserMarker(window.lastUserCoords.lat, window.lastUserCoords.lng);
     }
 
-    // Mapa base limpio estilo moderno (CartoDB Voyager)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
+    // Mapa base OpenStreetMap oficial (sin API key ni marcas de agua), suavizado por CSS
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap &copy; CARTO'
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     try {

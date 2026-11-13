@@ -4,14 +4,42 @@
 
 window.currentPedidosStatusFilter = window.currentPedidosStatusFilter || 'all';
 
+function escapePedidosHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatPedidoShortDate(dateValue) {
+    if (!dateValue) return '';
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+}
+
+function formatPedidoDayMonth(dateValue) {
+    if (!dateValue) return '';
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
+}
+
 async function renderPedidos(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('pedidos', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Pedidos', {
         extraAction: `
-            <button class="btn-header-pill" onclick="openExportPedidosModal()" title="Informe Pedidos">
+            <button class="btn-header-pill btn-pedidos-report-pill" onclick="openExportPedidosModal()" title="Informe Pedidos">
                 <span class="material-icons-round">description</span>
-                <span>Informe Pedidos</span>
+                <span class="btn-pedidos-report-label">Informe</span>
             </button>
         `
     });
@@ -40,40 +68,35 @@ async function renderPedidos(isBack = false) {
 
     let contentHtml = '<main class="pedidos-view-main">';
 
-    // Parte fija superior bien distribuida: 1) Filtros de Estado -> 2) Buscador -> 3) Cabecera Tabla
+    // Parte fija superior: 1) Filtros de Estado -> 2) Buscador -> 3) Cabecera sutil del listado
     contentHtml += `
         <div class="pedidos-fixed-controls">
-            <!-- 1. Pestañas de Filtro Rápido por Estado (3 columnas simétricas) -->
             <div id="pedidosStatusTabs" class="pedidos-status-tabs">
                 <button type="button" data-status-tab="all" onclick="setPedidosStatusFilter('all')"
-                        class="pedidos-status-pill ${activeFilter === 'all' ? 'is-active' : ''}"
-                        style="border-color: ${activeFilter === 'all' ? '#0f172a' : '#cbd5e1'}; background: ${activeFilter === 'all' ? '#0f172a' : '#ffffff'}; color: ${activeFilter === 'all' ? '#ffffff' : '#334155'};">
-                    <span class="pedidos-pill-count" style="color: ${activeFilter === 'all' ? '#ffffff' : '#0f172a'};">${sortedOrders.length}</span>
+                        class="pedidos-status-pill ${activeFilter === 'all' ? 'is-active' : ''}">
+                    <span class="pedidos-pill-count">${sortedOrders.length}</span>
                     <span class="pedidos-pill-top">
                         <span>Todos</span>
                     </span>
                 </button>
                 <button type="button" data-status-tab="almacen" onclick="setPedidosStatusFilter('almacen')"
-                        class="pedidos-status-pill ${activeFilter === 'almacen' ? 'is-active' : ''}"
-                        style="border-color: ${activeFilter === 'almacen' ? '#f59e0b' : '#fde68a'}; background: ${activeFilter === 'almacen' ? '#f59e0b' : '#fffbeb'}; color: ${activeFilter === 'almacen' ? '#ffffff' : '#b45309'};">
-                    <span class="pedidos-pill-count" style="color: ${activeFilter === 'almacen' ? '#ffffff' : '#d97706'};">${countAlmacen}</span>
+                        class="pedidos-status-pill ${activeFilter === 'almacen' ? 'is-active' : ''}">
+                    <span class="pedidos-pill-count">${countAlmacen}</span>
                     <span class="pedidos-pill-top">
-                        <span class="pedidos-status-dot" style="background: ${activeFilter === 'almacen' ? '#ffffff' : '#f59e0b'};"></span>
+                        <span class="pedidos-status-dot"></span>
                         <span>Almacén</span>
                     </span>
                 </button>
                 <button type="button" data-status-tab="tampo" onclick="setPedidosStatusFilter('tampo')"
-                        class="pedidos-status-pill ${activeFilter === 'tampo' ? 'is-active' : ''}"
-                        style="border-color: ${activeFilter === 'tampo' ? '#2563eb' : '#bfdbfe'}; background: ${activeFilter === 'tampo' ? '#2563eb' : '#eff6ff'}; color: ${activeFilter === 'tampo' ? '#ffffff' : '#1d4ed8'};">
-                    <span class="pedidos-pill-count" style="color: ${activeFilter === 'tampo' ? '#ffffff' : '#2563eb'};">${countTampo}</span>
+                        class="pedidos-status-pill ${activeFilter === 'tampo' ? 'is-active' : ''}">
+                    <span class="pedidos-pill-count">${countTampo}</span>
                     <span class="pedidos-pill-top">
-                        <span class="pedidos-status-dot" style="background: ${activeFilter === 'tampo' ? '#ffffff' : '#2563eb'};"></span>
+                        <span class="pedidos-status-dot"></span>
                         <span>Falta Tampo</span>
                     </span>
                 </button>
             </div>
 
-            <!-- 2. Buscador colocado en la zona intermedia con espacio equilibrado -->
             <div class="pedidos-search-wrap">
                 <div class="pro-search-bar pedidos-search-bar">
                     <span class="material-icons-round pro-search-icon">search</span>
@@ -89,39 +112,67 @@ async function renderPedidos(isBack = false) {
                 </div>
             </div>
 
-            <!-- 3. Cabecera de Columnas unida directamente al listado -->
             <div class="pedidos-table-header">
-                <div>Nº</div>
-                <div>TIENDA</div>
+                <div>Nº · TIENDA / FECHA</div>
                 <div style="text-align: right;">IMPORTE</div>
             </div>
         </div>
     `;
 
-    contentHtml += '<div id="pedidosFilterSummaryBar" style="display: none; background: #f8fafc; padding: 8px 20px; border-bottom: 1px solid #e2e8f0; font-size: 11.5px; font-weight: 800; color: #334155; justify-content: space-between; align-items: center;"></div>';
-    contentHtml += '<div id="pedidosList" class="pedidos-list" style="background: white;">';
+    contentHtml += '<div id="pedidosFilterSummaryBar" class="pedidos-filter-summary-bar" style="display: none;"></div>';
+    contentHtml += '<div id="pedidosList" class="pedidos-list">';
     if (sortedOrders.length === 0) {
         contentHtml += '<div class="text-center p-8 text-gray-400">No hay pedidos registrados</div>';
     } else {
         sortedOrders.forEach(order => {
             const rawAmount = Math.round(parseFloat(order.amount) || 0);
             const amount = formatCurrency(rawAmount);
-            
-            // Reglas de negocio de colores y estados
-            let rowClass = '';
+            const shortDate = formatPedidoShortDate(order.dateISO || order.date) || '--/--/--';
+            const cleanComment = String(order.comments || '').trim();
+            const sinTampoFull = formatPedidoShortDate(order.noTampo);
+            const sinTampoDM = formatPedidoDayMonth(order.noTampo);
+            const todoFull = formatPedidoShortDate(order.facturadoTodo);
+            const todoDM = formatPedidoDayMonth(order.facturadoTodo);
+
             let statusType = 'almacen';
+            let statusClass = 'status-almacen';
+            let statusHtml = `<span class="pedido-status-badge status-almacen">Almacén</span>`;
+
             if (order.facturadoTodo) {
-                rowClass = 'row-green';
                 statusType = 'servido';
+                statusClass = 'status-servido';
+                if (order.noTampo && sinTampoDM && todoDM) {
+                    statusHtml = `<span class="pedido-status-badge status-servido">Sin tampo ${sinTampoDM} · Tampo ${todoDM}</span>`;
+                } else if (todoFull) {
+                    statusHtml = `<span class="pedido-status-badge status-servido">Facturado · ${todoFull}</span>`;
+                } else {
+                    statusHtml = `<span class="pedido-status-badge status-servido">Facturado</span>`;
+                }
             } else if (order.noTampo) {
-                rowClass = 'row-blue';
                 statusType = 'tampo';
+                statusClass = 'status-tampo';
+                const sinTampoChip = sinTampoFull
+                    ? `<span class="pedido-status-badge status-tampo-soft">Sin Tampo ${sinTampoFull}</span>`
+                    : '';
+                statusHtml = `${sinTampoChip}<span class="pedido-status-badge status-tampo">Falta el Tampo</span>`;
             }
 
             contentHtml += `
-                <div class="pedido-row ${rowClass}" data-status="${statusType}" data-amount="${rawAmount}" onclick="openEditOrderModal('${order.id}')">
-                    <div class="p-id">${order.displayId}</div>
-                    <div class="p-shop">${order.shop}</div>
+                <div class="pedido-row ${statusClass}" data-status="${statusType}" data-amount="${rawAmount}" onclick="openEditOrderModal('${order.id}')">
+                    <div class="pedido-card-main">
+                        <div class="pedido-card-top">
+                            <span class="pedido-num-pill">${escapePedidosHtml(order.displayId)}</span>
+                            <span class="p-shop">${escapePedidosHtml(order.shop)}</span>
+                        </div>
+                        <div class="pedido-card-meta">
+                            <span class="pedido-meta-date">
+                                <span class="material-icons-round">calendar_today</span>
+                                <span>${shortDate}</span>
+                            </span>
+                            ${statusHtml}
+                        </div>
+                        ${cleanComment ? `<div class="pedido-card-note">${escapePedidosHtml(cleanComment)}</div>` : ''}
+                    </div>
                     <div class="p-amount">${amount}</div>
                 </div>
             `;
@@ -133,8 +184,8 @@ async function renderPedidos(isBack = false) {
     injectPedidoModals();
 
     contentHtml += `
-        <button class="fab-btn shadow-premium" onclick="openNewOrderModal()" style="bottom: 90px; right: 20px; background: #009ee3 !important;">
-            <span class="material-icons-round" style="color: #ffffff !important; font-size: 32px;">add</span>
+        <button class="fab-btn shadow-premium pedidos-fab-add" onclick="openNewOrderModal()" title="Nuevo pedido">
+            <span class="material-icons-round">add</span>
         </button>
     `;
 
@@ -154,29 +205,7 @@ function setPedidosStatusFilter(status) {
     const tabs = document.querySelectorAll('#pedidosStatusTabs [data-status-tab]');
     tabs.forEach(btn => {
         const tab = btn.getAttribute('data-status-tab');
-        const isActive = tab === safeStatus;
-        btn.classList.toggle('is-active', isActive);
-        const dot = btn.querySelector('.pedidos-status-dot');
-        const badge = btn.querySelector('.pedidos-pill-count');
-
-        if (tab === 'all') {
-            btn.style.background = isActive ? '#0f172a' : '#ffffff';
-            btn.style.color = isActive ? '#ffffff' : '#334155';
-            btn.style.borderColor = isActive ? '#0f172a' : '#cbd5e1';
-            if (badge) badge.style.color = isActive ? '#ffffff' : '#0f172a';
-        } else if (tab === 'almacen') {
-            btn.style.background = isActive ? '#f59e0b' : '#fffbeb';
-            btn.style.color = isActive ? '#ffffff' : '#b45309';
-            btn.style.borderColor = isActive ? '#f59e0b' : '#fde68a';
-            if (dot) dot.style.background = isActive ? '#ffffff' : '#f59e0b';
-            if (badge) badge.style.color = isActive ? '#ffffff' : '#d97706';
-        } else if (tab === 'tampo') {
-            btn.style.background = isActive ? '#2563eb' : '#eff6ff';
-            btn.style.color = isActive ? '#ffffff' : '#1d4ed8';
-            btn.style.borderColor = isActive ? '#2563eb' : '#bfdbfe';
-            if (dot) dot.style.background = isActive ? '#ffffff' : '#2563eb';
-            if (badge) badge.style.color = isActive ? '#ffffff' : '#2563eb';
-        }
+        btn.classList.toggle('is-active', tab === safeStatus);
     });
     filterPedidos();
 }
@@ -212,9 +241,9 @@ function filterPedidos() {
         if (activeStatus !== 'all' || filter) {
             const labels = {
                 all: 'Filtrados',
-                almacen: '🟡 En Almacén (Pendientes de servir)',
-                tampo: '🔵 Servidos parcial (Falta Tampo)',
-                servido: '🟢 Servidos completos'
+                almacen: '🟡 En Almacén (Pendientes)',
+                tampo: '🔵 Facturado parcial (Falta el Tampo)',
+                servido: '🟢 Facturados completos'
             };
             summaryBar.style.display = 'flex';
             summaryBar.innerHTML = `

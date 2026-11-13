@@ -1,11 +1,29 @@
 ﻿/* Pedidos View Styles - Diseño Ejecutivo y Distribución Limpia */
 
+/* Botón Informe en cabecera (siempre legible en móvil vertical) */
+.btn-pedidos-report-pill {
+    padding: 6px 12px !important;
+    gap: 5px !important;
+}
+
+.btn-pedidos-report-pill .material-icons-round {
+    font-size: 17px !important;
+}
+
+.btn-pedidos-report-pill .btn-pedidos-report-label {
+    display: inline !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+}
+
 .pedidos-view-main {
-    padding: 0 0 100px 0;
+    padding: 0;
     margin-top: 0;
     display: flex;
     flex-direction: column;
     width: 100%;
+    background-color: var(--bg-app, #f1f5f9);
 }
 
 .pedidos-fixed-controls {
@@ -15,33 +33,35 @@
     max-width: 100%;
     z-index: 20;
     background-color: var(--bg-app, #f1f5f9);
-    padding-top: 14px;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    padding-top: 12px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
 .pedidos-status-tabs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    padding: 0 14px 12px 14px;
+    padding: 0 12px 10px 12px;
 }
 
 .pedidos-status-pill {
     min-width: 0;
-    min-height: 52px;
-    border-radius: 14px;
-    padding: 7px 6px;
-    font-size: 11.5px;
+    min-height: 44px;
+    border-radius: 13px;
+    padding: 6px 6px;
+    font-size: 11px;
     font-weight: 800;
     cursor: pointer;
     border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-    transition: transform 0.14s ease, background-color 0.16s ease, border-color 0.16s ease;
+    transition: transform 0.14s ease, background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
 .pedidos-status-pill:active {
@@ -65,83 +85,289 @@
 }
 
 .pedidos-pill-count {
-    font-size: 17px;
-    font-weight: 900;
+    font-size: 14.5px;
+    font-weight: 800;
     line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+/* Estados de color de las pestañas superiores */
+.pedidos-status-pill[data-status-tab="all"] {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+.pedidos-status-pill[data-status-tab="all"] .pedidos-pill-count {
+    color: #0284c7;
+}
+.pedidos-status-pill[data-status-tab="all"].is-active {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border-color: #0284c7;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.24);
+}
+.pedidos-status-pill[data-status-tab="all"].is-active .pedidos-pill-count {
+    color: #ffffff;
+}
+
+.pedidos-status-pill[data-status-tab="almacen"] {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #b45309;
+}
+.pedidos-status-pill[data-status-tab="almacen"] .pedidos-pill-count {
+    color: #d97706;
+}
+.pedidos-status-pill[data-status-tab="almacen"] .pedidos-status-dot {
+    background: #f59e0b;
+}
+.pedidos-status-pill[data-status-tab="almacen"].is-active {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+.pedidos-status-pill[data-status-tab="almacen"].is-active .pedidos-pill-count {
+    color: #ffffff;
+}
+.pedidos-status-pill[data-status-tab="almacen"].is-active .pedidos-status-dot {
+    background: #ffffff;
+}
+
+.pedidos-status-pill[data-status-tab="tampo"] {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+.pedidos-status-pill[data-status-tab="tampo"] .pedidos-pill-count {
+    color: #2563eb;
+}
+.pedidos-status-pill[data-status-tab="tampo"] .pedidos-status-dot {
+    background: #2563eb;
+}
+.pedidos-status-pill[data-status-tab="tampo"].is-active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+.pedidos-status-pill[data-status-tab="tampo"].is-active .pedidos-pill-count {
+    color: #ffffff;
+}
+.pedidos-status-pill[data-status-tab="tampo"].is-active .pedidos-status-dot {
+    background: #ffffff;
 }
 
 .pedidos-search-wrap {
-    padding: 0 14px 14px 14px;
+    padding: 0 12px 10px 12px;
 }
 
 .pedidos-search-bar {
     margin-bottom: 0 !important;
-    min-height: 48px;
+    min-height: 46px;
     border-radius: 14px;
     border: 1.5px solid #cbd5e1;
     box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
 }
 
+/* Cabecera de columnas sutil y luminosa */
 .pedidos-table-header {
-    background-color: #0f172a;
-    color: white;
-    padding: 12px 20px;
-    font-size: 12px;
-    font-weight: 900;
+    background-color: #f8fafc;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 16px;
+    font-size: 10.5px;
+    font-weight: 800;
     text-transform: uppercase;
-    display: grid;
-    grid-template-columns: 45px 1fr 95px;
-    gap: 12px;
-    letter-spacing: 1.2px;
+    letter-spacing: 0.7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
+.pedidos-filter-summary-bar {
+    background: #f0f9ff;
+    padding: 8px 16px;
+    border-bottom: 1px solid #bae6fd;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #0369a1;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pedidos-list {
+    padding: 10px 12px 115px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background-color: var(--bg-app, #f1f5f9);
+}
+
+/* Tarjeta de Pedido con tinte suave y barra lateral para distinción rápida */
 .pedido-row {
     display: grid;
-    grid-template-columns: 45px 1fr 95px;
-    gap: 12px;
-    padding: 16px 20px;
-    border-bottom: 1px solid #e2e8f0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 11px 14px 11px 13px;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #cbd5e1;
+    border-radius: 14px;
     align-items: center;
-    background-color: white;
-    font-size: 14px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.035);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: transform 0.14s ease, filter 0.15s ease;
 }
 
 .pedido-row:active {
-    background-color: #f1f5f9;
+    transform: scale(0.99);
+    filter: brightness(0.97);
 }
 
-/* Row Color States */
-.pedido-row.row-blue {
-    background-color: #dbeafe !important;
+.pedido-row.status-servido {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+    border-left: 5px solid #16a34a;
 }
 
-.pedido-row.row-green {
-    background-color: #dcfce7 !important;
+.pedido-row.status-tampo {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+    border-left: 5px solid #2563eb;
 }
 
-.p-id {
-    font-weight: 900;
-    color: #475569;
-    text-align: center;
+.pedido-row.status-almacen {
+    background-color: #fffbeb;
+    border-color: #fde68a;
+    border-left: 5px solid #f59e0b;
+}
+
+.pedido-card-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pedido-card-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+.pedido-num-pill {
+    flex-shrink: 0;
+    background-color: #ffffff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 7px;
+    line-height: 1.2;
 }
 
 .p-shop {
-    font-weight: 700;
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 800;
     color: #0f172a;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.15px;
+}
+
+.pedido-card-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.pedido-meta-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    margin-right: 2px;
+}
+
+.pedido-meta-date .material-icons-round {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.pedido-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.pedido-status-badge.status-servido {
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+
+.pedido-status-badge.status-tampo-soft {
+    background-color: #ffffff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.pedido-status-badge.status-tampo {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+}
+
+.pedido-status-badge.status-almacen {
+    background-color: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+.pedido-card-note {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.35;
+    word-break: break-word;
+    margin-top: 1px;
 }
 
 .p-amount {
+    font-size: 15.5px;
     font-weight: 900;
-    color: #1e293b;
+    color: #0f172a;
     text-align: right;
-    letter-spacing: -0.5px;
+    white-space: nowrap;
+    letter-spacing: -0.3px;
+}
+
+/* Botón flotante Nuevo Pedido */
+.pedidos-fab-add {
+    bottom: 90px !important;
+    right: 20px !important;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35) !important;
+}
+
+.pedidos-fab-add .material-icons-round {
+    color: #ffffff !important;
+    font-size: 30px !important;
 }
 
 /* Header Action Pill */
