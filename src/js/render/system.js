@@ -9,9 +9,22 @@ async function renderAjustes(isBack = false) {
     const headerHtml = getCommonHeaderHtml('Backups', { showBack: true });
 
     const currentUrl = localStorage.getItem('apps_script_url') || DEFAULT_SCRIPT_URL;
-    const lastBackup = localStorage.getItem('last_auto_backup_str') || 'Sin registros recientes';
+    const rawBackupTs = parseInt(localStorage.getItem('last_auto_backup') || '', 10);
+    let lastBackup = localStorage.getItem('last_auto_backup_str') || 'Sin copias';
+    if (!Number.isNaN(rawBackupTs) && rawBackupTs > 0) {
+        const d = new Date(rawBackupTs);
+        if (!Number.isNaN(d.getTime())) {
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            lastBackup = `${dd}/${mm} · ${hh}:${min}`;
+        }
+    }
+
     const orders = await dataManager.getOrders();
     const clients = await dataManager.getClients();
+    const visitNotes = typeof dataManager.getVisitNotes === 'function' ? await dataManager.getVisitNotes() : [];
     const salesHistory = await dataManager.getSalesHistory();
     const configuredYears = Object.keys(salesHistory).sort((a, b) => a - b);
     const currentYearStr = String(new Date().getFullYear());
@@ -22,18 +35,36 @@ async function renderAjustes(isBack = false) {
 
     let contentHtml = `<main class="ajustes-container fade-in-up">`;
 
-    // 1. COPIA DE SEGURIDAD EN LA NUBE (GOOGLE DRIVE)
+    contentHtml += `<div class="sys-section-eyebrow">Copias de seguridad</div>`;
+
+    // 1. COPIA DE SEGURIDAD EN LA NUBE (TARJETA PROTAGONISTA AZUL)
     contentHtml += `
-        <section class="sys-pro-card">
-            <div class="sys-card-head">
+        <section class="sys-pro-card sys-card-cloud-hero">
+            <div class="sys-hero-banner">
                 <div class="sys-card-head-left">
-                    <div class="sys-icon-box">
+                    <div class="sys-icon-box sys-icon-hero">
                         <span class="material-icons-round">cloud_done</span>
                     </div>
                     <div>
-                        <h3 class="sys-card-title">Copia en la Nube (Google Drive)</h3>
-                        <p class="sys-card-subtitle">${orders.length} pedidos · ${clients.length} clientes sincronizados</p>
+                        <h3 class="sys-card-title sys-title-white">Copia en la Nube</h3>
+                        <p class="sys-card-subtitle sys-sub-white">Respaldo completo en Google Drive</p>
                     </div>
+                </div>
+                <span class="sys-hero-badge">Auto 20:30</span>
+            </div>
+
+            <div class="sys-hero-stats-grid">
+                <div class="sys-hero-stat">
+                    <span class="sys-hero-stat-val">${orders.length}</span>
+                    <span class="sys-hero-stat-lbl">Pedidos</span>
+                </div>
+                <div class="sys-hero-stat">
+                    <span class="sys-hero-stat-val">${clients.length}</span>
+                    <span class="sys-hero-stat-lbl">Clientes</span>
+                </div>
+                <div class="sys-hero-stat">
+                    <span class="sys-hero-stat-val">${visitNotes.length}</span>
+                    <span class="sys-hero-stat-lbl">Notas</span>
                 </div>
             </div>
 
@@ -51,58 +82,60 @@ async function renderAjustes(isBack = false) {
             <div class="sys-info-strip">
                 <div class="sys-info-strip-left">
                     <span class="material-icons-round">schedule</span>
-                    <span>Auto-Backup L-V (20:30h)</span>
+                    <span>Auto-Backup L–V</span>
                 </div>
                 <span class="sys-info-strip-badge">Última: ${lastBackup}</span>
             </div>
         </section>
     `;
 
-    // 2. COPIA EN ARCHIVO EXCEL (.XLSX)
+    // 2. COPIA EN ARCHIVO EXCEL (.XLSX) - ACENTO VERDE EXCEL
     contentHtml += `
-        <section class="sys-pro-card">
+        <section class="sys-pro-card sys-card-excel">
             <div class="sys-card-head">
                 <div class="sys-card-head-left">
-                    <div class="sys-icon-box">
+                    <div class="sys-icon-box sys-icon-excel">
                         <span class="material-icons-round">table_view</span>
                     </div>
                     <div>
-                        <h3 class="sys-card-title">Copia Completa en Excel (.XLSX)</h3>
-                        <p class="sys-card-subtitle">Descarga, importa o sube un archivo Excel con todas las tablas.</p>
+                        <h3 class="sys-card-title">Copia en Excel (.XLSX)</h3>
+                        <p class="sys-card-subtitle">Exporta o restaura tus hojas de cálculo</p>
                     </div>
                 </div>
             </div>
 
             <div class="sys-btn-grid-2">
-                <button type="button" class="sys-btn-primary" onclick="handleExcelExport()">
+                <button type="button" class="sys-btn-excel" onclick="handleExcelExport()">
                     <span class="material-icons-round">file_download</span>
-                    <span>Descargar Excel</span>
+                    <span>Descargar</span>
                 </button>
-                <button type="button" class="sys-btn-secondary" onclick="document.getElementById('excelBackupInput').click()">
+                <button type="button" class="sys-btn-secondary sys-btn-excel-sec" onclick="document.getElementById('excelBackupInput').click()">
                     <span class="material-icons-round">file_upload</span>
-                    <span>Importar Excel</span>
+                    <span>Importar</span>
                 </button>
             </div>
 
-            <button type="button" class="sys-btn-soft" onclick="handleExcelDriveExport()">
+            <button type="button" class="sys-btn-soft-excel" onclick="handleExcelDriveExport()">
                 <span class="material-icons-round">cloud_upload</span>
-                <span>Guardar Copia Excel en Google Drive</span>
+                <span>Subir copia Excel a Google Drive</span>
             </button>
             <input type="file" id="excelBackupInput" accept=".xlsx,.xls" style="display:none;" onchange="handleExcelImport(this)">
         </section>
     `;
 
-    // 3. CANALES DE COMUNICACIÓN (WHATSAPP BUSINESS Y CORREO)
+    contentHtml += `<div class="sys-section-eyebrow">Preferencias y sistema</div>`;
+
+    // 3. CANALES DE COMUNICACIÓN (WHATSAPP Y CORREO) - ACENTO ÍNDIGO
     contentHtml += `
-        <section class="sys-pro-card">
+        <section class="sys-pro-card sys-card-comm">
             <div class="sys-card-head">
                 <div class="sys-card-head-left">
-                    <div class="sys-icon-box">
+                    <div class="sys-icon-box sys-icon-comm">
                         <span class="material-icons-round">forum</span>
                     </div>
                     <div>
-                        <h3 class="sys-card-title">WhatsApp y Correo de Trabajo</h3>
-                        <p class="sys-card-subtitle">Elige desde qué aplicación enviar mensajes a clientes y equipo.</p>
+                        <h3 class="sys-card-title">WhatsApp y Correo</h3>
+                        <p class="sys-card-subtitle">Apps predeterminadas para contactar clientes</p>
                     </div>
                 </div>
             </div>
@@ -110,25 +143,25 @@ async function renderAjustes(isBack = false) {
             <div class="sys-field-group">
                 <label class="sys-field-label">Aplicación de WhatsApp</label>
                 <select class="sys-select-control" style="cursor: pointer;" onchange="window.setWhatsAppPref(this.value)">
-                    <option value="business" ${currentWaPref === 'business' ? 'selected' : ''}>WhatsApp Business (Trabajo - Por defecto)</option>
+                    <option value="business" ${currentWaPref === 'business' ? 'selected' : ''}>WhatsApp Business (Por defecto)</option>
                     <option value="personal" ${currentWaPref === 'personal' ? 'selected' : ''}>WhatsApp Personal</option>
-                    <option value="ask" ${currentWaPref === 'ask' ? 'selected' : ''}>Preguntar siempre antes de abrir</option>
+                    <option value="ask" ${currentWaPref === 'ask' ? 'selected' : ''}>Preguntar siempre</option>
                 </select>
             </div>
 
             <div class="sys-field-group">
-                <label class="sys-field-label">Aplicación de Correo Electrónico</label>
+                <label class="sys-field-label">Aplicación de Correo</label>
                 <select class="sys-select-control" style="cursor: pointer;" onchange="window.setEmailPref(this.value)">
                     <option value="default" ${currentEmailPref === 'default' ? 'selected' : ''}>App de correo predeterminada</option>
-                    <option value="gmail" ${currentEmailPref === 'gmail' ? 'selected' : ''}>Abrir directamente en Gmail</option>
-                    <option value="outlook" ${currentEmailPref === 'outlook' ? 'selected' : ''}>Abrir directamente en Microsoft Outlook</option>
-                    <option value="ask" ${currentEmailPref === 'ask' ? 'selected' : ''}>Preguntar siempre antes de abrir</option>
+                    <option value="gmail" ${currentEmailPref === 'gmail' ? 'selected' : ''}>Gmail</option>
+                    <option value="outlook" ${currentEmailPref === 'outlook' ? 'selected' : ''}>Microsoft Outlook</option>
+                    <option value="ask" ${currentEmailPref === 'ask' ? 'selected' : ''}>Preguntar siempre</option>
                 </select>
             </div>
 
             <div class="sys-field-group">
                 <label class="sys-field-label">Tu Correo de Trabajo (Opcional)</label>
-                <input type="email" class="sys-input-control"
+                <input type="email" class="sys-input-control" data-no-clear="true"
                        value="${currentWorkEmail.replace(/"/g, '&quot;')}"
                        placeholder="Ej: comercial@tuempresa.com"
                        onchange="window.setWorkEmailAddress(this.value)">
@@ -138,22 +171,22 @@ async function renderAjustes(isBack = false) {
 
     // 4. CONECTIVIDAD CON GOOGLE APPS SCRIPT
     contentHtml += `
-        <section class="sys-pro-card">
+        <section class="sys-pro-card sys-card-tech">
             <div class="sys-card-head">
                 <div class="sys-card-head-left">
-                    <div class="sys-icon-box">
+                    <div class="sys-icon-box sys-icon-tech">
                         <span class="material-icons-round">cloud_sync</span>
                     </div>
                     <div>
-                        <h3 class="sys-card-title">Conexión con Servidor Cloud</h3>
-                        <p class="sys-card-subtitle">Enlace técnico con Google Apps Script para sincronización.</p>
+                        <h3 class="sys-card-title">Servidor Google Drive</h3>
+                        <p class="sys-card-subtitle">Enlace técnico de Google Apps Script</p>
                     </div>
                 </div>
             </div>
 
             <div class="sys-field-group">
                 <label class="sys-field-label">URL del Servidor</label>
-                <input type="text" id="scriptUrlInput" class="sys-input-control" 
+                <input type="text" id="scriptUrlInput" class="sys-input-control sys-input-mono" data-no-clear="true"
                        value="${currentUrl}" 
                        placeholder="https://script.google.com/..."
                        onchange="updateScriptUrl(this.value)">
@@ -161,8 +194,8 @@ async function renderAjustes(isBack = false) {
 
             <div class="sys-conn-bar">
                 <div id="syncStatus" class="sync-status-indicator" style="color: #64748b;">
-                    <span class="material-icons-round" style="font-size: 17px;">sensors</span>
-                    <span>Estado: Comprobando...</span>
+                    <span class="material-icons-round" style="font-size: 16px;">sensors</span>
+                    <span>Comprobando...</span>
                 </div>
                 <button type="button" class="btn-test-conn" onclick="testConnection()">
                     <span class="material-icons-round" style="font-size: 15px;">refresh</span>
@@ -174,20 +207,20 @@ async function renderAjustes(isBack = false) {
 
     // 5. GESTIÓN DE AÑOS COMERCIALES
     contentHtml += `
-        <section class="sys-pro-card">
+        <section class="sys-pro-card sys-card-years">
             <div class="sys-card-head">
                 <div class="sys-card-head-left">
-                    <div class="sys-icon-box">
+                    <div class="sys-icon-box sys-icon-years">
                         <span class="material-icons-round">date_range</span>
                     </div>
                     <div>
-                        <h3 class="sys-card-title">Gestión de Años</h3>
-                        <p class="sys-card-subtitle">Ejercicios activos en tus tablas de ventas y objetivos.</p>
+                        <h3 class="sys-card-title">Años Comerciales</h3>
+                        <p class="sys-card-subtitle">Ejercicios activos en ventas</p>
                     </div>
                 </div>
                 <button type="button" class="btn-add-year-pro" onclick="openManagementYearsModal()">
                     <span class="material-icons-round" style="font-size: 16px;">add</span>
-                    <span>Añadir Año</span>
+                    <span>Añadir</span>
                 </button>
             </div>
 
@@ -312,13 +345,40 @@ async function initiateDriveBackup() {
     }
 }
 
+function _formatBackupDisplay(file) {
+    const rawName = String(file?.name || 'Copia');
+    const match = rawName.match(/(\d{4})-(\d{2})-(\d{2})[_T-](\d{2})-(\d{2})/);
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    if (match) {
+        const [, yyyy, mm, dd, hh, min] = match;
+        const mLabel = months[Math.max(0, parseInt(mm, 10) - 1)] || mm;
+        return {
+            title: `${parseInt(dd, 10)} ${mLabel} ${yyyy} · ${hh}:${min}`,
+            subtitle: rawName
+        };
+    }
+    const d = file?.date ? new Date(file.date) : null;
+    if (d && !Number.isNaN(d.getTime())) {
+        const mLabel = months[d.getMonth()] || '';
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return {
+            title: `${d.getDate()} ${mLabel} ${d.getFullYear()} · ${hh}:${min}`,
+            subtitle: rawName
+        };
+    }
+    return { title: rawName, subtitle: '' };
+}
+
 async function openBackupsModal() {
     let modal = document.getElementById('backupsModal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'backupsModal';
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay sys-backups-overlay';
         document.body.appendChild(modal);
+    } else {
+        modal.classList.add('sys-backups-overlay');
     }
 
     // Lock background scroll
@@ -326,30 +386,30 @@ async function openBackupsModal() {
 
     // Modal Structure (Executive Pro Design)
     modal.innerHTML = `
-        <div class="modal-content" style="border-radius: 22px; overflow: hidden; padding: 0; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25); max-width: 520px; width: 95%; background-color: #ffffff; margin: auto; border: 1px solid #e2e8f0;">
+        <div class="modal-content sys-backups-modal-content">
             <!-- Header (Fixed at top) -->
-            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 10;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center; color: #ffffff;">
-                        <span class="material-icons-round" style="font-size: 19px;">cloud_queue</span>
+            <div class="sys-backups-modal-header">
+                <div class="sys-backups-head-left">
+                    <div class="sys-backups-head-icon">
+                        <span class="material-icons-round">cloud_queue</span>
                     </div>
                     <div>
-                        <h2 style="font-size: 1.05rem; font-weight: 800; color: #ffffff; margin: 0; letter-spacing: -0.01em;">Copias Disponibles</h2>
-                        <p style="font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.82); margin: 1px 0 0;">Historial en Google Drive</p>
+                        <h2 class="sys-backups-head-title">Copias Disponibles</h2>
+                        <p class="sys-backups-head-sub">Historial en Google Drive</p>
                     </div>
                 </div>
-                <button style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.22); color: #ffffff; cursor: pointer; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;" onclick="closeBackupsModal()">
-                    <span class="material-icons-round" style="font-size: 20px;">close</span>
+                <button type="button" class="sys-backups-close-btn" onclick="closeBackupsModal()" title="Cerrar">
+                    <span class="material-icons-round">close</span>
                 </button>
             </div>
             
             <!-- List Body Container with Internal Scroll -->
-            <div id="backupsListContainer" style="padding: 18px; max-height: 72vh; overflow-y: auto; background-color: #f8fafc; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
+            <div id="backupsListContainer" class="sys-backups-body">
                 <!-- Loading State -->
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 1rem;">
-                    <span class="material-icons-round" style="font-size: 36px; color: #0284c7; margin-bottom: 10px;">cloud_sync</span>
-                    <p style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 4px;">Consultando copias en Google Drive...</p>
-                    <p style="font-size: 0.78rem; color: #64748b; font-weight: 600; margin: 0;">Esto puede tardar unos segundos</p>
+                <div class="sys-backups-loading">
+                    <span class="material-icons-round">cloud_sync</span>
+                    <p class="sys-backups-loading-title">Consultando copias en Google Drive...</p>
+                    <p class="sys-backups-loading-sub">Esto puede tardar unos segundos</p>
                 </div>
             </div>
         </div>
@@ -436,37 +496,45 @@ async function openBackupsModal() {
         `;
     } else {
         html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 2px;">
-                <span style="font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em;">Copias en la Nube (${driveFiles.length})</span>
-                <button onclick="handleDeleteMultipleRemoteFiles()" id="btnBulkDelete" style="display: none; align-items: center; gap: 5px; background-color: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; padding: 6px 12px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; cursor: pointer;">
-                    <span class="material-icons-round" style="font-size: 16px;">delete_sweep</span>
+            <div class="sys-backups-toolbar">
+                <span class="sys-backups-count-lbl">Copias guardadas (${driveFiles.length})</span>
+                <button type="button" onclick="handleDeleteMultipleRemoteFiles()" id="btnBulkDelete" class="sys-backups-bulk-del" style="display: none;">
+                    <span class="material-icons-round" style="font-size: 15px;">delete_sweep</span>
                     <span id="bulkDeleteCount">Borrar</span>
                 </button>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                ${driveFiles.map(f => {
+            <div class="sys-backups-list">
+                ${driveFiles.map((f, idx) => {
                     const sizeKB = f.size ? (f.size / 1024) : 0;
-                    const sizeStr = f.size ? `${sizeKB.toFixed(1)} KB` : "—";
+                    const sizeStr = f.size ? `${sizeKB.toFixed(1)} KB` : '—';
                     const isSmallWarning = sizeKB > 0 && sizeKB < 10;
+                    const info = _formatBackupDisplay(f);
+                    const safeName = String(f.name || '').replace(/'/g, "\\'");
                     return `
-                    <div class="sys-backup-item">
-                        <input type="checkbox" class="backup-checkbox" value="${f.id}" data-name="${f.name}" onchange="toggleBulkDeleteBtn()" style="width: 19px; height: 19px; accent-color: #0284c7; cursor: pointer; flex-shrink: 0;">
-                        <div class="sys-backup-meta">
-                            <p class="sys-backup-name">${f.name}</p>
-                            <p class="sys-backup-sub">
-                                <span>${new Date(f.date).toLocaleDateString('es-ES')}</span>
-                                <span class="sys-backup-size-pill" style="${isSmallWarning ? 'background:#fef2f2; color:#dc2626; border-color:#fecaca;' : ''}">${sizeStr}</span>
-                            </p>
+                    <div class="sys-backup-item ${idx === 0 ? 'is-latest' : ''}">
+                        <div class="sys-backup-top-row">
+                            <label class="sys-backup-check-wrap" title="Seleccionar copia">
+                                <input type="checkbox" class="backup-checkbox" value="${f.id}" data-name="${safeName}" onchange="toggleBulkDeleteBtn()">
+                            </label>
+                            <div class="sys-backup-meta">
+                                <div class="sys-backup-title-row">
+                                    <span class="sys-backup-name">${info.title}</span>
+                                    ${idx === 0 ? '<span class="sys-backup-latest-pill">Más reciente</span>' : ''}
+                                </div>
+                                <div class="sys-backup-sub">
+                                    ${info.subtitle ? `<span class="sys-backup-filename">${info.subtitle}</span>` : ''}
+                                    <span class="sys-backup-size-pill ${isSmallWarning ? 'is-warn' : ''}">${sizeStr}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-                            <button onclick="handleDeleteRemoteFile('${f.id}', '${f.name}')" title="Eliminar copia"
-                                    style="width: 36px; height: 36px; border-radius: 10px; background-color: #fef2f2; border: 1.5px solid #fecaca; color: #dc2626; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                                <span class="material-icons-round" style="font-size: 18px;">delete_outline</span>
+                        <div class="sys-backup-actions-row">
+                            <button type="button" class="sys-backup-del-btn" onclick="handleDeleteRemoteFile('${f.id}', '${safeName}')">
+                                <span class="material-icons-round">close</span>
+                                <span>Eliminar</span>
                             </button>
-                            <button onclick="handleRemoteRestore('${f.id}', '${f.name}')" 
-                                    style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%); color: #ffffff; border: none; padding: 9px 14px; border-radius: 10px; font-size: 0.76rem; font-weight: 800; cursor: pointer; box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);">
-                                <span class="material-icons-round" style="font-size: 16px;">cloud_download</span>
-                                <span>Restaurar</span>
+                            <button type="button" class="sys-backup-restore-btn" onclick="handleRemoteRestore('${f.id}', '${safeName}')">
+                                <span class="material-icons-round">cloud_download</span>
+                                <span>Restaurar copia</span>
                             </button>
                         </div>
                     </div>
@@ -662,8 +730,8 @@ async function checkConnectionStatus(isSilent = true) {
     if (!url) {
         if (statusEl) {
             statusEl.innerHTML = `
-                <span class="material-icons-round" style="color: #ef4444; font-size: 18px;">error</span>
-                <span style="color: #ef4444; font-weight: 700;">Estado: URL no configurada</span>
+                <span class="material-icons-round" style="color: #ef4444; font-size: 17px;">error</span>
+                <span style="color: #dc2626; font-weight: 800;">URL no configurada</span>
             `;
         }
         return false;
@@ -671,8 +739,8 @@ async function checkConnectionStatus(isSilent = true) {
 
     if (statusEl) {
         statusEl.innerHTML = `
-            <span class="material-icons-round animate-spin" style="color: #009ee3; font-size: 18px;">sync</span>
-            <span style="color: #64748b;">Comprobando conexión...</span>
+            <span class="material-icons-round animate-spin" style="color: #0284c7; font-size: 17px;">sync</span>
+            <span style="color: #64748b; font-weight: 700;">Comprobando...</span>
         `;
     }
 
@@ -691,8 +759,8 @@ async function checkConnectionStatus(isSilent = true) {
 
         if (statusEl) {
             statusEl.innerHTML = `
-                <span class="material-icons-round" style="color: #10b981; font-size: 18px;">check_circle</span>
-                <span style="color: #10b981; font-weight: 700;">Estado: Sincronización activa</span>
+                <span class="material-icons-round" style="color: #10b981; font-size: 17px;">check_circle</span>
+                <span style="color: #059669; font-weight: 800;">Sincronización activa</span>
             `;
         }
         if (!isSilent) alert("Conexión activa. La URL es válida y el servidor responde correctamente.");
@@ -701,8 +769,8 @@ async function checkConnectionStatus(isSilent = true) {
         console.warn("Connection Status Check Error:", e);
         if (statusEl) {
             statusEl.innerHTML = `
-                <span class="material-icons-round" style="color: #ef4444; font-size: 18px;">error</span>
-                <span style="color: #ef4444; font-weight: 700;">Estado: Error de conexión</span>
+                <span class="material-icons-round" style="color: #ef4444; font-size: 17px;">error</span>
+                <span style="color: #dc2626; font-weight: 800;">Error de conexión</span>
             `;
         }
         if (!isSilent) alert("No se pudo alcanzar el script. Verifica la conexión o la URL.");

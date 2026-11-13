@@ -98,65 +98,70 @@ function closeNavMenu() {
 }
 
 function renderNavMenuHTML() {
+    const sections = [
+        {
+            title: 'Análisis',
+            items: [
+                { icon: 'trending_up', label: 'Ventas Mensuales', action: 'renderVentas()', tone: 'blue' },
+                { icon: 'receipt_long', label: 'Facturación Real', action: 'renderFactura()', tone: 'blue' },
+                { icon: 'euro_symbol', label: 'Comisiones', action: 'renderComisiones()', tone: 'green' },
+                { icon: 'lightbulb', label: 'Ideas de Visita', action: 'renderIdeas()', tone: 'amber' },
+                { icon: 'history_toggle_off', label: 'Medias Mensuales', action: 'renderMedias()', tone: 'indigo' },
+                { icon: 'emoji_events', label: 'Ranking Clientes', action: 'openRankingModal()', tone: 'amber' }
+            ]
+        },
+        {
+            title: 'Planificación',
+            items: [
+                { icon: 'ads_click', label: 'Objetivos Mensuales', action: 'renderObjetivos()', tone: 'indigo' },
+                { icon: 'event_repeat', label: 'Objetivos Trimestrales', action: 'renderObjetivosTrimestrales()', tone: 'indigo' }
+            ]
+        },
+        {
+            title: 'Sistema y Ayuda',
+            items: [
+                { icon: 'cloud_upload', label: 'Backups', action: 'renderAjustes()', tone: 'blue' },
+                { icon: 'menu_book', label: 'Manual de Usuario', action: 'openInfoModal()', tone: 'slate' }
+            ]
+        }
+    ];
+
+    const bodyHtml = sections.map(sec => `
+        <div class="nav-menu-section">${sec.title}</div>
+        <div class="nav-menu-group">
+            ${sec.items.map(item => `
+                <button type="button" class="nav-menu-item tone-${item.tone}" onclick="closeNavMenu(); ${item.action};">
+                    <span class="nav-item-icon-box">
+                        <span class="material-icons-round">${item.icon}</span>
+                    </span>
+                    <span class="nav-item-label">${item.label}</span>
+                    <span class="material-icons-round nav-item-chevron">chevron_right</span>
+                </button>
+            `).join('')}
+        </div>
+    `).join('');
+
     return `
         <div class="nav-menu-content">
             <div class="nav-menu-header">
-                <div class="flex items-center gap-2">
-                    <span class="material-icons-round">explore</span>
-                    <h2 class="font-bold text-lg">Más Opciones</h2>
+                <div class="nav-menu-head-left">
+                    <div class="nav-menu-head-icon">
+                        <span class="material-icons-round">explore</span>
+                    </div>
+                    <div>
+                        <h2 class="nav-menu-head-title">Más Opciones</h2>
+                        <p class="nav-menu-head-sub">Herramientas comerciales</p>
+                    </div>
                 </div>
-                <button class="icon-btn text-white" onclick="closeNavMenu()">
+                <button type="button" class="nav-menu-close-btn" onclick="closeNavMenu()" title="Cerrar menú">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
             <div class="nav-menu-body">
-                <div class="nav-menu-section">Análisis</div>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderVentas();">
-                    <span class="material-icons-round">trending_up</span>
-                    <span>Ventas Mensuales</span>
-                </button>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderFactura();">
-                    <span class="material-icons-round">receipt_long</span>
-                    <span>Facturación Real</span>
-                </button>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderComisiones();">
-                    <span class="material-icons-round">euro_symbol</span>
-                    <span>Comisiones</span>
-                </button>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderIdeas();">
-                    <span class="material-icons-round">lightbulb</span>
-                    <span>Ideas de Visita</span>
-                </button>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderMedias();">
-                    <span class="material-icons-round">history_toggle_off</span>
-                    <span>Medias Mensuales</span>
-                </button>
-                <button class="nav-menu-item" onclick="closeNavMenu(); openRankingModal();">
-                    <span class="material-icons-round">emoji_events</span>
-                    <span>Ranking Clientes</span>
-                </button>
-                <div class="nav-menu-section">Planificación</div>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderObjetivos();">
-                    <span class="material-icons-round">ads_click</span>
-                    <span>Objetivos Mensuales</span>
-                </button>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderObjetivosTrimestrales();">
-                    <span class="material-icons-round">event_repeat</span>
-                    <span>Objetivos Trimestrales</span>
-                </button>
-                <button class="nav-menu-item" onclick="closeNavMenu(); renderAjustes();">
-                    <span class="material-icons-round">cloud_upload</span>
-                    <span>Backups</span>
-                </button>
-
-                <button class="nav-menu-item" onclick="closeNavMenu(); openInfoModal();">
-                    <span class="material-icons-round">menu_book</span>
-                    <span>Manual de Usuario</span>
-                </button>
-
+                ${bodyHtml}
             </div>
             <div class="nav-menu-footer">
-                <p>App Ventas Lolo Serantes</p>
+                <p>App Ventas · Lolo Serantes</p>
             </div>
         </div>
     `;

@@ -101,6 +101,9 @@ async function renderMapa(isBack = false) {
                     <span class="material-icons-round">my_location</span>
                 </button>
             </div>
+
+            <!-- Selector rápido inferior al pulsar un grupo de tiendas -->
+            <div id="mapClusterSheet" class="map-cluster-sheet" style="display: none;"></div>
         </div>
     `;
 
@@ -146,20 +149,17 @@ async function initLeafletMap() {
             spiderfyOnMaxZoom: false,
             showCoverageOnHover: false,
             zoomToBoundsOnClick: false,
-            maxClusterRadius: 26,
-            disableClusteringAtZoom: 14
+            maxClusterRadius: 12,
+            disableClusteringAtZoom: 13
         });
         window._mapClusterGroup = markers;
+        window._activeClusterLayer = null;
 
         markers.on('clusterclick', function (a) {
-            const bounds = a.layer.getBounds();
-            window.currentLeafletMap.fitBounds(bounds, {
-                padding: [50, 50],
-                maxZoom: 17,
-                animate: true,
-                duration: 0.6
-            });
+            openMapClusterSheet(a.layer);
         });
+        map.on('click', closeMapClusterSheet);
+        map.on('zoomend', updateMapMarkerRadii);
 
         const seenCoords = new Map();
         let countActive = 0;
@@ -206,15 +206,31 @@ async function initLeafletMap() {
                 countNone++;
             }
 
+            const currentZoom = map.getZoom();
+            const initialRadius = currentZoom <= 9 ? 7 : (currentZoom <= 11 ? 8 : 9.5);
             const marker = L.circleMarker([lat, lng], {
-                radius: 9.5,
+                radius: initialRadius,
                 fillColor: color,
                 color: '#ffffff',
-                weight: 2.5,
+                weight: 2.2,
                 fillOpacity: 1
             });
 
             const safeCode = String(c.code || '').replace(/'/g, "\\'");
+            const statusShort = statusKey === 'overdue'
+                ? `+45d (${daysAgo}d)`
+                : (statusKey === 'active' ? `${daysAgo}d` : 'Sin ped.');
+            marker._mapClientMeta = {
+                code: String(c.code || ''),
+                safeCode,
+                name: c.name || 'Cliente',
+                location: c.location || '',
+                status: statusKey,
+                daysAgo,
+                statusShort,
+                lat,
+                lng
+            };
             const visitTag = c.lastVisitDate
                 ? `<span class="popup-visit-pill"><span class="material-icons-round">visibility</span>${new Date(c.lastVisitDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</span>`
                 : '';
@@ -260,6 +276,7 @@ async function initLeafletMap() {
 
             window._mapMarkerItems.push({
                 marker,
+                code: String(c.code || ''),
                 status: statusKey,
                 name: c.name || '',
                 location: c.location || '',
@@ -304,7 +321,120 @@ function setMapStatusFilter(mode) {
     document.querySelectorAll('#mapFilterRow .map-filter-chip').forEach(btn => {
         btn.classList.toggle('is-active', btn.getAttribute('data-map-filter') === window._mapStatusFilter);
     });
+    closeMapClusterSheet();
     applyMapStatusFilter();
+}
+
+function updateMapMarkerRadii() {
+    const map = window.currentLeafletMap;
+    if (!map || !Array.isArray(window._mapMarkerItems)) return;
+    const z = map.getZoom();
+    const r = z <= 9 ? 7 : (z <= 11 ? 8 : 9.5);
+    window._mapMarkerItems.forEach(item => {
+        if (item.marker && typeof item.marker.setRadius === 'function') {
+            item.marker.setRadius(r);
+        }
+    });
+}
+
+function openMapClusterSheet(clusterLayer) {
+    const sheet = document.getElementById('mapClusterSheet');
+    if (!sheet || !clusterLayer) return;
+
+    window._activeClusterLayer = clusterLayer;
+    const childMarkers = clusterLayer.getAllChildMarkers ? clusterLayer.getAllChildMarkers() : [];
+    const items = childMarkers
+        .map((m, idx) => ({ marker: m, meta: m._mapClientMeta, idx }))
+        .filter(x => Boolean(x.meta));
+
+    const rank = { overdue: 0, active: 1, none: 2 };
+    items.sort((a, b) => {
+        const ra = rank[a.meta.status] ?? 3;
+        const rb = rank[b.meta.status] ?? 3;
+        if (ra !== rb) return ra - rb;
+        if (a.meta.status === 'overdue' && b.meta.status === 'overdue') {
+            return (b.meta.daysAgo || 0) - (a.meta.daysAgo || 0);
+        }
+        return String(a.meta.name).localeCompare(String(b.meta.name));
+    });
+
+    window._clusterSheetMarkers = items.map(x => x.marker);
+
+    sheet.innerHTML = `
+        <div class="map-cluster-sheet-head">
+            <div class="map-cluster-sheet-title-wrap">
+                <span class="map-cluster-sheet-count">${items.length}</span>
+                <span class="map-cluster-sheet-title">tiendas en esta zona</span>
+            </div>
+            <div class="map-cluster-sheet-actions">
+                <button type="button" class="map-cluster-zoom-btn" onclick="window.focusMapClusterBounds()">
+                    <span class="material-icons-round">zoom_in</span>
+                    <span>Acercar</span>
+                </button>
+                <button type="button" class="map-cluster-close-btn" onclick="window.closeMapClusterSheet()" title="Cerrar">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+        </div>
+        <div class="map-cluster-sheet-list">
+            ${items.map((item, i) => {
+                const m = item.meta;
+                const dotClass = m.status === 'overdue' ? 'is-overdue' : (m.status === 'active' ? 'is-active' : 'is-none');
+                return `
+                    <div class="map-cluster-item" onclick="window.selectMapClusterClient(${i})">
+                        <span class="map-cluster-dot ${dotClass}"></span>
+                        <div class="map-cluster-item-info">
+                            <div class="map-cluster-item-name">${_escapeMapHtml(m.name)}</div>
+                            ${m.location ? `<div class="map-cluster-item-loc">${_escapeMapHtml(m.location)}</div>` : ''}
+                        </div>
+                        <span class="map-cluster-item-badge ${dotClass}">${_escapeMapHtml(m.statusShort)}</span>
+                        <button type="button" class="map-cluster-ficha-btn"
+                                onclick="event.stopPropagation(); window.closeMapClusterSheet(); window.openClientDetailModal('${m.safeCode}')"
+                                title="Abrir ficha">
+                            Ficha
+                        </button>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    sheet.style.display = 'flex';
+}
+
+function closeMapClusterSheet() {
+    const sheet = document.getElementById('mapClusterSheet');
+    if (sheet) sheet.style.display = 'none';
+}
+
+function focusMapClusterBounds() {
+    const map = window.currentLeafletMap;
+    const layer = window._activeClusterLayer;
+    closeMapClusterSheet();
+    if (map && layer && typeof layer.getBounds === 'function') {
+        map.fitBounds(layer.getBounds(), {
+            padding: [50, 50],
+            maxZoom: 17,
+            animate: true,
+            duration: 0.55
+        });
+    }
+}
+
+function selectMapClusterClient(index) {
+    const markerList = window._clusterSheetMarkers || [];
+    const marker = markerList[index];
+    const clusterGroup = window._mapClusterGroup;
+    closeMapClusterSheet();
+    if (!marker) return;
+    if (clusterGroup && typeof clusterGroup.zoomToShowLayer === 'function') {
+        clusterGroup.zoomToShowLayer(marker, () => {
+            marker.openPopup();
+        });
+    } else if (window.currentLeafletMap && marker._mapClientMeta) {
+        window.currentLeafletMap.flyTo([marker._mapClientMeta.lat, marker._mapClientMeta.lng], 16, { animate: true, duration: 0.5 });
+        marker.openPopup();
+    }
 }
 
 /**
@@ -563,6 +693,9 @@ window.clearMapSearch = clearMapSearch;
 window.toggleMapClearBtn = toggleMapClearBtn;
 window.centerMapOnUser = centerMapOnUser;
 window.setMapStatusFilter = setMapStatusFilter;
+window.closeMapClusterSheet = closeMapClusterSheet;
+window.focusMapClusterBounds = focusMapClusterBounds;
+window.selectMapClusterClient = selectMapClusterClient;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
 window.showToast = showToast;

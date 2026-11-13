@@ -1,47 +1,177 @@
 /* ==========================================================================
-   VISTA BACKUPS Y AJUSTES — DISEÑO EJECUTIVO UNIFICADO (SIN PARCHES)
+   VISTA BACKUPS Y AJUSTES — DISEÑO EJECUTIVO UNIFICADO
    ========================================================================== */
 
 .ajustes-container {
-    padding: 16px 16px 120px 16px;
+    padding: 12px 14px 115px 14px;
     background-color: var(--bg-app, #f1f5f9);
     flex: 0 0 auto;
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
 }
 
-/* Tarjeta Ejecutiva Unificada */
+.sys-section-eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    padding: 4px 4px 0 4px;
+}
+
+/* Tarjeta Ejecutiva Base */
 .sys-pro-card {
     background: #ffffff;
-    border-radius: 20px;
-    padding: 18px;
+    border-radius: 18px;
+    padding: 15px;
     border: 1.5px solid #e2e8f0;
     box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
     flex-shrink: 0;
+}
+
+/* 1. Tarjeta Protagonista Google Drive */
+.sys-card-cloud-hero {
+    padding: 0 0 14px 0;
+    overflow: hidden;
+    border-color: #bae6fd;
+    box-shadow: 0 8px 22px rgba(2, 132, 199, 0.1);
+}
+
+.sys-hero-banner {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    padding: 14px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sys-icon-hero {
+    background: rgba(255, 255, 255, 0.18) !important;
+    border: 1px solid rgba(255, 255, 255, 0.28) !important;
+    color: #ffffff !important;
+}
+
+.sys-title-white {
+    color: #ffffff !important;
+}
+
+.sys-sub-white {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.sys-hero-badge {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 4px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.sys-hero-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0 14px;
+}
+
+.sys-hero-stat {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+}
+
+.sys-hero-stat-val {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0369a1;
+    line-height: 1.1;
+}
+
+.sys-hero-stat-lbl {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.sys-card-cloud-hero .sys-btn-grid-2,
+.sys-card-cloud-hero .sys-info-strip {
+    margin: 0 14px;
+}
+
+/* 2. Acentos de color por bloque */
+.sys-card-excel {
+    border-top: 3px solid #16a34a;
+}
+
+.sys-icon-excel {
+    background: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+    color: #16a34a !important;
+}
+
+.sys-card-comm {
+    border-top: 3px solid #6366f1;
+}
+
+.sys-icon-comm {
+    background: #eef2ff !important;
+    border-color: #c7d2fe !important;
+    color: #4f46e5 !important;
+}
+
+.sys-card-tech {
+    border-top: 3px solid #0ea5e9;
+}
+
+.sys-icon-tech {
+    background: #f0f9ff !important;
+    border-color: #bae6fd !important;
+    color: #0284c7 !important;
+}
+
+.sys-card-years {
+    border-top: 3px solid #f59e0b;
+}
+
+.sys-icon-years {
+    background: #fffbeb !important;
+    border-color: #fde68a !important;
+    color: #d97706 !important;
 }
 
 .sys-card-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
 }
 
 .sys-card-head-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
     min-width: 0;
 }
 
 .sys-icon-box {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
     background: #f0f9ff;
     border: 1px solid #bae6fd;
@@ -53,11 +183,11 @@
 }
 
 .sys-icon-box .material-icons-round {
-    font-size: 21px;
+    font-size: 20px;
 }
 
 .sys-card-title {
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 800;
     color: #0f172a;
     margin: 0;
@@ -66,24 +196,25 @@
 }
 
 .sys-card-subtitle {
-    font-size: 12px;
+    font-size: 11.5px;
     color: #64748b;
     margin: 2px 0 0 0;
-    font-weight: 500;
-    line-height: 1.35;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 /* Botonera Ejecutiva */
 .sys-btn-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 9px;
 }
 
-.sys-btn-primary {
-    height: 46px;
-    padding: 0 14px;
-    border-radius: 13px;
+.sys-btn-primary,
+.sys-btn-excel {
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
     border: none;
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     color: #ffffff;
@@ -92,24 +223,32 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 7px;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
 }
 
-.sys-btn-primary .material-icons-round {
-    font-size: 19px;
+.sys-btn-excel {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.22);
 }
 
-.sys-btn-primary:active {
+.sys-btn-primary .material-icons-round,
+.sys-btn-excel .material-icons-round {
+    font-size: 18px;
+}
+
+.sys-btn-primary:active,
+.sys-btn-excel:active {
     transform: scale(0.97);
 }
 
 .sys-btn-secondary {
-    height: 46px;
-    padding: 0 14px;
-    border-radius: 13px;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
     border: 1.5px solid #cbd5e1;
     background: #ffffff;
     color: #1e293b;
@@ -118,33 +257,39 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 7px;
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    white-space: nowrap;
 }
 
 .sys-btn-secondary .material-icons-round {
-    font-size: 19px;
+    font-size: 18px;
     color: #0284c7;
 }
 
-.sys-btn-secondary:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
+.sys-btn-excel-sec {
+    border-color: #bbf7d0;
+    color: #15803d;
+}
+
+.sys-btn-excel-sec .material-icons-round {
+    color: #16a34a;
 }
 
 .sys-btn-secondary:active {
     transform: scale(0.97);
+    background: #f8fafc;
 }
 
-.sys-btn-soft {
-    height: 42px;
-    padding: 0 14px;
+.sys-btn-soft-excel {
+    height: 40px;
+    padding: 0 12px;
     border-radius: 12px;
-    border: 1.5px solid #bae6fd;
-    background: #f0f9ff;
-    color: #0369a1;
-    font-size: 12.5px;
+    border: 1.5px solid #bbf7d0;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 12px;
     font-weight: 800;
     display: inline-flex;
     align-items: center;
@@ -155,54 +300,52 @@
     width: 100%;
 }
 
-.sys-btn-soft .material-icons-round {
-    font-size: 18px;
-    color: #0284c7;
+.sys-btn-soft-excel .material-icons-round {
+    font-size: 17px;
+    color: #16a34a;
 }
 
-.sys-btn-soft:hover {
-    background: #e0f2fe;
-}
-
-.sys-btn-soft:active {
+.sys-btn-soft-excel:active {
     transform: scale(0.97);
+    background: #dcfce7;
 }
 
-/* Barra informativa de Auto-Backup */
+/* Barra informativa de Auto-Backup en una línea */
 .sys-info-strip {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 13px;
-    padding: 10px 14px;
+    border-radius: 12px;
+    padding: 9px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .sys-info-strip-left {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 11.5px;
     color: #475569;
-    font-weight: 600;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
 .sys-info-strip-left .material-icons-round {
-    font-size: 18px;
+    font-size: 16px;
     color: #0284c7;
 }
 
 .sys-info-strip-badge {
     font-size: 11px;
     font-weight: 800;
-    color: #0f172a;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
+    color: #0369a1;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
     padding: 3px 9px;
     border-radius: 999px;
+    white-space: nowrap;
 }
 
 /* Campos de formulario e inputs en Ajustes */
@@ -225,16 +368,22 @@
 .sys-select-control {
     width: 100%;
     min-height: 44px;
-    padding: 9px 13px;
+    padding: 9px 12px;
     border-radius: 12px;
     border: 1.5px solid #cbd5e1;
     background: #f8fafc;
     font-family: inherit;
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 700;
     color: #0f172a;
     outline: none;
     transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sys-input-mono {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
 }
 
 .sys-input-control:focus,
@@ -244,12 +393,12 @@
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
-/* Pie de estado de conexión */
+/* Pie de estado de conexión (siempre en 1 línea) */
 .sys-conn-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     padding-top: 10px;
     border-top: 1px solid #f1f5f9;
 }
@@ -260,15 +409,14 @@
     gap: 6px;
     font-size: 11.5px;
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    min-width: 0;
 }
 
 .btn-test-conn {
     background: #f8fafc;
     border: 1.5px solid #cbd5e1;
     border-radius: 10px;
-    padding: 6px 12px;
+    padding: 7px 12px;
     font-weight: 800;
     font-size: 11.5px;
     color: #334155;
@@ -277,46 +425,41 @@
     gap: 5px;
     cursor: pointer;
     transition: all 0.15s ease;
-}
-
-.btn-test-conn:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-    color: #0f172a;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .btn-test-conn:active {
     transform: scale(0.96);
+    background: #f1f5f9;
 }
 
-/* Gestión de Años */
+/* Gestión de Años (4 columnas equilibradas en móvil) */
 .btn-add-year-pro {
-    background: #f0f9ff;
-    color: #0284c7;
-    border: 1.5px solid #bae6fd;
-    padding: 7px 13px;
-    border-radius: 11px;
+    background: #fffbeb;
+    color: #b45309;
+    border: 1.5px solid #fde68a;
+    padding: 6px 12px;
+    border-radius: 10px;
     font-weight: 800;
     font-size: 12px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     cursor: pointer;
     transition: all 0.15s ease;
     flex-shrink: 0;
-}
-
-.btn-add-year-pro:hover {
-    background: #e0f2fe;
+    white-space: nowrap;
 }
 
 .btn-add-year-pro:active {
     transform: scale(0.96);
+    background: #fef3c7;
 }
 
 .years-pill-cloud {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
 }
 
@@ -332,45 +475,345 @@
 }
 
 .pill-year.is-current-year {
-    background-color: #f0f9ff;
-    color: #0284c7;
-    border-color: #bae6fd;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);
 }
 
-/* Tarjeta de elemento en el Modal de Copias Disponibles */
+/* Modal de Copias Disponibles (diseño móvil vertical sin desbordamientos) */
+.sys-backups-overlay {
+    align-items: center !important;
+    padding: 12px !important;
+}
+
+.sys-backups-modal-content {
+    height: auto !important;
+    max-height: 86vh !important;
+    width: 100% !important;
+    max-width: 460px !important;
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.28) !important;
+    margin: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.sys-backups-modal-header {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.sys-backups-head-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.sys-backups-head-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+.sys-backups-head-icon .material-icons-round {
+    font-size: 20px;
+}
+
+.sys-backups-head-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.sys-backups-head-sub {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 1px 0 0 0;
+}
+
+.sys-backups-close-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.sys-backups-close-btn .material-icons-round {
+    font-size: 20px;
+}
+
+.sys-backups-body {
+    padding: 14px;
+    overflow-y: auto;
+    background-color: #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sys-backups-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2.5rem 1rem;
+}
+
+.sys-backups-loading .material-icons-round {
+    font-size: 36px;
+    color: #0284c7;
+    margin-bottom: 8px;
+}
+
+.sys-backups-loading-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+}
+
+.sys-backups-loading-sub {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    margin: 0;
+}
+
+.sys-backups-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 0 2px;
+}
+
+.sys-backups-count-lbl {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.sys-backups-bulk-del {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.sys-backups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Tarjeta limpia de copia individual (2 filas ordenadas) */
 .sys-backup-item {
-    padding: 13px 14px;
+    padding: 12px;
     border: 1.5px solid #e2e8f0;
     border-radius: 16px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 10px;
     background: #ffffff;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
-    transition: border-color 0.15s ease;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    min-width: 0;
 }
 
-.sys-backup-item:hover {
-    border-color: #cbd5e1;
+.sys-backup-item.is-latest {
+    border-color: #bae6fd;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.09);
+}
+
+.sys-backup-top-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.sys-backup-check-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 2px;
+    flex-shrink: 0;
+}
+
+.sys-backup-check-wrap .backup-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #0284c7;
+    cursor: pointer;
 }
 
 .sys-backup-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sys-backup-title-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 4px;
+    justify-content: space-between;
+    gap: 6px;
     flex-wrap: wrap;
 }
 
+.sys-backup-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.sys-backup-latest-pill {
+    font-size: 10px;
+    font-weight: 800;
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.sys-backup-sub {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.sys-backup-filename {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
 .sys-backup-size-pill {
+    flex-shrink: 0;
     font-size: 10.5px;
     font-weight: 800;
-    padding: 2px 7px;
+    padding: 2px 8px;
     border-radius: 999px;
     background: #f0f9ff;
     color: #0369a1;
     border: 1px solid #bae6fd;
+    white-space: nowrap;
+}
+
+.sys-backup-size-pill.is-warn {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.sys-backup-actions-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.sys-backup-del-btn {
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 11px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sys-backup-del-btn .material-icons-round {
+    font-size: 15px;
+}
+
+.sys-backup-del-btn:active {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.sys-backup-restore-btn {
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 11px;
+    border: none;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);
+    white-space: nowrap;
+}
+
+.sys-backup-restore-btn .material-icons-round {
+    font-size: 17px;
+}
+
+.sys-backup-restore-btn:active {
+    transform: scale(0.98);
 }
 
 /* Pie de versión discreto */
