@@ -250,222 +250,300 @@ window.formatNumericInput = formatNumericInput;
 // Inicializar al cargar
 
 // --- MANUAL DE USUARIO ---
+const MANUAL_SECTIONS = [
+    {
+        id: 'manual-sec-nav',
+        num: '01 · Primeros Pasos',
+        shortTitle: 'Navegación',
+        title: 'Cómo moverte por la aplicación',
+        icon: 'explore',
+        tone: 'blue',
+        intro: 'La pantalla principal está pensada para usarla cómodamente con una mano desde el móvil en vertical.',
+        items: [
+            { label: 'Barra inferior fija', text: 'Tienes acceso directo en cualquier momento a tus 6 vistas principales: Dash, Pedidos, Totales, Clientes, Alertas y Mapa.' },
+            { label: 'Menú Más Opciones (≡)', text: 'Arriba a la derecha abre el menú lateral con los informes históricos (Ventas Mensuales, Facturación Real, Comisiones, Ideas de Visita, Medias Mensuales, Ranking Clientes), Objetivos, Backups y este Manual.' },
+            { label: 'Búsqueda por voz y limpieza rápida', text: 'Todos los buscadores principales incluyen micrófono para dictar en español sin escribir y botón × para borrar la búsqueda al instante.' }
+        ]
+    },
+    {
+        id: 'manual-sec-dash',
+        num: '02 · Inicio',
+        shortTitle: 'Dash',
+        title: 'Dash (Panel Principal)',
+        icon: 'grid_view',
+        tone: 'blue',
+        intro: 'Es tu centro de control diario para saber en segundos cuánto llevas vendido este mes y qué tienes pendiente hoy.',
+        items: [
+            { label: 'Selector de mes (< HOY >)', text: 'Cambia de mes o vuelve rápidamente al mes actual pulsando HOY.' },
+            { label: 'Accesos rápidos', text: 'Abre Departamentos, Calendario (actividad diaria) y Notas visita. Si hay recordatorios vencidos o de hoy, verás un aviso destacado para atenderlos.' },
+            { label: 'Tarjeta VENTAS DEL MES', text: 'Muestra el total acumulado, el progreso automático hacia tu objetivo mensual (tramos 3%, 4% y 5%) y la comparativa frente al mismo mes del año anterior.' },
+            { label: 'Informe Completo', text: 'Botón en la barra superior para generar y revisar un resumen completo de tu actividad.' },
+            { label: 'Análisis del mes', text: 'Incluye ventas por semanas laborables, gráfico comparativo (Ant. vs Actual), clientes activos y alertas de tiendas VIP que llevan tiempo sin pedir.' }
+        ]
+    },
+    {
+        id: 'manual-sec-pedidos',
+        num: '03 · Ventas Diarias',
+        shortTitle: 'Pedidos',
+        title: 'Gestión de Pedidos',
+        icon: 'shopping_bag',
+        tone: 'green',
+        intro: 'Registra cada venta al momento y controla fácilmente qué pedidos siguen pendientes de preparación o facturación.',
+        items: [
+            { label: 'Resumen fijo superior', text: 'Siempre ves arriba el número e importe de pedidos en Almacén y los de Falta Tampo (calculando el importe pendiente).' },
+            { label: 'Nuevo pedido (+)', text: 'Genera el número anual automático (ej. 2026-001), te deja elegir o buscar cliente, anotar el importe, marcar S/ Tampo (completo o parcial), añadir notas y señalar si es Nuevo Cliente.' },
+            { label: 'Buscador e Informe', text: 'Filtra al instante por Nº de pedido o tienda (también por voz) y usa el botón Informe arriba para exportar o revisar listados.' },
+            { label: 'Estados de pedido', text: 'Almacén (pendiente normal), S/ Tampo (sin o con parte pendiente de tampografía) y Todo (facturado al 100%). Pulsa cualquier pedido para editarlo o cambiar su estado.' }
+        ]
+    },
+    {
+        id: 'manual-sec-totales',
+        num: '04 · Resumen Anual',
+        shortTitle: 'Totales',
+        title: 'Totales y Zonas',
+        icon: 'euro',
+        tone: 'indigo',
+        intro: 'Revisa de un vistazo cómo va tu facturación acumulada del año actual y cuánto aporta cada zona geográfica.',
+        items: [
+            { label: 'Facturación Ventas Real', text: 'Tarjeta principal con el total facturado en el año en curso, cuánto te falta para alcanzar la siguiente meta (3%, 4% o 5%) y su barra de progreso.' },
+            { label: 'Desglose por provincias', text: 'Cuatro tarjetas claras con el importe y número de pedidos de Asturias, Cantabria, León y Galicia.' },
+            { label: 'Estadísticas Generales', text: 'Resume Clientes Nuevos, Clientes con Compra, Total Pedidos del año e Importe Medio Facturado.' }
+        ]
+    },
+    {
+        id: 'manual-sec-clientes',
+        num: '05 · Cartera',
+        shortTitle: 'Clientes',
+        title: 'Clientes y Fichas',
+        icon: 'people',
+        tone: 'teal',
+        intro: 'Tu agenda comercial completa, preparada para buscar una tienda, contactar en un toque y anotar tus visitas.',
+        items: [
+            { label: 'Panel superior de acciones', text: 'Crea un Nuevo Cliente, abre el radar Clientes Cerca o gestiona tus datos con Importar Excel, Bajar Drive y Subir Drive (con aviso automático si hay cambios pendientes offline).' },
+            { label: 'Buscador inteligente', text: 'Localiza cualquier tienda por nombre, código o población mediante texto o dictado por voz.' },
+            { label: 'Ficha completa', text: 'Consulta código, contacto, correo y teléfonos; llama, abre WhatsApp o inicia navegación GPS en un toque, registra notas de visita con recordatorios y revisa todo su historial de pedidos.' },
+            { label: 'Captura GPS', text: 'Al crear o editar un cliente puedes guardar tu ubicación actual para situarlo con exactitud en el mapa y en las rutas.' }
+        ]
+    },
+    {
+        id: 'manual-sec-alertas',
+        num: '06 · Seguimiento',
+        shortTitle: 'Alertas',
+        title: 'Alertas de Clientes',
+        icon: 'notifications',
+        tone: 'rose',
+        intro: 'Evita que tus clientes habituales se enfríen detectando quién lleva demasiado tiempo sin hacer pedido.',
+        items: [
+            { label: 'Orden automático por urgencia', text: 'Ordena los clientes con actividad este año de mayor a menor número de días desde su último pedido.' },
+            { label: 'Filtros rápidos', text: 'Alterna en un toque entre Todos, +45 días (prioritarios para contactar) y Al día.' },
+            { label: 'Acción directa', text: 'Desde la propia alerta puedes buscar por tienda, población o provincia, ver la ficha, llamar o escribir por WhatsApp.' }
+        ]
+    },
+    {
+        id: 'manual-sec-mapa',
+        num: '07 · Territorio',
+        shortTitle: 'Mapa',
+        title: 'Mapa Interactivo y Radar',
+        icon: 'map',
+        tone: 'blue',
+        intro: 'Visualiza toda tu cartera geolocalizada sobre el mapa para planificar desplazamientos y aprovechar cada viaje.',
+        items: [
+            { label: 'Filtros de estado y buscador', text: 'Filtra marcadores entre Todos, Al día, +45 días o Sin ped., y busca tiendas o localidades por texto o voz.' },
+            { label: 'Radar ¿Quién tengo cerca ahora?', text: 'Usa el GPS de tu móvil para mostrarte los clientes más próximos ordenados por distancia real y actuar al instante.' },
+            { label: 'Agrupación y navegación', text: 'Los puntos cercanos se agrupan en clusters para mantener el mapa limpio; al tocar un cliente puedes abrir su ruta directa en Google Maps.' }
+        ],
+        tip: 'El mapa almacena en caché las zonas que vas consultando para ayudarte incluso en zonas con cobertura limitada.'
+    },
+    {
+        id: 'manual-sec-analisis',
+        num: '08 · Menú ≡',
+        shortTitle: 'Análisis',
+        title: 'Análisis Comercial Avanzado',
+        icon: 'analytics',
+        tone: 'amber',
+        intro: 'Desde el menú lateral (≡ → Análisis) dispones de 6 herramientas especializadas para estudiar evolución, comisiones y rutas.',
+        items: [
+            { label: 'Ventas Mensuales', text: 'Tabla multi-año con todos los meses a la vista, variación porcentual (verde/rojo) frente al año anterior y edición táctil por mes (con suma automática de pedidos).' },
+            { label: 'Facturación Real', text: 'Tabla editable por mes y año con barra de progreso y color automático según el tramo de objetivo alcanzado.' },
+            { label: 'Comisiones', text: 'Vista automática de solo lectura que calcula la comisión mensual y el total anual aplicando el porcentaje alcanzado sobre tu Facturación Real.' },
+            { label: 'Ideas de Visita', text: 'Motor inteligente que puntúa clientes según urgencia de ciclo, estacionalidad y volumen; organiza rutas de 1 día por Asturias, Cantabria, León o Galicia, envía la ruta por WhatsApp y permite registrar visitas al vuelo.' },
+            { label: 'Medias Mensuales', text: 'Calcula tu media histórica de años cerrados, la media anual, la media mensual, el mes pico y el peso estacional (%) de cada mes.' },
+            { label: 'Ranking Clientes', text: 'Clasificación por año alternando entre Por Ventas (€) y Por Pedidos, con top 3 destacado, buscador por voz y salto directo a cada ficha.' }
+        ],
+        tiers: true
+    },
+    {
+        id: 'manual-sec-objetivos',
+        num: '09 · Metas y Equipo',
+        shortTitle: 'Objetivos',
+        title: 'Objetivos y Departamentos',
+        icon: 'ads_click',
+        tone: 'indigo',
+        intro: 'Define tus metas económicas anuales y ten siempre a mano el directorio interno de la empresa.',
+        items: [
+            { label: 'Objetivos Mensuales (≡ → Objetivos)', text: 'Configura mes a mes los importes objetivo de cada tramo (3%, 4% y 5%). Cada año conserva su propio histórico sin alterar años anteriores.' },
+            { label: 'Objetivos Trimestrales (≡ → Objetivos)', text: 'Selector de año y tarjetas para 1er Trimestre (Ene–Mar), 2º (Abr–Jun), 3er (Jul–Sep) y 4º (Oct–Dic), con cálculo automático de facturado y estado (Conseguido, En curso, No conseguido o Pendiente).' },
+            { label: 'Departamentos (desde Dash)', text: 'Agenda interna para guardar responsables y pulsar directamente sobre su teléfono, WhatsApp o correo.' }
+        ]
+    },
+    {
+        id: 'manual-sec-backups',
+        num: '10 · Seguridad y PWA',
+        shortTitle: 'Backups',
+        title: 'Backups, Preferencias y Uso Offline',
+        icon: 'cloud_done',
+        tone: 'slate',
+        intro: 'En ≡ → Backups proteges toda tu información en la nube y adaptas la app a tu forma habitual de trabajar.',
+        items: [
+            { label: 'Copia en Google Drive', text: 'Programación automática de lunes a viernes a las 20:30 h, subida manual con Guardar Ahora y botón Ver Historial para restaurar copias anteriores.' },
+            { label: 'Excel (.XLSX)', text: 'Descarga copia local en Excel, importa hojas de Excel o sube una copia Excel directamente a tu Google Drive.' },
+            { label: 'WhatsApp y Correo', text: 'Elige tu app preferida (WhatsApp Business, Personal o Preguntar; Gmail, Outlook o Predeterminada) y guarda tu correo de trabajo.' },
+            { label: 'Servidor Drive y Años Comerciales', text: 'Comprueba el enlace con Probar enlace y añade nuevos años comerciales cuando empiece un nuevo ejercicio.' }
+        ],
+        tip: 'Añade la app a la pantalla de inicio desde el navegador del móvil (instalar PWA): funcionará a pantalla completa, más rápida y lista para consultar o anotar pedidos sin cobertura.'
+    }
+];
+
+function buildManualSectionHtml(section) {
+    const itemsHtml = section.items.map(item => `
+        <li class="manual-item-row">
+            <span class="manual-item-dot"></span>
+            <div><strong>${item.label}:</strong> ${item.text}</div>
+        </li>
+    `).join('');
+
+    const tiersHtml = section.tiers ? `
+        <div class="manual-tier-chips">
+            <span class="manual-chip is-red"><span class="manual-chip-dot"></span>Rojo · 2% (bajo 3%)</span>
+            <span class="manual-chip is-amber"><span class="manual-chip-dot"></span>Ámbar · 3%</span>
+            <span class="manual-chip is-blue"><span class="manual-chip-dot"></span>Azul · 4%</span>
+            <span class="manual-chip is-green"><span class="manual-chip-dot"></span>Verde · 5%</span>
+        </div>
+    ` : '';
+
+    const tipHtml = section.tip ? `
+        <div class="manual-tip-box">
+            <span class="material-icons-round">tips_and_updates</span>
+            <span>${section.tip}</span>
+        </div>
+    ` : '';
+
+    return `
+        <section id="${section.id}" class="manual-section-card">
+            <div class="manual-sec-head">
+                <span class="manual-sec-icon tone-${section.tone}">
+                    <span class="material-icons-round">${section.icon}</span>
+                </span>
+                <div class="manual-sec-heading">
+                    <span class="manual-sec-num">${section.num}</span>
+                    <h3 class="manual-sec-title">${section.title}</h3>
+                </div>
+            </div>
+            <p class="manual-sec-intro">${section.intro}</p>
+            <ul class="manual-item-list">${itemsHtml}</ul>
+            ${tiersHtml}
+            ${tipHtml}
+        </section>
+    `;
+}
+
+function scrollToManualSection(sectionId) {
+    const target = document.getElementById(sectionId);
+    if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
 function openInfoModal() {
     let modal = document.getElementById('infoModal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'infoModal';
         modal.className = 'modal-overlay';
+        modal.onclick = (e) => {
+            if (e.target && e.target.id === 'infoModal') closeInfoModal();
+        };
         document.body.appendChild(modal);
     }
 
     // Bloquear scroll de fondo
     document.body.style.overflow = 'hidden';
 
+    const tocPillsHtml = MANUAL_SECTIONS.map(sec => `
+        <button type="button" class="manual-toc-pill" onclick="scrollToManualSection('${sec.id}')">
+            <span class="material-icons-round">${sec.icon}</span>
+            <span>${sec.shortTitle}</span>
+        </button>
+    `).join('');
+
+    const sectionsHtml = MANUAL_SECTIONS.map(buildManualSectionHtml).join('');
+
     const manualContent = `
-        <div class="modal-content" style="border-radius: 28px; overflow: hidden; padding: 0; box-shadow: 0 25px 60px rgba(0,0,0,0.3); max-width: 650px; width: 95%; background-color: #fff; margin: auto;">
-            <!-- Header -->
-            <div style="background-color: #009ee3; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin: 0; font-family: 'Inter', sans-serif;">Manual de Usuario Completo</h2>
-                <button style="background: transparent; border: none; color: #ffffff; cursor: pointer; padding: 4px; display: flex;" onclick="closeInfoModal()">
-                    <span class="material-icons-round" style="font-size: 24px;">close</span>
+        <div class="manual-modal-card" role="dialog" aria-modal="true" aria-labelledby="manualModalTitle">
+            <div class="manual-modal-header">
+                <div class="manual-head-left">
+                    <span class="manual-head-icon">
+                        <span class="material-icons-round">menu_book</span>
+                    </span>
+                    <div class="manual-head-titles">
+                        <h2 id="manualModalTitle" class="manual-head-title">Manual de Usuario</h2>
+                        <p class="manual-head-sub">Guía completa paso a paso · App Ventas</p>
+                    </div>
+                </div>
+                <button type="button" class="ana-modal-close" onclick="closeInfoModal()" title="Cerrar manual" aria-label="Cerrar manual">
+                    <span class="material-icons-round">close</span>
                 </button>
             </div>
-            
-            <!-- Cuerpo del Manual con Scroll -->
-            <div style="padding: 2rem; max-height: 80vh; overflow-y: auto; background-color: #fff; line-height: 1.6; color: #334155; font-size: 0.95rem;">
-                
-                <p style="text-align: center; font-weight: 900; color: #009ee3; text-transform: uppercase; margin-bottom: 2rem; letter-spacing: 0.05em; line-height: 1.4;">
-                    Aplicación creada por<br>
-                    <span style="font-size: 1.1em;">Manuel F. Serantes Pérez</span>
-                </p>
 
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">dashboard</span>
-                        1. Dashboard (Panel Principal)
-                    </h3>
-                    <p>Es la pantalla de inicio y el centro de control de tu actividad diaria. Aquí encontrarás un resumen visual y rápido de cómo marchan las ventas:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Indicadores Clave (KPIs):</strong> Muestra la <em>Venta Diaria</em> (la suma de todos los pedidos registrados en el día de hoy) y el total acumulado en el mes actual.</li>
-                        <li><strong>Accesos Rápidos:</strong> En la parte superior derecha encontrarás botones rápidos para registrar nuevos pedidos o añadir clientes sin tener que navegar por los menús.</li>
-                        <li><strong>Gráficos de Tendencia:</strong> Diferentes gráficos de barras y líneas que te permitirán comparar de un vistazo el rendimiento por meses o visualizar cómo se distribuyen tus ventas entre los diferentes departamentos.</li>
-                    </ul>
+            <div class="manual-scroll-body">
+                <div class="manual-hero-card">
+                    <div class="manual-hero-eyebrow">
+                        <span class="material-icons-round">auto_awesome</span>
+                        <span>Guía de bienvenida</span>
+                    </div>
+                    <p class="manual-author-label">Aplicación creada por</p>
+                    <p class="manual-author-name">Manuel F. Serantes Pérez</p>
+                    <p class="manual-hero-desc">
+                        Todo lo que necesitas para controlar tus pedidos, clientes, rutas GPS, facturación y objetivos comerciales desde el móvil.
+                    </p>
+                    <div class="manual-quickstart-grid">
+                        <div class="manual-step-chip">
+                            <span class="manual-step-num">Paso 1</span>
+                            <span class="manual-step-text">Revisa Backups y Drive en ≡</span>
+                        </div>
+                        <div class="manual-step-chip">
+                            <span class="manual-step-num">Paso 2</span>
+                            <span class="manual-step-text">Consulta Dash, Clientes y Mapa</span>
+                        </div>
+                        <div class="manual-step-chip">
+                            <span class="manual-step-num">Paso 3</span>
+                            <span class="manual-step-text">Anota pedidos y rutas al vuelo</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">shopping_cart</span>
-                        2. Gestión de Pedidos
-                    </h3>
-                    <p>Esta es la sección donde registras y administras todas las ventas que realizas. Está pensada para ser rápida y eficiente:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Crear Nuevo Pedido:</strong> Usando el botón flotante inferior o el botón superior "+", puedes añadir una venta. Selecciona la fecha, elige el cliente de la lista y teclea el importe total.</li>
-                        <li><strong>Buscador:</strong> Un cajón de búsqueda potente en la parte superior te permite filtrar tus pedidos por nombre de cliente para que encuentres rápidamente lo que buscas.</li>
-                        <li><strong>Estados de Facturación:</strong> Los pedidos cuentan con un sistema de control visual por colores:
-                            <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
-                                <li><span style="color: #2563eb; font-weight: 800;">ALMACÉN</span>: El pedido acaba de ser registrado y está pendiente de procesar o facturar.</li>
-                                <li><span style="color: #10b981; font-weight: 800;">TODO</span>: El pedido ha sido facturado por completo (100%).</li>
-                                <li><span style="color: #0d9488; font-weight: 800;">S/ TAMPO</span>: Ha sido facturado, pero con alguna exclusión (por ejemplo, sin incluir tampografía).</li>
-                            </ul>
-                        </li>
-                        <li><strong>Edición Rápida:</strong> Pulsando sobre cualquier tarjeta de pedido abrirás su ficha, donde puedes corregir la cantidad, cambiar el cliente o actualizar su estado de facturación con un simple click.</li>
-                    </ul>
+                <div class="manual-toc-card">
+                    <p class="manual-toc-title">
+                        <span class="material-icons-round">bolt</span>
+                        <span>Acceso rápido a capítulos</span>
+                    </p>
+                    <div class="manual-toc-pills">
+                        ${tocPillsHtml}
+                    </div>
                 </div>
 
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">euro</span>
-                        3. Totales y Analítica
-                    </h3>
-                    <p>El lugar perfecto para la analítica profunda. Aquí puedes ver cómo se desglosan los ingresos:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Filtros Temporales:</strong> Arriba dispones de selectores para cambiar el año y el mes. Al seleccionarlos, todos los números y rankings de la pantalla se recalcularán de inmediato.</li>
-                        <li><strong>Desglose por Provincia:</strong> Verás exactamente cuánto dinero y cuántos pedidos ha aportado cada zona geográfica (Asturias, Cantabria, León, Galicia) al total facturado.</li>
-                        <li><strong>Ranking de Tiendas:</strong> Descubre fácilmente qué clientes te están comprando más volumen o haciendo mayor número de pedidos en cada periodo.</li>
-                    </ul>
-                </div>
+                ${sectionsHtml}
 
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">contact_mail</span>
-                        4. Directorio de Departamentos
-                    </h3>
-                    <p>Accesible desde el menú superior del Dashboard, es una agenda interna de la empresa:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Contactos Internos:</strong> Puedes dar de alta diferentes departamentos (Dirección, Compras, Administración...) junto con el nombre de la persona responsable.</li>
-                        <li><strong>Comunicación Rápida:</strong> Te permite guardar números de teléfono, correos y WhatsApp corporativos para tener el contacto de tu equipo centralizado.</li>
-                    </ul>
+                <div class="manual-footer-card">
+                    <div>
+                        <p class="manual-footer-credit-label">Aplicación diseñada y desarrollada por</p>
+                        <p class="manual-footer-credit-name">Manuel F. Serantes Pérez</p>
+                    </div>
+                    <button type="button" class="manual-close-cta" onclick="closeInfoModal()">
+                        <span class="material-icons-round" style="font-size: 18px;">check_circle</span>
+                        <span>Entendido, volver a la app</span>
+                    </button>
                 </div>
-
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">track_changes</span>
-                        5. Seguimiento de Objetivos
-                    </h3>
-                    <p>Una sección vital para medir el crecimiento, con dos vistas diferentes accesibles desde el menú superior de la app:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Objetivos Mensuales:</strong> Podrás ver una tabla que calcula automáticamente, sobre tu facturación mensual real, a cuánto ascienden diferentes porcentajes (3%, 4% y 5%). También puedes editar estos valores de forma manual si tienes otras metas pactadas.</li>
-                        <li><strong>Objetivos Trimestrales:</strong> Un sistema de tarjetas que te permite fijar una meta económica ("Objetivo") a cada uno de los 4 trimestres del año. La aplicación calculará sola el total "Facturado" durante los meses de ese trimestre y te mostrará una etiqueta de <span style="color: #10b981; font-weight: 800; background: #ecfdf5; padding: 2px 6px; border-radius: 4px;">CONSEGUIDO</span> o <span style="color: #ef4444; font-weight: 800; background: #fef2f2; padding: 2px 6px; border-radius: 4px;">NO CONSEGUIDO</span> en tiempo real. <em>¡Acuérdate de pulsar en "Guardar Cambios" cuando modifiques las metas!</em></li>
-                    </ul>
-                </div>
-
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">receipt_long</span>
-                        6. Facturación Real
-                    </h3>
-                    <p>Tabla multi-año con la facturación mensual real, editable para cada mes y año. Incluye un sistema de colores automático según los objetivos:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Código de Colores:</strong> Cada cifra se colorea automáticamente según el objetivo alcanzado en ese mes:
-                            <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
-                                <li><span style="display: inline-block; background: #ef4444; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Rojo</span> → No se ha alcanzado el objetivo del 3%</li>
-                                <li><span style="display: inline-block; background: #9333ea; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Morado</span> → Alcanzado el 3% pero no el 4%</li>
-                                <li><span style="display: inline-block; background: #3b82f6; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Azul</span> → Alcanzado el 4% pero no el 5%</li>
-                                <li><span style="display: inline-block; background: #22c55e; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">Verde</span> → Superado el objetivo del 5%</li>
-                            </ul>
-                        </li>
-                        <li><strong>Persistencia de Colores:</strong> Cuando finaliza un año, los colores quedan congelados tal y como estaban. Aunque modifiques los objetivos para el nuevo año, los años anteriores conservarán sus colores originales.</li>
-                        <li><strong>Editable:</strong> Puedes modificar cualquier cifra pulsando directamente sobre el valor. Los cambios se guardan automáticamente.</li>
-                    </ul>
-                </div>
-
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">euro_symbol</span>
-                        7. Comisiones
-                    </h3>
-                    <p>Vista de solo lectura que calcula automáticamente la comisión generada cada mes, basándose en la facturación real y el porcentaje de objetivo logrado:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Cálculo Automático:</strong> La comisión de cada mes se calcula multiplicando la facturación real por el porcentaje correspondiente al objetivo alcanzado:
-                            <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
-                                <li><span style="display: inline-block; background: #ef4444; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">2%</span> → Si no se llega al objetivo del 3%</li>
-                                <li><span style="display: inline-block; background: #9333ea; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">3%</span> → Si se alcanza el 3% pero no el 4%</li>
-                                <li><span style="display: inline-block; background: #3b82f6; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">4%</span> → Si se alcanza el 4% pero no el 5%</li>
-                                <li><span style="display: inline-block; background: #22c55e; color: white; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 0.85em;">5%</span> → Si se supera el objetivo del 5%</li>
-                            </ul>
-                        </li>
-                        <li><strong>Código de Colores:</strong> Mismo sistema visual que en Facturación Real (rojo, morado, azul, verde), aplicado también a la fila TOTAL según los totales anuales de los objetivos.</li>
-                        <li><strong>Persistencia:</strong> Al igual que en Facturación Real, los colores de años anteriores quedan congelados permanentemente.</li>
-                        <li><strong>Años Dinámicos:</strong> Al iniciar un nuevo año, la columna aparece automáticamente a la derecha. Puedes hacer scroll horizontal para consultar años anteriores.</li>
-                    </ul>
-                </div>
-
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">lightbulb</span>
-                        8. Ideas de Visita (Inteligencia Comercial)
-                    </h3>
-                    <p>Sistema inteligente que analiza continuamente el historial de pedidos de tus clientes para sugerirte planes de trabajo y rutas comerciales optimizadas de 1 día:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Aprendizaje Continuo:</strong> Con cada pedido que registras en la app, el sistema recalcula en tiempo real la frecuencia media de compra de cada cliente, sus meses históricos fuertes y su volumen medio. <em>Cuanto más usas la app, más precisa es la predicción.</em></li>
-                        <li><strong>Cálculo de Prioridad (0 a 100):</strong> El número dentro del círculo de color indica el nivel de urgencia de la visita:
-                            <br>- <strong style="color: #ef4444;">🔴 Alta (>60 pts):</strong> Cliente muy atrasado respecto a su ciclo habitual de compra.
-                            <br>- <strong style="color: #f59e0b;">🟠 Media (40 - 59 pts):</strong> Cliente que se aproxima a su fecha estimada o en su mes fuerte histórico.
-                        </li>
-                        <li><strong>Filtro Inteligente:</strong> La vista muestra exclusivamente clientes con prioridad <strong>Media y Alta (≥ 40 pts)</strong>. Si un cliente ha comprado recientemente (menos de 14 días o menos del 45% de su ciclo habitual), el sistema lo penaliza y lo excluye automáticamente para no forzar visitas innecesarias.</li>
-                        <li><strong>Rutas Comerciales Delimitadas (1 Día):</strong> El motor agrupa a los clientes según las rutas comerciales reales de trabajo delimitadas para <strong>Asturias</strong> (8 zonas), <strong>Cantabria</strong> (7 zonas), <strong>León</strong> (2 zonas) y <strong>Galicia</strong> (Mariña Lucense - Lugo), asegurando que todos los clientes recomendados para un mismo día correspondan a una única zona geográfica realizable.</li>
-                        <li><strong>Agrupación Contigua por Municipio:</strong> Dentro de cada día, los clientes aparecen organizados e identificados por su población (ej: todos los de Luanco juntos, luego Candás, luego Avilés), con cabeceras visuales claras por municipio.</li>
-                        <li><strong>Acciones Rápidas en Tarjeta:</strong> Cada cliente de la lista cuenta con botones directos para <strong>Llamar por teléfono 📞</strong>, <strong>abrir WhatsApp 💬</strong> o <strong>iniciar navegación GPS 📍</strong>.</li>
-                        <li><strong>Enviar Ruta del Día por WhatsApp:</strong> En la cabecera de cada día dispones de un botón <em>"Enviar Ruta"</em> que formatea y prepara el resumen completo del plan del día para enviártelo o compartirlo por WhatsApp con un solo toque.</li>
-                        <li><strong>Filtro por Comunidad:</strong> Puedes usar la botonera superior (<em>Todas, Asturias, Cantabria, León, Galicia</em>) para enfocar tu planificación a una región en particular.</li>
-                    </ul>
-                </div>
-
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">groups</span>
-                        9. Fichero de Clientes
-                    </h3>
-                    <p>Tu agenda comercial avanzada, diseñada para tener todos los contactos y su información a un solo toque:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Importación Premium:</strong> Puedes cargar masivamente tus clientes subiendo un archivo Excel (.XLSX) o restaurándolos directamente desde tu base de datos central en la nube.</li>
-                        <li><strong>Buscador Instantáneo:</strong> Encuentra a cualquier cliente tecleando parte de su nombre, o buscando por su código postal o ciudad.</li>
-                        <li><strong>Ficha de Cliente:</strong> Al pulsar en un cliente, verás su Código, Persona de Contacto, Correo y Teléfonos.
-                            <br>- Tienes botones de acceso directo para <strong>llamar por teléfono</strong> al instante o <strong>abrir un chat de WhatsApp</strong> directamente sin tener que guardarlo en tu agenda.
-                        </li>
-                        <li><strong>Historial Integrado:</strong> Al final de la ficha de cada cliente, verás una cronología con absolutamente todos los pedidos que te ha hecho a lo largo de la historia y sus importes.</li>
-                        <li><strong>Geolocalización GPS:</strong> Al crear o editar un cliente, hay un botón especial que capta tu ubicación actual (latitud y longitud). Guardarlo te permitirá usar después la integración con mapas.</li>
-                    </ul>
-                </div>
-
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">map</span>
-                        10. Mapa Interactivo
-                    </h3>
-                    <p>Una vista especial (accesible desde el icono "Mapa" del menú inferior) que pinta tu cartera de clientes sobre el mapa geográfico de Google.</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Chinchetas:</strong> Cada cliente de tu base de datos que tenga coordenadas guardadas aparecerá marcado en el mapa para que visualices tu cobertura comercial.</li>
-                        <li><strong>Trazar Ruta Directa:</strong> Al pinchar en cualquier cliente del mapa, o usando el botón "Llévame" dentro de la ficha de cliente, se abrirá automáticamente la app de navegación de tu móvil (Google Maps o similar) calculando la ruta en coche para llegar hasta su puerta.</li>
-                    </ul>
-                </div>
-
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: #0f172a; font-weight: 900; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons-round" style="color: #009ee3;">settings</span>
-                        11. Ajustes, Seguridad y Backups
-                    </h3>
-                    <p>Accesible pulsando en el icono superior derecho de tres rayitas o perfil. Es el panel técnico y de mantenimiento:</p>
-                    <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                        <li><strong>Guardado en la Nube (Drive):</strong> Para que nunca pierdas datos. La app tiene rutinas automáticas de seguridad que suben toda tu información a Drive de Lunes a Viernes a las 20:30h, salvaguardando tu trabajo diario.</li>
-                        <li><strong>Restauración de Copias:</strong> Si borras un pedido o cliente sin querer, tienes un botón de "Historial Drive" que te permite restaurar la base de datos completa a un momento del pasado.</li>
-                        <li><strong>Archivos Locales (Excel):</strong> Además de la nube, tienes la opción manual de exportar todos tus datos (ventas y clientes) en archivos Excel estándar en tu dispositivo en cualquier momento.</li>
-                        <li><strong>Gestión de Años:</strong> Al comenzar un nuevo año comercial, utiliza este apartado para activarlo de forma que puedas seguir trabajando y conservando la estadística del año anterior intacta.</li>
-                        <li><strong>Limpiar Caché:</strong> Un mantenimiento útil si la app sufre un comportamiento extraño o va lenta. Borrará la memoria temporal de tu teléfono y descargará la base de datos fresca desde la nube.</li>
-                    </ul>
-                </div>
-
-                <div style="background-color: #f0fdf4; padding: 1.5rem; border-radius: 16px; border: 1px left solid #10b981; border-left-width: 4px; margin-top: 1rem;">
-                    <strong style="color: #065f46; display: block; margin-bottom: 0.5rem;">Consejo Experto de Uso:</strong>
-                    Si usas la aplicación desde tu smartphone (Android o iOS), instálala o "Añádela a la pantalla de inicio" desde tu navegador web. Se instalará como una App Nativa (PWA), eliminando las barras del navegador, funcionando a pantalla completa y mejorando drásticamente su velocidad y fluidez.
-                </div>
-
-                <p style="text-align: center; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-top: 3.5rem; letter-spacing: 0.05em; font-size: 0.8rem; line-height: 1.4;">
-                    Aplicación diseñada y desarrollada por<br>
-                    <span style="font-size: 1.1em; color: #009ee3;">Manuel F. Serantes Pérez</span><br>
-                    <span style="font-size: 0.8em; opacity: 0.7;">Versión Final (V7)</span>
-                </p>
             </div>
         </div>
     `;
@@ -481,6 +559,10 @@ function closeInfoModal() {
         document.body.style.overflow = '';
     }
 }
+
+window.openInfoModal = openInfoModal;
+window.closeInfoModal = closeInfoModal;
+window.scrollToManualSection = scrollToManualSection;
 
 // --- 🎙️ DICTADO POR VOZ A TEXTO (ES-ES) ---
 window._activeSpeechRecognition = null;

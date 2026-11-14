@@ -454,26 +454,12 @@ function getAnnualCommissionTier(totalFacturado, goals) {
     return { pct: 2, tierKey: 't2', sum3, sum4, sum5 };
 }
 
-function buildTierLegendFooter(hintText) {
-    return `
-        <footer class="ana-footer">
-            <div class="ana-legend-items">
-                <span class="ana-legend-pill"><span class="ana-legend-dot is-t2"></span>2%</span>
-                <span class="ana-legend-pill"><span class="ana-legend-dot is-t3"></span>3%</span>
-                <span class="ana-legend-pill"><span class="ana-legend-dot is-t4"></span>4%</span>
-                <span class="ana-legend-pill"><span class="ana-legend-dot is-t5"></span>5%</span>
-            </div>
-            ${hintText ? `<span class="ana-footer-hint">${hintText}</span>` : ''}
-        </footer>
-    `;
-}
-
 function renderAnalyticsTableView({ title, isBack, stateKey, scrollId, years, currentYear, buildCellFn, buildTotalCellFn, footerHtml, preserveScrollLeft = null }) {
     if (typeof updateHistoryState === 'function') updateHistoryState(stateKey, isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml(title);
 
-    let contentHtml = `<main class="ana-wrapper">
+    let contentHtml = `<main class="ana-wrapper ana-view-${stateKey}">
         <div class="ana-card">
             <div class="ana-scroll" id="${scrollId}">
                 <table class="ana-table">
@@ -704,16 +690,6 @@ async function renderVentas(isBack = false, preserveScrollLeft = null) {
         totalsByYear[y] = yearTotal;
     });
 
-    const footerHtml = `
-        <footer class="ana-footer">
-            <div class="ana-legend-items" style="justify-content:flex-start; gap:14px;">
-                <span class="ana-legend-pill"><span class="ana-legend-dot is-up"></span>Sube vs año ant.</span>
-                <span class="ana-legend-pill"><span class="ana-legend-dot is-down"></span>Baja</span>
-            </div>
-            <span class="ana-footer-hint">Pulsa un mes para editar</span>
-        </footer>
-    `;
-
     renderAnalyticsTableView({
         title: 'Ventas Mensuales',
         isBack,
@@ -722,7 +698,7 @@ async function renderVentas(isBack = false, preserveScrollLeft = null) {
         years,
         currentYear,
         preserveScrollLeft,
-        footerHtml,
+        footerHtml: '',
         buildCellFn: (y, yIdx, mIdx) => {
             const val = gridValues[y][mIdx];
             let deltaHtml = '';
@@ -778,203 +754,404 @@ async function renderMedias(isBack = false) {
     const app = document.getElementById('app');
     const history = await dataManager.getSalesHistory();
     const currentYear = new Date().getFullYear();
-    const validYears = Object.keys(history).map(Number).filter(y => y < currentYear).sort();
+    const validYears = Object.keys(history || {})
+        .map(Number)
+        .filter(y => !Number.isNaN(y) && y < currentYear)
+        .sort((a, b) => a - b);
+
     const numYears = validYears.length;
     const yearsLabel = numYears === 1 ? 'año' : 'años';
-    
-    const headerHtml = getCommonHeaderHtml(`
-        <div style="display: flex; flex-direction: column; line-height: 1.2; padding: 2px 0;">
-            <span style="font-size: 1.4rem; font-weight: 950; letter-spacing: -0.5px;">Medias Mensuales</span>
-            <span style="font-size: 0.95rem; font-weight: 600; font-style: italic; color: #fff; margin-top: 2px;">(${numYears} ${yearsLabel})</span>
-        </div>
-    `);
-    
-    const monthsNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const averages = monthsNames.map((_, i) => {
-        if (validYears.length === 0) return 0;
-        const sum = validYears.reduce((acc, y) => acc + (history[y][i] || 0), 0);
-        return Math.floor(sum / validYears.length);
+    const yearsRange = numYears === 0
+        ? 'Sin histórico'
+        : (numYears === 1
+            ? `${validYears[0]} · 1 año`
+            : `${validYears[0]}–${validYears[numYears - 1]} · ${numYears} ${yearsLabel}`);
+
+    const headerHtml = getCommonHeaderHtml('Medias Mensuales');
+
+    const averages = ANA_MONTHS.map((_, i) => {
+        if (numYears === 0) return 0;
+        const sum = validYears.reduce((acc, y) => acc + ((history[y] && history[y][i]) || 0), 0);
+        return Math.floor(sum / numYears);
     });
 
-    let contentHtml = '<main class="medias-container" style="padding-top: 1.5rem !important;">';
-    
-    // Contenedor Cuadrícula 3x4
-    contentHtml += '<div class="months-grid">';
-    averages.forEach((val, i) => {
-        const formattedVal = Math.round(val).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        contentHtml += `
-            <div class="month-card">
-                <span class="month-card-title">${monthsNames[i]}</span>
-                <span class="month-card-value">${formattedVal}</span>
+    const totalAvg = Math.floor(averages.reduce((a, b) => a + b, 0));
+    const monthlyAvg = Math.round(totalAvg / 12);
+    const maxAvg = Math.max(...averages, 0);
+    const bestIdx = maxAvg > 0 ? averages.indexOf(maxAvg) : -1;
+
+    const monthsHtml = ANA_MONTHS.map((name, i) => {
+        const val = averages[i];
+        const sharePct = totalAvg > 0 ? Math.round((val / totalAvg) * 100) : 0;
+        const barPct = maxAvg > 0 ? Math.max(val > 0 ? 6 : 0, Math.round((val / maxAvg) * 100)) : 0;
+        const isPeak = i === bestIdx;
+        const isStrong = totalAvg > 0 && val >= monthlyAvg;
+        const stateCls = isPeak ? 'is-peak' : (isStrong ? 'is-strong' : '');
+
+        return `
+            <div class="month-card ${stateCls}">
+                <div class="month-card-top">
+                    <span class="month-card-title">${name}</span>
+                    <span class="month-card-pct">${sharePct}%</span>
+                </div>
+                <div class="month-card-value">${anaFormatNoSymbol(val)} €</div>
+                <div class="month-card-bar">
+                    <div class="month-card-fill" style="width: ${barPct}%;"></div>
+                </div>
             </div>
         `;
-    });
-    contentHtml += '</div>';
-    
-    // Tarjeta Resumen Anual Premium
-    const totalAvg = Math.floor(averages.reduce((a,b) => a+b, 0));
-    const formattedTotal = Math.round(totalAvg).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    contentHtml += `
-        <div class="annual-media-card">
-            <p class="annual-title">Media Ventas Anual</p>
-            <h2 class="annual-value">${formattedTotal}</h2>
-            <div class="annual-chart-deco">
-                <span class="material-icons-round" style="font-size: 60px;">trending_up</span>
-            </div>
-        </div>
-    `;
+    }).join('');
 
-    contentHtml += '</main>';
-    contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
+    const contentHtml = `
+        <main class="medias-container">
+            <section class="annual-media-card">
+                <div class="annual-media-top">
+                    <span class="annual-title">Media Ventas Anual</span>
+                    <span class="annual-years-pill">${yearsRange}</span>
+                </div>
+                <div class="annual-media-bottom">
+                    <h2 class="annual-value">${anaFormatNoSymbol(totalAvg)} <span class="annual-euro">€</span></h2>
+                    <div class="annual-sub-stat">
+                        <span class="annual-sub-lbl">Media / mes</span>
+                        <strong class="annual-sub-val">${anaFormatNoSymbol(monthlyAvg)} €</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="medias-panel">
+                <div class="medias-panel-head">
+                    <span class="medias-panel-title">Desglose mensual</span>
+                    ${bestIdx >= 0
+                        ? `<span class="medias-peak-pill">Pico: ${ANA_MONTHS[bestIdx]} · ${anaFormatNoSymbol(maxAvg)} €</span>`
+                        : `<span class="medias-peak-pill is-empty">Sin datos</span>`}
+                </div>
+                <div class="months-grid">
+                    ${monthsHtml}
+                </div>
+            </section>
+        </main>
+    ` + renderBottomNav(null);
+
+    app.innerHTML = headerHtml + contentHtml;
+    if (window.restoreScroll) window.restoreScroll();
 }
 
 // --- RANKING ---
-async function openRankingModal(sortBy = 'sales', searchTerm = '') {
+let _rankingState = null;
+
+function escapeRankingHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getRankingOrderYear(order) {
+    if (order && order.year !== undefined && order.year !== null) {
+        const y = parseInt(order.year, 10);
+        if (!Number.isNaN(y)) return y;
+    }
+    const raw = order && (order.dateISO || order.date);
+    if (!raw) return null;
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d.getFullYear();
+}
+
+async function openRankingModal(sortBy = 'sales', searchTerm = '', targetYear = null) {
     let modal = document.getElementById('rankingModal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'rankingModal';
         modal.className = 'modal-overlay';
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeRankingModal();
+        });
         document.body.appendChild(modal);
     }
 
-    const orders = await dataManager.getOrders();
-    const clientsData = await dataManager.getClients();
+    const [orders, clientsData] = await Promise.all([
+        dataManager.getOrders(),
+        dataManager.getClients()
+    ]);
     const lookup = dataManager.buildClientLookup(clientsData);
 
     const currentYear = new Date().getFullYear();
-    const yearOrders = orders.filter(o => o.year === currentYear);
-    
+    const yearSet = new Set([currentYear]);
+    orders.forEach(o => {
+        const y = getRankingOrderYear(o);
+        if (y && y >= 2000) yearSet.add(y);
+    });
+    const availableYears = Array.from(yearSet).sort((a, b) => a - b);
+
+    const selectedYear = targetYear !== null && targetYear !== undefined
+        ? parseInt(targetYear, 10)
+        : currentYear;
+
     const stats = {};
-    yearOrders.forEach(o => {
+    let totalSales = 0;
+    let totalOrders = 0;
+
+    orders.forEach(o => {
+        if (getRankingOrderYear(o) !== selectedYear) return;
         const c = dataManager.resolveClientForOrder(o, lookup);
         const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
-        const displayName = c ? c.name : o.shop;
+        const displayName = (c ? c.name : o.shop) || 'Sin nombre';
+        const amount = parseFloat(o.amount) || 0;
         if (!stats[key]) {
-            stats[key] = { 
+            stats[key] = {
                 name: displayName,
-                sales: 0, 
-                orders: 0, 
+                sales: 0,
+                orders: 0,
                 code: c ? c.code : (o.clientCode || null)
             };
         }
-        stats[key].sales += (o.amount || 0);
-        stats[key].orders++;
+        stats[key].sales += amount;
+        stats[key].orders += 1;
+        totalSales += amount;
+        totalOrders += 1;
     });
 
-    // Lógica de Ordenación COMPLETA para obtener posiciones reales
-    let ranking = Object.values(stats).map(s => ({ ...s }));
-    
-    if (sortBy === 'sales') {
-        ranking.sort((a, b) => b.sales - a.sales);
-    } else {
-        ranking.sort((a, b) => {
-            if (b.orders !== a.orders) return b.orders - a.orders;
-            return b.sales - a.sales;
-        });
-    }
+    const list = Object.values(stats);
+    _rankingState = {
+        year: selectedYear,
+        sortBy: sortBy === 'pedidos' ? 'pedidos' : 'sales',
+        searchTerm: searchTerm || '',
+        list,
+        filteredList: [],
+        totalSales,
+        totalOrders
+    };
 
-    // Asignar posición original antes de filtrar
-    ranking = ranking.map((r, i) => ({ ...r, originalRank: i + 1 }));
-    
-    // Filtrado por buscador (ignorando tildes)
-    if (searchTerm) {
-        const normSearch = normalizeTextKey(searchTerm);
-        if (normSearch) {
-            ranking = ranking.filter(r => normalizeTextKey(r.name).includes(normSearch));
-        }
-    }
-    
+    const clientCount = list.length;
+    const summaryText = clientCount > 0
+        ? `${clientCount} ${clientCount === 1 ? 'cliente' : 'clientes'} · ${anaFormatNoSymbol(totalSales)} € · ${totalOrders} ${totalOrders === 1 ? 'pedido' : 'pedidos'}`
+        : `Sin pedidos registrados en ${selectedYear}`;
+
+    const yearsHtml = availableYears.length > 1
+        ? `<div class="ranking-yearbar">
+                ${availableYears.map(y => `
+                    <button type="button"
+                            class="ranking-year-pill ${y === selectedYear ? 'is-active' : ''}"
+                            onclick="openRankingModal(_rankingState?.sortBy || 'sales', document.getElementById('rankSearch')?.value || '', ${y})">${y}</button>
+                `).join('')}
+           </div>`
+        : '';
+
     modal.innerHTML = `
-        <div class="modal-content" style="max-height: 85vh; width: 95%; max-width: 480px; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden;">
-            <!-- CABECERA FIJA AZUL -->
-            <div class="modal-header" style="background: #009ee3; color: white; padding: 1.25rem 1.5rem; border: none; flex-shrink: 0;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="material-icons-round">emoji_events</span>
-                    <h2 class="text-lg font-black" style="letter-spacing: 0.5px;">Ranking ${currentYear}</h2>
-                </div>
-                <button class="icon-btn" onclick="closeRankingModal()" style="background: rgba(255,255,255,0.2); border-radius: 12px; color: white;">
-                    <span class="material-icons-round">close</span>
-                </button>
-            </div>
-            
-            <!-- CONTROLES FIJOS (PESTAÑAS Y BUSCADOR) -->
-            <div style="padding: 1.25rem 1.5rem 0.5rem 1.5rem; background: #fff; flex-shrink: 0; border-bottom: 1px solid #f1f5f9;">
-                <div class="ranking-tabs-container" style="margin-bottom: 1rem;">
-                    <button class="ranking-tab-btn ${sortBy === 'sales' ? 'active' : ''}" onclick="openRankingModal('sales', document.getElementById('rankSearch')?.value || '')">
-                        Por Ventas
+        <div class="ranking-modal-card" role="dialog" aria-modal="true" aria-label="Ranking Clientes ${selectedYear}">
+            <div class="ranking-modal-head">
+                <div class="ranking-head-top">
+                    <div class="ranking-head-left">
+                        <span class="ranking-head-icon">
+                            <span class="material-icons-round">emoji_events</span>
+                        </span>
+                        <div class="ranking-head-titles">
+                            <h2 class="ranking-head-title">Ranking ${selectedYear}</h2>
+                            <p class="ranking-head-sub">${summaryText}</p>
+                        </div>
+                    </div>
+                    <button type="button" class="ana-modal-close" onclick="closeRankingModal()" aria-label="Cerrar">
+                        <span class="material-icons-round">close</span>
                     </button>
-                    <button class="ranking-tab-btn ${sortBy === 'pedidos' ? 'active' : ''}" onclick="openRankingModal('pedidos', document.getElementById('rankSearch')?.value || '')">
-                        Por Pedidos
+                </div>
+                ${yearsHtml}
+            </div>
+
+            <div class="ranking-controls">
+                <div class="ranking-tabs-container">
+                    <button type="button"
+                            id="rankTabSales"
+                            class="ranking-tab-btn ${_rankingState.sortBy === 'sales' ? 'active' : ''}"
+                            onclick="switchRankingSort('sales')">
+                        <span class="material-icons-round">euro</span>
+                        <span>Por Ventas</span>
+                    </button>
+                    <button type="button"
+                            id="rankTabOrders"
+                            class="ranking-tab-btn ${_rankingState.sortBy === 'pedidos' ? 'active' : ''}"
+                            onclick="switchRankingSort('pedidos')">
+                        <span class="material-icons-round">shopping_bag</span>
+                        <span>Por Pedidos</span>
                     </button>
                 </div>
 
-                <div class="pro-search-bar" style="margin-bottom: 0.75rem;">
+                <div class="pro-search-bar ranking-search-bar">
                     <span class="material-icons-round pro-search-icon">search</span>
-                    <input type="text" id="rankSearch" class="pro-search-input"
-                           placeholder="Buscar tienda..." 
-                           value="${searchTerm}"
-                           oninput="openRankingModal('${sortBy}', this.value)"
+                    <input type="text"
+                           id="rankSearch"
+                           class="pro-search-input"
+                           placeholder="Buscar tienda..."
+                           value="${escapeRankingHtml(_rankingState.searchTerm)}"
+                           oninput="filterRankingList(this.value)"
                            autocomplete="off">
                     <div class="pro-search-actions">
-                        ${searchTerm ? `
-                        <button type="button" class="pro-search-clear-btn" style="display: inline-flex;" onclick="openRankingModal('${sortBy}', '')" title="Borrar búsqueda">
+                        <button type="button"
+                                id="rankSearchClearBtn"
+                                class="pro-search-clear-btn"
+                                style="display: ${_rankingState.searchTerm ? 'inline-flex' : 'none'};"
+                                onclick="clearRankingSearch()"
+                                title="Borrar búsqueda">
                             <span class="material-icons-round">close</span>
                         </button>
-                        ` : ''}
-                        <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('rankSearch', this, (val) => openRankingModal('${sortBy}', val))" title="Buscar por voz">
+                        <button type="button"
+                                class="pro-search-mic-btn"
+                                onclick="window.toggleVoiceDictation('rankSearch', this, (val) => filterRankingList(val))"
+                                title="Buscar por voz">
                             <span class="material-icons-round">mic</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- LISTA DESPLAZABLE -->
-            <div class="modal-body overflow-y-auto" style="padding: 1rem 1.5rem; flex: 1; background: #fff;">
-                <div class="flex flex-col" style="padding-right: 4px;">
-                    ${ranking.length > 0 ? ranking.map((r) => {
-                        const rankNum = r.originalRank;
-                        let badgeClass = '';
-                        if (rankNum === 1) badgeClass = 'rank-badge-1';
-                        else if (rankNum === 2) badgeClass = 'rank-badge-2';
-                        else if (rankNum === 3) badgeClass = 'rank-badge-3';
-                        
-                        return `
-                            <div class="ranking-card" 
-                                 style="cursor: pointer;" 
-                                 onclick="if('${r.code}' !== 'null') { closeRankingModal(); openClientDetailModal('${r.code}'); } else { alert('No se ha encontrado una ficha para la tienda: ${r.name}'); }">
-                                <div class="rank-badge ${badgeClass}">${rankNum}</div>
-                                <div style="flex-grow: 1;">
-                                    <p class="ranking-shop-name">${r.name}</p>
-                                    <p class="ranking-order-count">${r.orders} ${r.orders === 1 ? 'pedido' : 'pedidos'}</p>
-                                </div>
-                                <div class="ranking-amount">
-                                    ${formatCurrency(Math.round(r.sales)).replace(' €', '')}<span style="font-size: 11px; margin-left: 2px;">€</span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('') : `
-                        <div style="text-align: center; padding: 2rem; color: #94a3b8; font-weight: 700;">
-                            No se encontraron clientes para "${searchTerm}"
-                        </div>
-                    `}
-                </div>
-            </div>
+            <div class="ranking-list-body" id="rankingListContainer"></div>
         </div>
     `;
+
+    renderRankingList();
     modal.classList.add('open');
 
-    // Mantener foco si estamos buscando
-    if (searchTerm) {
+    if (_rankingState.searchTerm) {
         const input = document.getElementById('rankSearch');
+        if (input) {
+            input.focus();
+            input.setSelectionRange(_rankingState.searchTerm.length, _rankingState.searchTerm.length);
+        }
+    }
+}
+
+function switchRankingSort(sortBy) {
+    if (!_rankingState) return;
+    _rankingState.sortBy = sortBy === 'pedidos' ? 'pedidos' : 'sales';
+    const salesTab = document.getElementById('rankTabSales');
+    const ordersTab = document.getElementById('rankTabOrders');
+    if (salesTab) salesTab.classList.toggle('active', _rankingState.sortBy === 'sales');
+    if (ordersTab) ordersTab.classList.toggle('active', _rankingState.sortBy === 'pedidos');
+    renderRankingList();
+}
+
+function filterRankingList(searchTerm) {
+    if (!_rankingState) return;
+    _rankingState.searchTerm = searchTerm || '';
+    const clearBtn = document.getElementById('rankSearchClearBtn');
+    if (clearBtn) {
+        clearBtn.style.display = _rankingState.searchTerm ? 'inline-flex' : 'none';
+    }
+    renderRankingList();
+}
+
+function clearRankingSearch() {
+    const input = document.getElementById('rankSearch');
+    if (input) {
+        input.value = '';
         input.focus();
-        input.setSelectionRange(searchTerm.length, searchTerm.length);
+    }
+    filterRankingList('');
+}
+
+function renderRankingList() {
+    if (!_rankingState) return;
+    const container = document.getElementById('rankingListContainer');
+    if (!container) return;
+
+    const { list, sortBy, searchTerm, totalSales, totalOrders, year } = _rankingState;
+    const isOrdersMode = sortBy === 'pedidos';
+
+    const sorted = list.map(s => ({ ...s })).sort((a, b) => {
+        if (!isOrdersMode) {
+            if (b.sales !== a.sales) return b.sales - a.sales;
+            return b.orders - a.orders;
+        }
+        if (b.orders !== a.orders) return b.orders - a.orders;
+        return b.sales - a.sales;
+    });
+
+    const ranked = sorted.map((r, i) => ({ ...r, originalRank: i + 1 }));
+    const maxMetric = ranked.length > 0
+        ? (isOrdersMode ? ranked[0].orders : ranked[0].sales)
+        : 0;
+
+    let filtered = ranked;
+    if (searchTerm) {
+        const normSearch = normalizeTextKey(searchTerm);
+        if (normSearch) {
+            filtered = ranked.filter(r => normalizeTextKey(r.name).includes(normSearch));
+        }
+    }
+
+    _rankingState.filteredList = filtered;
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="ranking-empty-state">
+                <span class="material-icons-round">search_off</span>
+                <p>${searchTerm
+                    ? `No se encontraron clientes para "${escapeRankingHtml(searchTerm)}"`
+                    : `No hay pedidos registrados en ${year}`}</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map((r, idx) => {
+        const rankNum = r.originalRank;
+        const topCls = rankNum === 1 ? 'is-top-1' : (rankNum === 2 ? 'is-top-2' : (rankNum === 3 ? 'is-top-3' : ''));
+        const badgeCls = rankNum <= 3 ? `rank-badge-${rankNum}` : '';
+        const avgTicket = r.orders > 0 ? Math.round(r.sales / r.orders) : 0;
+        const metricVal = isOrdersMode ? r.orders : r.sales;
+        const barPct = maxMetric > 0 ? Math.max(metricVal > 0 ? 6 : 0, Math.round((metricVal / maxMetric) * 100)) : 0;
+
+        let primaryVal = '';
+        let secondaryVal = '';
+        let metaText = '';
+
+        if (!isOrdersMode) {
+            const sharePct = totalSales > 0 ? Math.round((r.sales / totalSales) * 100) : 0;
+            primaryVal = `${anaFormatNoSymbol(r.sales)} <span class="ranking-unit">€</span>`;
+            secondaryVal = `${sharePct}% del total`;
+            metaText = `${r.orders} ${r.orders === 1 ? 'pedido' : 'pedidos'} · Media ${anaFormatNoSymbol(avgTicket)} €`;
+        } else {
+            const sharePct = totalOrders > 0 ? Math.round((r.orders / totalOrders) * 100) : 0;
+            primaryVal = `${r.orders} <span class="ranking-unit">${r.orders === 1 ? 'ped.' : 'peds.'}</span>`;
+            secondaryVal = `${anaFormatNoSymbol(r.sales)} €`;
+            metaText = `Media ${anaFormatNoSymbol(avgTicket)} €/ped · ${sharePct}% ped.`;
+        }
+
+        return `
+            <button type="button" class="ranking-card ${topCls}" onclick="handleRankingCardClick(${idx})">
+                <div class="rank-badge ${badgeCls}">${rankNum}</div>
+                <div class="ranking-card-info">
+                    <div class="ranking-shop-name">${escapeRankingHtml(r.name)}</div>
+                    <div class="ranking-order-count">${metaText}</div>
+                    <div class="ranking-bar-track">
+                        <div class="ranking-bar-fill" style="width: ${barPct}%;"></div>
+                    </div>
+                </div>
+                <div class="ranking-metric-col">
+                    <div class="ranking-amount">${primaryVal}</div>
+                    <div class="ranking-sub-metric">${secondaryVal}</div>
+                </div>
+            </button>
+        `;
+    }).join('');
+}
+
+function handleRankingCardClick(idx) {
+    if (!_rankingState || !_rankingState.filteredList) return;
+    const item = _rankingState.filteredList[idx];
+    if (!item) return;
+    if (item.code !== null && item.code !== undefined && String(item.code) !== 'null') {
+        closeRankingModal();
+        openClientDetailModal(item.code);
+    } else {
+        alert(`No se ha encontrado una ficha para la tienda: ${item.name}`);
     }
 }
 
 function closeRankingModal() {
-    document.getElementById('rankingModal').classList.remove('open');
+    const modal = document.getElementById('rankingModal');
+    if (modal) modal.classList.remove('open');
 }
 
 // Globales
@@ -985,6 +1162,10 @@ window.handleSalesUpdate = handleSalesUpdate;
 window.renderMedias = renderMedias;
 window.openRankingModal = openRankingModal;
 window.closeRankingModal = closeRankingModal;
+window.switchRankingSort = switchRankingSort;
+window.filterRankingList = filterRankingList;
+window.clearRankingSearch = clearRankingSearch;
+window.handleRankingCardClick = handleRankingCardClick;
 // --- OBJETIVOS VIEW (V7 + SOPORTE POR AÑO) ---
 async function renderObjetivos(isBack = false, selectedYear = null) {
     if (typeof updateHistoryState === 'function') updateHistoryState('objetivos', isBack);
@@ -1107,7 +1288,7 @@ async function renderFactura(isBack = false, preserveScrollLeft = null) {
         years,
         currentYear,
         preserveScrollLeft,
-        footerHtml: buildTierLegendFooter('Pulsa para editar'),
+        footerHtml: '',
         buildCellFn: (y, _yIdx, mIdx) => {
             const yearData = history[String(y)] || Array(12).fill(0);
             const val = parseFloat(yearData[mIdx]) || 0;
@@ -1209,7 +1390,7 @@ async function renderComisiones(isBack = false) {
         scrollId: 'comisionesScrollContainer',
         years,
         currentYear,
-        footerHtml: buildTierLegendFooter('Base: facturación real'),
+        footerHtml: '',
         buildCellFn: (y, _yIdx, mIdx) => {
             const goals = goalsPerYear[y];
             if (!goals) {

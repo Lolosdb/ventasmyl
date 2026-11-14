@@ -1293,13 +1293,18 @@ class DataManager {
         ordersThisMonth.forEach(o => {
             const c = this.resolveClientForOrder(o, lookup);
             const displayShop = c ? c.name : o.shop;
+            const resolvedCode = c ? c.code : (o.clientCode || null);
             const key = c ? `code_${c.code}` : `shop_${normalizeTextKey(o.shop)}`;
-            if (!clientSales[key]) clientSales[key] = { name: displayShop, amount: 0 };
-            clientSales[key].amount += (parseFloat(o.amount) || 0);
+            const amt = parseFloat(o.amount) || 0;
+            if (!clientSales[key]) {
+                clientSales[key] = { name: displayShop, code: resolvedCode, amount: 0, orders: 0 };
+            }
+            clientSales[key].amount += amt;
+            if (amt > 0) clientSales[key].orders += 1;
         });
 
         const topClientes = Object.values(clientSales)
-            .map(item => ({ name: item.name, amount: item.amount, rank: 0 }))
+            .map(item => ({ name: item.name, code: item.code, amount: item.amount, orders: item.orders, rank: 0 }))
             .sort((a, b) => b.amount - a.amount)
             .slice(0, 20)
             .map((item, index) => ({ ...item, rank: index + 1 }));

@@ -1,104 +1,315 @@
-/* Medias Mensuales Styles - RE-EQUILIBRIO V3 */
+/* Medias Mensuales - Diseño unificado compacto y elegante */
 
 .medias-container {
-    height: calc(100vh - 120px);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between !important; /* Llena el alto total */
-    padding: 1.25rem 1.75rem 1.5rem 1.75rem !important; /* Aumentado padding-bottom a 1.5rem */
-    overflow: hidden;
-    background-color: #f8fafc;
-}
-
-/* Grid for 12 months - MAS ESPACIADO */
-.months-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(4, 1fr);
-    gap: 1.2rem !important; /* Aumentado de 0.75 a 1.2 */
     flex: 1;
-}
-
-.month-card {
-    background-color: white;
-    border-radius: 14px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
-    border: 1px solid #f1f5f9;
-    position: relative;
-    overflow: hidden;
+    gap: 8px;
+    padding: 8px 10px 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    background-color: #f1f5f9;
 }
 
-/* Indicador Azul Corporativo */
-.month-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: #009ee3;
-}
-
-.month-card-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #94a3b8;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-    letter-spacing: 0.8px;
-}
-
-.month-card-value {
-    font-size: 1.2rem;
-    font-weight: 900;
-    color: #0f172a;
-}
-
-/* Bottom Annual Average Card - AZUL CORPORATIVO (No Morado) */
+/* Tarjeta resumen superior */
 .annual-media-card {
-    background: linear-gradient(135deg, #009ee3 0%, #0369a1 100%);
-    border-radius: 20px;
-    padding: 1.2rem 1.75rem;
-    position: relative;
-    color: white;
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    border-radius: 18px;
+    padding: 11px 14px;
+    color: #ffffff;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    box-shadow: 0 12px 24px -6px rgba(0, 158, 227, 0.3);
-    height: 100px; /* Un poco mÃ¡s alta */
+    gap: 5px;
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
+}
+
+.annual-media-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .annual-title {
-    font-size: 11px;
-    font-weight: 700;
+    margin: 0;
+    font-size: 10.5px;
+    font-weight: 800;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 4px;
-    letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.88);
+    letter-spacing: 0.7px;
+}
+
+.annual-years-pill {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.annual-media-bottom {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .annual-value {
-    font-size: 2.2rem;
-    font-weight: 950;
-    line-height: 1;
-    color: white;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    margin: 0;
+    font-size: 27px;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.6px;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
 }
 
-.annual-chart-deco {
-    position: absolute;
-    right: 2rem;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.2;
+.annual-euro {
+    font-size: 17px;
+    font-weight: 800;
+    opacity: 0.9;
+}
+
+.annual-sub-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+    line-height: 1.18;
+}
+
+.annual-sub-lbl {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.annual-sub-val {
+    font-size: 13.5px;
+    font-weight: 900;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Panel unificado del desglose mensual */
+.medias-panel {
+    flex: 1;
+    min-height: 0;
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.medias-panel-head {
+    background: #1e293b;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.medias-panel-title {
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #cbd5e1;
+}
+
+.medias-peak-pill {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 999px;
+    color: #ffffff;
+    background: rgba(0, 158, 227, 0.28);
+    border: 1px solid #38bdf8;
+    white-space: nowrap;
+}
+
+.medias-peak-pill.is-empty {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #94a3b8;
+}
+
+/* Cuadrícula 2x6 proporcionada */
+.months-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(6, minmax(54px, 1fr));
+    gap: 7px;
+    padding: 8px;
+}
+
+.month-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 7px 10px 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3px;
+    min-width: 0;
+}
+
+.month-card.is-strong {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+}
+
+.month-card.is-peak {
+    background: linear-gradient(180deg, #eff6ff 0%, #e0f2fe 100%);
+    border-color: #38bdf8;
+}
+
+.month-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.month-card-title {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #475569;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.month-card.is-strong .month-card-title,
+.month-card.is-peak .month-card-title {
+    color: #0369a1;
+}
+
+.month-card-pct {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #64748b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 0 5px;
+    border-radius: 999px;
+    line-height: 1.4;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.month-card.is-strong .month-card-pct,
+.month-card.is-peak .month-card-pct {
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+
+.month-card-value {
+    font-size: 15.5px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.month-card-bar {
+    width: 100%;
+    height: 3.5px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.month-card-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #94a3b8;
+    transition: width 0.25s ease;
+}
+
+.month-card.is-strong .month-card-fill {
+    background: #009ee3;
+}
+
+.month-card.is-peak .month-card-fill {
+    background: #0284c7;
+}
+
+body.dark-mode .medias-container {
+    background: #0f172a;
+}
+
+body.dark-mode .medias-panel {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode .medias-panel-head {
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+}
+
+body.dark-mode .month-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+body.dark-mode .month-card.is-strong {
+    background: rgba(56, 189, 248, 0.09);
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+body.dark-mode .month-card.is-peak {
+    background: rgba(56, 189, 248, 0.16);
+    border-color: #38bdf8;
+}
+
+body.dark-mode .month-card-title {
+    color: #cbd5e1;
+}
+
+body.dark-mode .month-card.is-strong .month-card-title,
+body.dark-mode .month-card.is-peak .month-card-title {
+    color: #7dd3fc;
+}
+
+body.dark-mode .month-card-pct {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+body.dark-mode .month-card.is-strong .month-card-pct,
+body.dark-mode .month-card.is-peak .month-card-pct {
+    color: #7dd3fc;
+    border-color: rgba(56, 189, 248, 0.35);
+}
+
+body.dark-mode .month-card-value {
+    color: #f8fafc;
+}
+
+body.dark-mode .month-card-bar {
+    background: rgba(255, 255, 255, 0.12);
 }
 /* --- OBJETIVOS V7: TABLE VIEW (SINGLE SCREEN) --- */
 .objetivos-v7-wrapper { height: calc(100vh - 120px); overflow: hidden; padding: 0.5rem 0.55rem !important; background: #f1f5f9; }

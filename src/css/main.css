@@ -1077,34 +1077,15 @@ body.no-scroll {
 
 
 
-/* --- RANKING TROPHY EDITION --- */
-.ranking-tabs-container { display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 1.5rem; }
-.ranking-tab-btn { flex: 1; border: none; background: transparent; padding: 10px; border-radius: 9px; font-size: 13px; font-weight: 800; color: #64748b; cursor: pointer; transition: all 0.3s ease; }
-.ranking-tab-btn.active { background: #009ee3; color: white; box-shadow: 0 4px 10px rgba(0, 158, 227, 0.2); }
-.ranking-card { background: white; border-radius: 16px; padding: 1rem; display: flex; align-items: center; gap: 1rem; border: 1px solid #f1f5f9; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); margin-bottom: 0.75rem; transition: transform 0.2s ease; }
-.ranking-card:hover { transform: translateY(-2px); }
-.rank-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 950; background: #f1f5f9; color: #64748b; flex-shrink: 0; }
-.rank-badge-1 { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
-.rank-badge-2 { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-.rank-badge-3 { background: #ffedd5; color: #9a3412; border: 1px solid #fb923c; }
-.ranking-shop-name { font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 2px; }
-.ranking-order-count { font-size: 11px; font-weight: 700; color: #94a3b8; }
-.ranking-amount { font-size: 14px; font-weight: 900; color: #009ee3; text-align: right; }
 
-.ranking-search-container { position: relative; margin-bottom: 1rem; }
-.ranking-search-container .material-icons-round { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; color: #94a3b8; }
-.ranking-search-input { width: 100%; padding: 10px 10px 10px 40px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 13.5px; font-weight: 700; color: #0f172a; transition: all 0.3s ease; }
-.ranking-search-input:focus { outline: none; border-color: #009ee3; background: #fff; box-shadow: 0 0 0 3px rgba(0, 158, 227, 0.1); }
+/* --- RANKING CLIENTES (estilos movidos a ventas.css) --- */
 
-.search-clear-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; color: #94a3b8; cursor: pointer; transition: all 0.2s ease; padding: 4px; display: flex; align-items: center; justify-content: center; }
-.search-clear-btn:hover { color: #ef4444; background: #fee2e2; border-radius: 50%; }
-.search-input-wrapper { position: relative; width: 100%; }
 
-/* FIX: Posicionamiento X y Hover */
-.ranking-search-container { position: relative !important; width: 100%; display: block; margin-bottom: 1rem; }
-.ranking-search-input { width: 100% !important; padding-right: 40px !important; box-sizing: border-box; }
-.search-clear-btn { position: absolute !important; right: 10px !important; top: 50% !important; transform: translateY(-50%) !important; background: transparent !important; color: #94a3b8; cursor: pointer; z-index: 20; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
-.search-clear-btn:hover { color: #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; }
+
+
+
+
+
 
 /* --- SISTEMA DE BOTONES PREMIUM UNIFICADO --- */
 .btn-action-excel { background: #0ea5e9; color: white; border: none; padding: 12px 24px; border-radius: 16px; font-weight: 800; font-size: 14.5px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); text-transform: uppercase; letter-spacing: 0.5px; }

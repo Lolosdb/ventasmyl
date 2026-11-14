@@ -3,6 +3,43 @@
  */
 
 let currentDashDate = new Date(); // Estado global para el periodo seleccionado
+let _dashChartRange = '6m'; // '6m' | '12m'
+let _lastDashStats = null;
+
+function _computeChartNiceScale(maxVal) {
+    if (!maxVal || maxVal <= 0) return { max: 1000, stepSize: 250 };
+    const rawStep = maxVal / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const norm = rawStep / mag;
+    let niceNorm = 10;
+    if (norm <= 1) niceNorm = 1;
+    else if (norm <= 2) niceNorm = 2;
+    else if (norm <= 2.5) niceNorm = 2.5;
+    else if (norm <= 5) niceNorm = 5;
+    const stepSize = niceNorm * mag;
+    const max = Math.ceil(maxVal / stepSize) * stepSize;
+    return { max, stepSize };
+}
+
+function _formatChartAxisTick(value) {
+    if (value === 0) return '0';
+    if (value >= 1000) {
+        const k = value / 1000;
+        return (Number.isInteger(k) ? k : k.toFixed(1)) + 'k';
+    }
+    return String(Math.round(value));
+}
+
+function _buildChartPeriodDeltaHtml(tendencia, range) {
+    const slice = range === '6m' ? tendencia.slice(-6) : tendencia;
+    const curSum = slice.reduce((acc, t) => acc + (parseFloat(t.ventas) || 0), 0);
+    const prevSum = slice.reduce((acc, t) => acc + (parseFloat(t.ventasAnterior) || 0), 0);
+    const diffPct = prevSum > 0 ? ((curSum - prevSum) / prevSum) * 100 : (curSum > 0 ? 100 : 0);
+    const sign = diffPct >= 0 ? '+' : '';
+    const toneClass = diffPct >= 0 ? 'is-pos' : 'is-neg';
+    const label = range === '6m' ? 'Últ. 6 meses' : 'Últ. 12 meses';
+    return `<span class="dash-chart-delta-pill ${toneClass}">${label}: ${sign}${diffPct.toFixed(1)}%</span>`;
+}
 
 
 function getRemainingBusinessDays(targetDate = new Date()) {
@@ -35,175 +72,119 @@ function getRemainingBusinessDays(targetDate = new Date()) {
     return count;
 }
 
+function _buildDashYoyBadgeHtml(monthSales, prevYearSales) {
+    const diff = monthSales - prevYearSales;
+    const diffPercent = prevYearSales > 0 ? (diff / prevYearSales) * 100 : (monthSales > 0 ? 100 : 0);
+    const isPositive = diff >= 0;
+    const icon = isPositive ? 'trending_up' : 'trending_down';
+    let toneClass = 'is-warn';
+    if (diffPercent < 0) toneClass = 'is-neg';
+    else if (diffPercent >= 5) toneClass = 'is-pos';
+
+    return `
+        <span class="dash-yoy-chip ${toneClass}">
+            <span class="material-icons-round">${icon}</span>
+            <span>${isPositive ? '+' : ''}${diffPercent.toFixed(1)}% vs año ant.</span>
+        </span>
+    `;
+}
+
+function _buildDashTopClientRowHtml(clientItem, maxAmount) {
+    const rankNum = clientItem.rank || 0;
+    const badgeClass = rankNum === 1 ? 'is-gold' : (rankNum === 2 ? 'is-silver' : (rankNum === 3 ? 'is-bronze' : ''));
+    const barPct = maxAmount > 0 ? Math.max(4, Math.min(100, Math.round((clientItem.amount / maxAmount) * 100))) : 0;
+    const safeName = _escapeDashHtml(clientItem.name || '');
+    const safeCode = clientItem.code ? String(clientItem.code).replace(/'/g, "\\'") : '';
+    const clickAttr = safeCode ? `onclick="openClientDetailModal('${safeCode}')" role="button" tabindex="0"` : '';
+    const ordersCount = clientItem.orders || 0;
+    const ordersText = ordersCount > 0 ? `${ordersCount} ${ordersCount === 1 ? 'pedido' : 'pedidos'}` : 'Mes actual';
+
+    return `
+        <div class="dash-top-client-row ${safeCode ? 'is-clickable' : ''}" ${clickAttr}>
+            <div class="dash-rank-badge ${badgeClass}">${String(rankNum).padStart(2, '0')}</div>
+            <div class="dash-top-client-info">
+                <div class="dash-top-client-name">${safeName}</div>
+                <div class="dash-top-client-sub">${ordersText}</div>
+                <div class="dash-top-client-bar-track">
+                    <div class="dash-top-client-bar-fill" style="width: ${barPct}%;"></div>
+                </div>
+            </div>
+            <div class="dash-top-client-right">
+                <span class="dash-top-client-amount">${formatCurrency(Math.round(clientItem.amount))}</span>
+                ${safeCode ? '<span class="material-icons-round dash-top-client-chev">chevron_right</span>' : ''}
+            </div>
+        </div>
+    `;
+}
+
 async function renderDash(isBack = false) {
     if (typeof updateHistoryState === 'function') updateHistoryState('dash', isBack);
     const app = document.getElementById('app');
-    
+
     // Usar el periodo seleccionado
     const selectedMonth = currentDashDate.getMonth();
     const selectedYear = currentDashDate.getFullYear();
-    
+
     const stats = await dataManager.getDashStats(selectedMonth, selectedYear);
-    const goals = await dataManager.getDetailedGoals();
     const dueVisitAlerts = typeof dataManager.getDueVisitAlerts === 'function'
         ? await dataManager.getDueVisitAlerts()
         : [];
-    
+
     const monthSales = stats.ventasMes.total;
-    const targetAmount = stats.ventasMes.objetivo;
-    const progressPercent = stats.ventasMes.porcentaje;
     const year = selectedYear;
-
-    let targetLabel = "Objetivo 3% del Mes";
-    if (monthSales >= goals.data4[selectedMonth]) targetLabel = "Objetivo 5% del Mes";
-    else if (monthSales >= goals.data3[selectedMonth]) targetLabel = "Objetivo 4% del Mes";
-
 
     const headerHtml = getCommonHeaderHtml('Dash', {
         extraAction: `
-            <button class="btn-header-pill" onclick="openReportModal()" title="Informe Completo">
+            <button type="button" class="btn-header-pill btn-dash-report-pill" onclick="openReportModal()" title="Informe Completo">
                 <span class="material-icons-round">analytics</span>
-                <span>Informe Completo</span>
+                <span class="btn-dash-report-label">Informe Completo</span>
             </button>
         `
     });
 
-    let contentHtml = '<main class="main-content fade-in-up" style="padding-top: 1rem;">';
-    
-    // Cabecera de Sección con Selector de Fecha Refinado
-    const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(currentDashDate).toUpperCase();
-    const isToday = currentDashDate.getMonth() === new Date().getMonth() && 
+    const rawMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(currentDashDate);
+    const monthLabelCap = rawMonthName.charAt(0).toUpperCase() + rawMonthName.slice(1);
+    const isToday = currentDashDate.getMonth() === new Date().getMonth() &&
                     currentDashDate.getFullYear() === new Date().getFullYear();
 
     const dueAlertPreview = dueVisitAlerts.slice(0, 2).map(n =>
         `${_escapeDashHtml(n.clientName)}: "${_escapeDashHtml(n.note)}"`
     ).join(' · ');
 
-    contentHtml += `
-        <div class="dash-section-header mb-6" style="padding: 0 1.25rem;">
-            <div class="dash-top-controls-row">
-                <div style="display: flex; flex-direction: column; gap: 2px; margin-top: -2px; min-width: 0;">
-                    <h1 class="text-3xl font-black text-slate-900 leading-tight" style="margin: 0;">Dash</h1>
-                    <span class="font-bold text-slate-500 tracking-widest" style="white-space: nowrap; font-size: 11px;">${monthName} ${year}</span>
-                </div>
-                <div class="date-selector-container">
-                    <button class="nav-date-btn" onclick="changeDashMonth(-1)" title="Mes anterior">
-                        <span class="material-icons-round">chevron_left</span>
-                    </button>
-                    <button onclick="resetDashDate()" class="btn-today-selector">HOY</button>
-                    <button class="nav-date-btn" onclick="changeDashMonth(1)" title="Mes siguiente">
-                        <span class="material-icons-round">chevron_right</span>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="dash-quick-actions-grid">
-                <button type="button" class="dash-quick-card" onclick="renderDepartamentos()">
-                    <span class="material-icons-round" style="color: #3b82f6;">groups</span>
-                    <span>Departamentos</span>
-                </button>
-                <button type="button" class="dash-quick-card" onclick="openCalendarModal()">
-                    <span class="material-icons-round" style="color: #f59e0b;">calendar_month</span>
-                    <span>Calendario</span>
-                </button>
-                <button type="button" class="dash-quick-card" onclick="openVisitNotesModal()">
-                    ${dueVisitAlerts.length > 0 ? `<span class="dash-quick-badge">${dueVisitAlerts.length}</span>` : ''}
-                    <span class="material-icons-round" style="color: #0284c7;">edit_note</span>
-                    <span>Notas visita</span>
-                </button>
-            </div>
-
-            ${dueVisitAlerts.length > 0 ? `
-            <div class="dash-visit-alert-banner" onclick="openVisitNotesModal()">
-                <div class="dash-visit-alert-icon">
-                    <span class="material-icons-round">notifications_active</span>
-                </div>
-                <div class="dash-visit-alert-body">
-                    <div class="dash-visit-alert-title">
-                        ${dueVisitAlerts.length === 1 ? '1 recordatorio de visita para hoy' : `${dueVisitAlerts.length} recordatorios de visita pendientes`}
-                    </div>
-                    <div class="dash-visit-alert-sub">${dueAlertPreview}${dueVisitAlerts.length > 2 ? ` (+${dueVisitAlerts.length - 2} más)` : ''}</div>
-                </div>
-                <span class="dash-visit-alert-cta">Ver</span>
-            </div>
-            ` : ''}
-        </div>
-    `;
-
     // --- Lógica de objetivos dinámicos (3% -> 4% -> 5%) ---
     const th = stats.ventasMes.thresholds;
     let activeTarget = th.p3;
-    let activeLabel = "Objetivo 3% del Mes";
-    
-    if (monthSales >= th.p4) {
+    let activeTierPct = 3;
+    let activeLabel = 'Meta 3%';
+
+    if (th.p4 > 0 && monthSales >= th.p4) {
         activeTarget = th.p5;
-        activeLabel = "Objetivo 5% del Mes";
-    } else if (monthSales >= th.p3) {
+        activeTierPct = 5;
+        activeLabel = 'Meta 5%';
+    } else if (th.p3 > 0 && monthSales >= th.p3) {
         activeTarget = th.p4;
-        activeLabel = "Objetivo 4% del Mes";
+        activeTierPct = 4;
+        activeLabel = 'Meta 4%';
     }
 
-    const currentProgressPercent = Math.min((monthSales / activeTarget) * 100, 100).toFixed(1);
-    
-    // Cálculo de color dinámico (Rojo 0 -> Verde 120)
-    const hue = (currentProgressPercent / 100) * 120;
-    const barColor = `hsl(${hue}, 85%, 45%)`;
-    const glowColor = `hsla(${hue}, 85%, 45%, 0.4)`;
+    const rawPct = activeTarget > 0 ? Math.min((monthSales / activeTarget) * 100, 100) : 0;
+    const currentProgressPercent = rawPct.toFixed(1);
+    const hue = (rawPct / 100) * 120;
+    const barColor = `hsl(${hue}, 82%, 44%)`;
 
-    // Card de Ventas con Comparativa YoY
-    contentHtml += `
-        <div class="card glass shadow-premium" style="border-left: 5px solid var(--blue-primary); margin-bottom: 1.5rem; padding: 1.5rem 2rem;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <p class="card-title-sm" style="margin: 0; font-size: 14px; letter-spacing: 1px; color: #94a3b8; font-weight: 900;">VENTAS DEL MES</p>
-                <h2 class="price-display-lg" style="margin: 0; line-height: 1; font-size: 3rem; color: #1e293b;">${formatCurrency(Math.round(monthSales))}</h2>
-                
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 13px; font-weight: 850; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${activeLabel}</span>
-                    <span style="font-size: 13px; font-weight: 900; color: #1e293b;">${formatCurrency(Math.round(activeTarget))}</span>
-                </div>
+    const missingForTarget = Math.max(0, activeTarget - monthSales);
+    const goalStatusLine = activeTarget <= 0
+        ? 'Sin objetivo configurado para este mes'
+        : (activeTierPct === 5 && monthSales >= th.p5)
+            ? `¡Meta máxima 5% superada! (+${formatCurrency(Math.round(monthSales - th.p5))})`
+            : `Faltan ${formatCurrency(Math.round(missingForTarget))} para alcanzar el ${activeTierPct}%`;
 
-                <div class="premium-progress-container" onclick="openGoalsModal()" style="cursor: pointer; margin: 0.5rem 0;">
-                    <div class="premium-progress-bar" style="width: ${currentProgressPercent}%; background-color: ${barColor}; box-shadow: 0 0 15px ${glowColor};"></div>
-                    <div class="premium-progress-text">${currentProgressPercent}%</div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                    ${(() => {
-                        const prevYearSales = stats.ventasMes.totalAnterior || 0;
-                        const diff = monthSales - prevYearSales;
-                        const diffPercent = prevYearSales > 0 ? (diff / prevYearSales) * 100 : (monthSales > 0 ? 100 : 0);
-                        const isPositive = diff >= 0;
-                        
-                        let color, bgColor, borderColor;
-                        if (diffPercent < 0) {
-                            color = '#ef4444'; bgColor = '#ef444410'; borderColor = '#ef444420';
-                        } else if (diffPercent >= 5) {
-                            color = '#10b981'; bgColor = '#10b98110'; borderColor = '#10b98120';
-                        } else {
-                            const ratio = diffPercent / 5;
-                            const h = 38 + (142 - 38) * ratio;
-                            color = `hsl(${h}, 80%, 45%)`;
-                            bgColor = `hsla(${h}, 80%, 45%, 0.1)`;
-                            borderColor = `hsla(${h}, 80%, 45%, 0.2)`;
-                        }
-
-                        const icon = isPositive ? 'trending_up' : 'trending_down';
-                        return `
-                            <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: ${bgColor}; color: ${color}; border: 1px solid ${borderColor};">
-                                <span class="material-icons-round" style="font-size: 16px;">${icon}</span>
-                                <span style="font-size: 12px; font-weight: 850;">${isPositive ? '+' : ''}${diffPercent.toFixed(1)}% vs año ant.</span>
-                            </div>
-
-                            <div style="display: flex; align-items: center; gap: 8px; color: #1e293b; font-size: 15px; font-weight: 850; padding-right: 4px;">
-                                <span class="material-icons-round" style="font-size: 20px; color: #009ee3;">event_repeat</span>
-                                <span>Quedan ${getRemainingBusinessDays(currentDashDate)} días</span>
-                            </div>
-                        `;
-                    })()}
-                </div>
-            </div>
-        </div>
-    `;
+    const remainingDays = getRemainingBusinessDays(currentDashDate);
+    const prevYearSales = stats.ventasMes.totalAnterior || 0;
+    const yoyChipHtml = _buildDashYoyBadgeHtml(monthSales, prevYearSales);
+    const daysText = remainingDays > 0
+        ? `Quedan ${remainingDays} ${remainingDays === 1 ? 'día' : 'días'}`
+        : (isToday ? 'Último día' : 'Mes cerrado');
 
     // --- CÁLCULO DE VENTAS SEMANALES ---
     const rawWeeks = [];
@@ -215,19 +196,17 @@ async function renderDash(isBack = false) {
     let sDate = 1;
     while (sDate <= lastDayOfMonth.getDate()) {
         const curr = new Date(year, selectedMonth, sDate);
-        let dw = curr.getDay(); // 0 (Sun) to 6 (Sat)
-        if (dw === 0) dw = 7; // Normalize Sun to 7
+        let dw = curr.getDay();
+        if (dw === 0) dw = 7;
         let eDate = sDate + (7 - dw);
         if (eDate > lastDayOfMonth.getDate()) eDate = lastDayOfMonth.getDate();
         rawWeeks.push({ start: sDate, end: eDate });
         sDate = eDate + 1;
     }
 
-    // Filtrar solo las semanas que contienen al menos un día laborable (L-V)
     const weeksList = rawWeeks.filter(w => {
         for (let d = w.start; d <= w.end; d++) {
-            const date = new Date(year, selectedMonth, d);
-            const dayOfWeek = date.getDay();
+            const dayOfWeek = new Date(year, selectedMonth, d).getDay();
             if (dayOfWeek >= 1 && dayOfWeek <= 5) return true;
         }
         return false;
@@ -246,103 +225,188 @@ async function renderDash(isBack = false) {
                 return day >= w.start && day <= w.end;
             })
             .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
-        
+
         const isCur = isCurrentRealMonth && realTodayDay >= w.start && realTodayDay <= w.end;
-        
+        const rangeLabel = w.start === w.end ? `${w.start}` : `${w.start}–${w.end}`;
+
         return `
             <div class="weekly-stat-card ${isCur ? 'current-week' : ''}">
-                <span class="weekly-label">Semana ${i + 1}</span>
+                <div class="weekly-card-top">
+                    <span class="weekly-label">Sem. ${i + 1}</span>
+                    ${isCur ? '<span class="weekly-now-dot" title="Semana actual"></span>' : `<span class="weekly-range">${rangeLabel}</span>`}
+                </div>
                 <span class="weekly-amount">${formatCurrency(Math.round(wTotal))}</span>
             </div>
         `;
     }).join('');
 
-    contentHtml += `
-        <div class="weekly-sales-grid">
-            ${weeklyHtml}
-        </div>
-    `;
+    const avgOrderMonth = stats.stats.pedidosMes > 0 ? (stats.ventasMes.total / stats.stats.pedidosMes) : 0;
+    const topClientes = stats.topClientes || [];
+    const maxTopAmount = topClientes.length > 0 ? (topClientes[0].amount || 0) : 0;
+    const topClientsHtml = topClientes.length > 0
+        ? topClientes.map(c => _buildDashTopClientRowHtml(c, maxTopAmount)).join('')
+        : `<div class="dash-empty-box">Sin pedidos registrados en ${monthLabelCap} ${year}</div>`;
 
-    // Gráfico de Tendencia
+    let contentHtml = `<main class="dash-main fade-in-up">`;
+
     contentHtml += `
-        <div class="card glass shadow-premium" style="margin-bottom: 1.5rem;">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-2">
-                    <div class="icon-circle bg-blue-light">
-                        <span class="material-icons-round text-blue-primary">analytics</span>
-                    </div>
-                    <h3 class="font-bold text-gray-800">Tendencia de Ventas</h3>
+        <div class="dash-top-controls-row">
+            <div class="dash-period-box">
+                <span class="dash-period-kicker">${isToday ? 'Mes en curso' : 'Histórico mensual'}</span>
+                <h2 class="dash-period-title">${monthLabelCap} ${year}</h2>
+            </div>
+            <div class="date-selector-container">
+                <button type="button" class="nav-date-btn" onclick="changeDashMonth(-1)" title="Mes anterior" aria-label="Mes anterior">
+                    <span class="material-icons-round">chevron_left</span>
+                </button>
+                <button type="button" onclick="resetDashDate()" class="btn-today-selector ${isToday ? 'is-current' : ''}">HOY</button>
+                <button type="button" class="nav-date-btn" onclick="changeDashMonth(1)" title="Mes siguiente" aria-label="Mes siguiente">
+                    <span class="material-icons-round">chevron_right</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="dash-quick-actions-grid">
+            <button type="button" class="dash-quick-card" onclick="renderDepartamentos()">
+                <span class="dash-quick-icon is-blue"><span class="material-icons-round">groups</span></span>
+                <span class="dash-quick-label">Departamentos</span>
+            </button>
+            <button type="button" class="dash-quick-card" onclick="openCalendarModal()">
+                <span class="dash-quick-icon is-amber"><span class="material-icons-round">calendar_month</span></span>
+                <span class="dash-quick-label">Calendario</span>
+            </button>
+            <button type="button" class="dash-quick-card" onclick="openVisitNotesModal()">
+                ${dueVisitAlerts.length > 0 ? `<span class="dash-quick-badge">${dueVisitAlerts.length}</span>` : ''}
+                <span class="dash-quick-icon is-teal"><span class="material-icons-round">edit_note</span></span>
+                <span class="dash-quick-label">Notas visita</span>
+            </button>
+        </div>
+
+        ${dueVisitAlerts.length > 0 ? `
+        <div class="dash-visit-alert-banner" onclick="openVisitNotesModal()">
+            <div class="dash-visit-alert-icon">
+                <span class="material-icons-round">notifications_active</span>
+            </div>
+            <div class="dash-visit-alert-body">
+                <div class="dash-visit-alert-title">
+                    ${dueVisitAlerts.length === 1 ? '1 recordatorio de visita para hoy' : `${dueVisitAlerts.length} recordatorios de visita pendientes`}
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <span style="display: block; width: 10px; height: 10px; border-radius: 50%; background-color: #bae6fd;"></span>
-                        <span style="font-size: 11px; font-weight: 800; color: #94a3b8;">Ant.</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span style="display: block; width: 10px; height: 10px; border-radius: 50%; background-color: #009ee3;"></span>
-                        <span style="font-size: 11px; font-weight: 800; color: #1e293b;">Actual</span>
-                    </div>
+                <div class="dash-visit-alert-sub">${dueAlertPreview}${dueVisitAlerts.length > 2 ? ` (+${dueVisitAlerts.length - 2} más)` : ''}</div>
+            </div>
+            <span class="dash-visit-alert-cta">Ver</span>
+        </div>
+        ` : ''}
+
+        <section class="dash-hero-card">
+            <div class="dash-hero-top">
+                <span class="dash-hero-eyebrow">VENTAS DEL MES</span>
+                <button type="button" class="dash-tier-pill" onclick="openGoalsModal()" title="Ver objetivos del mes">
+                    <span class="material-icons-round">ads_click</span>
+                    <span>${activeLabel}</span>
+                </button>
+            </div>
+
+            <div class="dash-hero-amount">${formatCurrency(Math.round(monthSales))}</div>
+
+            <div class="dash-hero-goal-box" onclick="openGoalsModal()" role="button" tabindex="0">
+                <div class="dash-hero-goal-row">
+                    <span class="dash-hero-goal-label">Objetivo ${activeTierPct}%: <strong>${formatCurrency(Math.round(activeTarget))}</strong></span>
+                    <span class="dash-hero-goal-pct" style="color: ${barColor};">${currentProgressPercent}%</span>
+                </div>
+                <div class="dash-progress-track">
+                    <div class="dash-progress-fill" style="width: ${currentProgressPercent}%; background-color: ${barColor};"></div>
+                </div>
+                <div class="dash-hero-goal-sub">${goalStatusLine}</div>
+            </div>
+
+            <div class="dash-hero-footer">
+                ${yoyChipHtml}
+                <span class="dash-days-chip">
+                    <span class="material-icons-round">event_repeat</span>
+                    <span>${daysText}</span>
+                </span>
+            </div>
+        </section>
+
+        <section class="dash-section-block">
+            <div class="dash-section-head">
+                <span class="dash-section-title">Desglose semanal</span>
+                <span class="dash-section-meta">${weeksList.length} semanas</span>
+            </div>
+            <div class="weekly-sales-grid">
+                ${weeklyHtml}
+            </div>
+        </section>
+
+        <section class="dash-card dash-chart-card">
+            <div class="dash-chart-head">
+                <div class="dash-chart-title-wrap">
+                    <span class="dash-chart-icon">
+                        <span class="material-icons-round">analytics</span>
+                    </span>
+                    <h3 class="dash-chart-title">Tendencia de Ventas</h3>
+                </div>
+                <div class="dash-chart-seg" role="group" aria-label="Rango del gráfico">
+                    <button type="button" class="dash-chart-seg-btn ${_dashChartRange === '6m' ? 'is-active' : ''}" data-range="6m" onclick="setDashChartRange('6m')">6M</button>
+                    <button type="button" class="dash-chart-seg-btn ${_dashChartRange === '12m' ? 'is-active' : ''}" data-range="12m" onclick="setDashChartRange('12m')">12M</button>
                 </div>
             </div>
-            <div style="display: flex; height: 220px; width: 100%; position: relative;">
-                <div style="width: 70px; height: 100%; flex-shrink: 0; z-index: 10; padding-right: 5px;">
+            <div class="dash-chart-subbar">
+                <div class="dash-chart-legend">
+                    <span class="dash-legend-item"><i class="is-prev"></i>Ant.</span>
+                    <span class="dash-legend-item"><i class="is-cur"></i>Actual</span>
+                </div>
+                <div id="dashChartDeltaWrap">${_buildChartPeriodDeltaHtml(stats.tendencia || [], _dashChartRange)}</div>
+            </div>
+            <div id="dashChartWrap" class="dash-chart-wrap ${_dashChartRange === '12m' ? 'is-12m' : 'is-6m'}">
+                <div class="dash-chart-yaxis">
                     <canvas id="trendChartYAxis"></canvas>
                 </div>
-                <div id="trendChartScroll" style="flex: 1; overflow-x: auto; overflow-y: hidden; position: relative;">
-                    <div style="width: 200%; min-width: 800px; height: 100%; position: relative;">
+                <div id="trendChartScroll" class="dash-chart-scroll">
+                    <div class="dash-chart-canvas-box">
                         <canvas id="trendChart"></canvas>
                     </div>
                 </div>
             </div>
-        </div>
-    `;
-
-    const avgOrderMonth = stats.stats.pedidosMes > 0 ? (stats.ventasMes.total / stats.stats.pedidosMes) : 0;
-    contentHtml += `
-        <div class="dash-stats-grid-3">
-            <div class="card glass shadow-premium flex flex-col justify-center items-center text-center">
-                <div class="stat-icon-box mb-2" style="background-color: #e0e7ff;">
-                     <span class="material-icons-round" style="color: #4f46e5;">group</span>
-                </div>
-                <h2 class="text-xl font-bold">${stats.stats.clientesActivos}</h2>
-                <p class="text-[10px] uppercase font-bold text-slate-400">Clientes Activos</p>
+            <div id="dashChartSwipeHint" class="dash-chart-swipe-hint" style="display: ${_dashChartRange === '12m' ? 'flex' : 'none'};">
+                <span class="material-icons-round">swipe</span>
+                <span>Desliza horizontalmente para ver los 12 meses</span>
             </div>
-            <div class="card glass shadow-premium flex flex-col justify-center items-center text-center">
-                 <div class="stat-icon-box mb-2" style="background-color: #dcfce7;">
-                     <span class="material-icons-round" style="color: #16a34a;">shopping_cart</span>
-                </div>
-                <h2 class="text-xl font-bold">${stats.stats.pedidosMes}</h2>
-                <p class="text-[10px] uppercase font-bold text-slate-400">Pedidos Mes</p>
-            </div>
-            <div class="card glass shadow-premium flex flex-col justify-center items-center text-center">
-                 <div class="stat-icon-box mb-2" style="background-color: #fef3c7;">
-                     <span class="material-icons-round" style="color: #d97706;">payments</span>
-                </div>
-                <h2 class="text-xl font-bold">${formatCurrency(Math.round(avgOrderMonth))}</h2>
-                <p class="text-[10px] uppercase font-bold text-slate-400">Media Pedido</p>
-            </div>
-        </div>
+        </section>
 
-        <div style="margin-top: 2rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
-            <span class="material-icons-round" style="color: #fbbf24; font-size: 22px;">emoji_events</span>
-            <h3 style="margin: 0; font-size: 15px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.8px;">Top Clientes Mensual</h3>
-        </div>
+        <section class="dash-stats-grid-3">
+            <div class="dash-kpi-card is-indigo">
+                <span class="dash-kpi-icon is-indigo"><span class="material-icons-round">group</span></span>
+                <div class="dash-kpi-val">${stats.stats.clientesActivos}</div>
+                <div class="dash-kpi-lbl">Clientes Activos</div>
+                <div class="dash-kpi-sub">Con pedido</div>
+            </div>
+            <div class="dash-kpi-card is-green">
+                <span class="dash-kpi-icon is-green"><span class="material-icons-round">shopping_cart</span></span>
+                <div class="dash-kpi-val">${stats.stats.pedidosMes}</div>
+                <div class="dash-kpi-lbl">Pedidos Mes</div>
+                <div class="dash-kpi-sub">${stats.stats.pedidosAnio} en ${year}</div>
+            </div>
+            <div class="dash-kpi-card is-amber">
+                <span class="dash-kpi-icon is-amber"><span class="material-icons-round">payments</span></span>
+                <div class="dash-kpi-val">${formatCurrency(Math.round(avgOrderMonth))}</div>
+                <div class="dash-kpi-lbl">Media Pedido</div>
+                <div class="dash-kpi-sub">Ticket medio</div>
+            </div>
+        </section>
 
-        <div class="top-clients-list" style="margin-bottom: 2.5rem; display: flex; flex-direction: column; align-items: center; width: 100%; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-bottom: 15px; padding-top: 5px;">
-            ${(stats.topClientes || []).map(c => `
-                <div class="card glass shadow-sm" style="padding: 12px 16px; border-radius: 16px; margin-bottom: 0.6rem; display: flex; align-items: center; background: white; border: 1px solid rgba(0,0,0,0.03); width: 90%; max-width: 400px;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <div class="rank-circle" style="background: #f1f5f9; color: #64748b; font-size: 11px; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;">
-                            ${c.rank.toString().padStart(2, '0')}
-                        </div>
-                        <div>
-                            <div style="font-size: 13px; font-weight: 800; color: #1e293b; text-transform: uppercase; line-height: 1.2;">${c.name}</div>
-                            <div style="font-size: 12px; font-weight: 600; color: #94a3b8; margin-top: 2px;">${formatCurrency(Math.round(c.amount))}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
+        <section class="dash-top-clients-section">
+            <div class="dash-section-head">
+                <span class="dash-section-title">
+                    <span class="material-icons-round dash-top-trophy">emoji_events</span>
+                    Top Clientes Mensual
+                </span>
+                <span class="dash-section-meta">${topClientes.length} ${topClientes.length === 1 ? 'tienda' : 'tiendas'}</span>
+            </div>
+            <div class="dash-top-clients-list">
+                ${topClientsHtml}
+            </div>
+        </section>
     `;
 
     // Modales de Informe
@@ -480,32 +544,73 @@ function initCarouselDrag(selector) {
 }
 
 
+window.setDashChartRange = function(range) {
+    if (range !== '6m' && range !== '12m') return;
+    _dashChartRange = range;
+    document.querySelectorAll('.dash-chart-seg-btn').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.range === range);
+    });
+    const wrap = document.getElementById('dashChartWrap');
+    if (wrap) {
+        wrap.classList.toggle('is-6m', range === '6m');
+        wrap.classList.toggle('is-12m', range === '12m');
+    }
+    const hint = document.getElementById('dashChartSwipeHint');
+    if (hint) hint.style.display = range === '12m' ? 'flex' : 'none';
+    const deltaWrap = document.getElementById('dashChartDeltaWrap');
+    if (deltaWrap && _lastDashStats) {
+        deltaWrap.innerHTML = _buildChartPeriodDeltaHtml(_lastDashStats.tendencia || [], range);
+    }
+    if (_lastDashStats) {
+        initDashCharts(_lastDashStats);
+        if (range === '12m') {
+            setTimeout(() => {
+                const sc = document.getElementById('trendChartScroll');
+                if (sc) sc.scrollLeft = sc.scrollWidth;
+            }, 60);
+        }
+    }
+};
+
 async function initDashCharts(stats) {
     const canvas = document.getElementById('trendChart');
     if (!canvas) return;
+    _lastDashStats = stats;
 
-    // Destruir instancia previa si existe para evitar duplicados y flickering
-    if (window.myTrendChart) window.myTrendChart.destroy();
+    // Destruir instancias previas si existen para evitar duplicados y flickering
+    if (window.myTrendChart) {
+        window.myTrendChart.destroy();
+        window.myTrendChart = null;
+    }
+    if (window.myTrendChartYAxis) {
+        window.myTrendChartYAxis.destroy();
+        window.myTrendChartYAxis = null;
+    }
 
     const ctx = canvas.getContext('2d');
-    const allHistory = await dataManager.getSalesHistory();
-    const currentYear = new Date().getFullYear();
-    const lastYear = currentYear - 1;
-    
-    const labels = stats.tendencia.map(t => t.mes);
-    const currentData = stats.tendencia.map(t => t.ventas);
-    
-    // Obtener datos del año anterior
-    const now = new Date();
-    const lastYearData = stats.tendencia.map(t => t.ventasAnterior);
+    const is6m = _dashChartRange === '6m';
+    const rawSeries = Array.isArray(stats.tendencia) ? stats.tendencia : [];
+    const series = is6m ? rawSeries.slice(-6) : rawSeries;
+
+    const labels = series.map(t => t.mes);
+    const currentData = series.map(t => t.ventas);
+    const lastYearData = series.map(t => t.ventasAnterior);
+
+    const maxSeriesVal = Math.max(0, ...currentData, ...lastYearData);
+    const niceScale = _computeChartNiceScale(maxSeriesVal);
 
     const isDark = document.body.classList.contains('dark-mode');
     const textColor = isDark ? '#94a3b8' : '#64748b';
-    const gridColor = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
+    const gridColor = isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(148, 163, 184, 0.22)';
+    const prevBarColor = isDark ? 'rgba(148, 163, 184, 0.38)' : '#cbd5e1';
 
+    const curGrad = ctx.createLinearGradient(0, 10, 0, 185);
+    curGrad.addColorStop(0, '#38bdf8');
+    curGrad.addColorStop(1, '#0284c7');
+
+    // En modo 12M usamos eje Y fijo alineado exactamente a niceScale; en 6M el canvas principal dibuja su propio eje Y nativo
     const yAxisCanvas = document.getElementById('trendChartYAxis');
-    if (yAxisCanvas) {
-        if (window.myTrendChartYAxis) window.myTrendChartYAxis.destroy();
+    if (!is6m && yAxisCanvas) {
         window.myTrendChartYAxis = new Chart(yAxisCanvas.getContext('2d'), {
             type: 'bar',
             data: {
@@ -518,23 +623,25 @@ async function initDashCharts(stats) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: { top: 10, bottom: 0, left: 0, right: 0 } },
+                layout: { padding: { top: 8, bottom: 0, left: 2, right: 0 } },
                 plugins: { legend: { display: false }, tooltip: { enabled: false } },
                 scales: {
                     x: {
                         grid: { display: false, drawBorder: false },
                         border: { display: false },
-                        ticks: { color: 'transparent', font: { size: 10, weight: '800' }, padding: 10 }
+                        ticks: { color: 'transparent', font: { size: 10.5, weight: '800' }, padding: 8 }
                     },
                     y: {
-                        beginAtZero: true,
+                        min: 0,
+                        max: niceScale.max,
                         grid: { display: false, drawBorder: false },
                         border: { display: false },
                         ticks: {
+                            stepSize: niceScale.stepSize,
                             color: textColor,
-                            font: { size: 10, weight: '600' },
-                            callback: (value) => value >= 1000 ? (value/1000) + 'k' : value,
-                            padding: 2
+                            font: { size: 10.5, weight: '700' },
+                            callback: _formatChartAxisTick,
+                            padding: 4
                         }
                     }
                 },
@@ -551,20 +658,20 @@ async function initDashCharts(stats) {
                 {
                     label: 'Año Anterior',
                     data: lastYearData,
-                    backgroundColor: '#bae6fd', // Azul Cielo suave (Sky Blue)
-                    borderRadius: 4,
+                    backgroundColor: prevBarColor,
+                    borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 2, bottomRight: 2 },
                     borderSkipped: false,
-                    barPercentage: 0.85,
-                    categoryPercentage: 0.7
+                    barPercentage: 0.82,
+                    categoryPercentage: 0.68
                 },
                 {
                     label: 'Año Actual',
                     data: currentData,
-                    backgroundColor: '#009ee3',
-                    borderRadius: 4,
+                    backgroundColor: curGrad,
+                    borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 2, bottomRight: 2 },
                     borderSkipped: false,
-                    barPercentage: 0.85,  // Pequeña separación entre barras del mismo mes
-                    categoryPercentage: 0.7 // Espacio general
+                    barPercentage: 0.82,
+                    categoryPercentage: 0.68
                 }
             ]
         },
@@ -572,42 +679,58 @@ async function initDashCharts(stats) {
             responsive: true,
             maintainAspectRatio: false,
             layout: {
-                padding: { top: 10, bottom: 0, left: 0, right: 5 }
+                padding: { top: 8, bottom: 0, left: 0, right: 4 }
             },
             plugins: {
                 legend: { display: false },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: isDark ? '#1e293b' : '#fff',
-                    titleColor: isDark ? '#f8fafc' : '#1e293b',
-                    titleFont: { size: 14, weight: 'bold' },
-                    bodyColor: isDark ? '#94a3b8' : '#64748b',
+                    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    titleColor: isDark ? '#f8fafc' : '#0f172a',
+                    titleFont: { size: 13, weight: '800' },
+                    bodyColor: isDark ? '#cbd5e1' : '#475569',
                     bodyFont: { size: 12, weight: '600' },
                     borderColor: isDark ? '#334155' : '#e2e8f0',
                     borderWidth: 1,
                     cornerRadius: 12,
-                    padding: 12,
-                    boxPadding: 8,
+                    padding: 10,
+                    boxPadding: 6,
                     callbacks: {
                         label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) label += ': ';
-                            if (context.parsed.y !== null) {
-                                label += formatCurrency(Math.round(context.parsed.y));
-                            }
-                            return label;
+                            const label = context.dataset.label || '';
+                            const val = context.parsed.y !== null ? formatCurrency(Math.round(context.parsed.y)) : '0 €';
+                            return `${label}: ${val}`;
+                        },
+                        afterBody: function(items) {
+                            if (!items || items.length < 2) return '';
+                            const prev = items[0].parsed.y || 0;
+                            const cur = items[1].parsed.y || 0;
+                            if (prev <= 0 && cur <= 0) return '';
+                            const pct = prev > 0 ? ((cur - prev) / prev) * 100 : 100;
+                            const sign = pct >= 0 ? '+' : '';
+                            return `\nVariación: ${sign}${pct.toFixed(1)}%`;
                         }
                     }
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: true,
-                    grid: { color: gridColor, drawBorder: false },
-                    border: { display: false },
+                    min: 0,
+                    max: niceScale.max,
+                    grid: {
+                        color: gridColor,
+                        drawBorder: false,
+                        tickLength: 0
+                    },
+                    border: { display: false, dash: [4, 4] },
                     ticks: {
-                        display: false
+                        display: is6m,
+                        stepSize: niceScale.stepSize,
+                        color: textColor,
+                        font: { size: 10.5, weight: '700' },
+                        callback: _formatChartAxisTick,
+                        padding: 6
                     }
                 },
                 x: {
@@ -615,10 +738,10 @@ async function initDashCharts(stats) {
                     border: { display: false },
                     ticks: {
                         color: textColor,
-                        font: { size: 10, weight: '800' },
+                        font: { size: 10.5, weight: '800' },
                         autoSkip: false,
                         maxRotation: 0,
-                        padding: 10
+                        padding: 8
                     }
                 }
             },
