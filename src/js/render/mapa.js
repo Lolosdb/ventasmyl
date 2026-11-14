@@ -247,32 +247,38 @@ async function initLeafletMap() {
                         ${visitTag}
                         ${pinTag}
                     </div>
-                    <div class="popup-actions-stack">
-                        <div class="popup-actions-grid">
-                            <button type="button" class="popup-btn btn-detail"
-                                    onclick="event.stopPropagation(); window.openClientDetailModal('${safeCode}')">
-                                <span class="material-icons-round">account_circle</span>
-                                <span>Ficha</span>
-                            </button>
-                            <button type="button" class="popup-btn btn-go-direct"
-                                    onclick="event.stopPropagation(); window.open('https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}', '_blank')">
-                                <span class="material-icons-round">directions</span>
-                                <span>Ir</span>
-                            </button>
-                        </div>
-                        <button type="button" class="popup-btn btn-popup-order"
-                                onclick="event.stopPropagation(); window.openNewOrderForClient('${safeCode}')">
-                            <span class="material-icons-round">add_shopping_cart</span>
-                            <span>Nuevo pedido</span>
-                        </button>
-                        <button type="button" class="popup-btn btn-popup-visit"
-                                onclick="event.stopPropagation(); window.quickCheckInVisit('${safeCode}')">
-                            <span class="material-icons-round">visibility</span>
-                            <span>Visitado hoy</span>
-                        </button>
+                    <div class="popup-corp-grid app-corp-row">
+                        ${window.renderCorpActionBtn({
+                            type: 'maps',
+                            onclick: `window.open('https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}', '_blank')`,
+                            label: 'Cómo llegar',
+                            compact: true,
+                            stopPropagation: true
+                        })}
+                        ${window.renderCorpActionBtn({
+                            type: 'detail',
+                            onclick: `window.openClientDetailModal('${safeCode}')`,
+                            label: 'Ficha',
+                            compact: true,
+                            stopPropagation: true
+                        })}
+                        ${window.renderCorpActionBtn({
+                            type: 'order',
+                            onclick: `window.openNewOrderForClient('${safeCode}')`,
+                            label: 'Pedido',
+                            compact: true,
+                            stopPropagation: true
+                        })}
+                        ${window.renderCorpActionBtn({
+                            type: 'visit',
+                            onclick: `window.quickCheckInVisit('${safeCode}')`,
+                            label: 'Visitado',
+                            compact: true,
+                            stopPropagation: true
+                        })}
                     </div>
                 </div>
-            `, { closeButton: false, minWidth: 210 });
+            `, { closeButton: false, minWidth: 232 });
 
             window._mapMarkerItems.push({
                 marker,

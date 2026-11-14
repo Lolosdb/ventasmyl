@@ -13,6 +13,39 @@ function escapePedidosHtml(text) {
         .replace(/'/g, '&#39;');
 }
 
+function normalizePedidosSearch(text) {
+    return String(text || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function toInputDateValue(dateValue) {
+    if (!dateValue) return '';
+    const str = String(dateValue).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    if (str.includes('T') && /^\d{4}-\d{2}-\d{2}/.test(str)) {
+        return str.split('T')[0];
+    }
+    if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3 && parts[2].length === 4) {
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+    }
+    const d = new Date(str);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
+}
+
+function getOrderPendingTampoAmount(order) {
+    const total = parseFloat(order && order.amount) || 0;
+    const partial = Math.max(0, parseFloat(order && order.noTampoAmount) || 0);
+    return Math.max(0, total - partial);
+}
+
 function formatPedidoShortDate(dateValue) {
     if (!dateValue) return '';
     const d = new Date(dateValue);
@@ -53,54 +86,52 @@ async function renderPedidos(isBack = false) {
         return (b.displayId || 0) - (a.displayId || 0);
     });
 
-    let countAlmacen = 0, countTampo = 0;
+    let countAlmacen = 0, sumAlmacen = 0;
+    let countTampo = 0, sumTampo = 0;
     sortedOrders.forEach(o => {
         if (!o.facturadoTodo) {
-            if (o.noTampo) countTampo++;
-            else countAlmacen++;
+            if (o.noTampo) {
+                countTampo++;
+                sumTampo += getOrderPendingTampoAmount(o);
+            } else {
+                countAlmacen++;
+                sumAlmacen += parseFloat(o.amount) || 0;
+            }
         }
     });
 
-    const activeFilter = (window.currentPedidosStatusFilter && window.currentPedidosStatusFilter !== 'servido')
-        ? window.currentPedidosStatusFilter
-        : 'all';
-    window.currentPedidosStatusFilter = activeFilter;
-
     let contentHtml = '<main class="pedidos-view-main">';
 
-    // Parte fija superior: 1) Filtros de Estado -> 2) Buscador -> 3) Cabecera sutil del listado
+    // Parte fija superior: 1) Resumen siempre visible (Almacén y Falta Tampo) -> 2) Buscador -> 3) Cabecera del listado
     contentHtml += `
         <div class="pedidos-fixed-controls">
-            <div id="pedidosStatusTabs" class="pedidos-status-tabs">
-                <button type="button" data-status-tab="all" onclick="setPedidosStatusFilter('all')"
-                        class="pedidos-status-pill ${activeFilter === 'all' ? 'is-active' : ''}">
-                    <span class="pedidos-pill-count">${sortedOrders.length}</span>
-                    <span class="pedidos-pill-top">
-                        <span>Todos</span>
-                    </span>
-                </button>
-                <button type="button" data-status-tab="almacen" onclick="setPedidosStatusFilter('almacen')"
-                        class="pedidos-status-pill ${activeFilter === 'almacen' ? 'is-active' : ''}">
-                    <span class="pedidos-pill-count">${countAlmacen}</span>
-                    <span class="pedidos-pill-top">
-                        <span class="pedidos-status-dot"></span>
-                        <span>Almacén</span>
-                    </span>
-                </button>
-                <button type="button" data-status-tab="tampo" onclick="setPedidosStatusFilter('tampo')"
-                        class="pedidos-status-pill ${activeFilter === 'tampo' ? 'is-active' : ''}">
-                    <span class="pedidos-pill-count">${countTampo}</span>
-                    <span class="pedidos-pill-top">
-                        <span class="pedidos-status-dot"></span>
-                        <span>Falta Tampo</span>
-                    </span>
-                </button>
+            <div class="pedidos-summary-grid">
+                <div class="pedidos-kpi-card is-almacen">
+                    <div class="pedidos-kpi-top">
+                        <span class="pedidos-kpi-label">
+                            <span class="pedidos-status-dot"></span>
+                            <span>Almacén</span>
+                        </span>
+                        <span class="pedidos-kpi-count">${countAlmacen} ${countAlmacen === 1 ? 'ped.' : 'peds.'}</span>
+                    </div>
+                    <div class="pedidos-kpi-amount">${formatCurrency(Math.round(sumAlmacen))}</div>
+                </div>
+                <div class="pedidos-kpi-card is-tampo">
+                    <div class="pedidos-kpi-top">
+                        <span class="pedidos-kpi-label">
+                            <span class="pedidos-status-dot"></span>
+                            <span>Falta Tampo</span>
+                        </span>
+                        <span class="pedidos-kpi-count">${countTampo} ${countTampo === 1 ? 'ped.' : 'peds.'}</span>
+                    </div>
+                    <div class="pedidos-kpi-amount">${formatCurrency(Math.round(sumTampo))}</div>
+                </div>
             </div>
 
             <div class="pedidos-search-wrap">
                 <div class="pro-search-bar pedidos-search-bar">
                     <span class="material-icons-round pro-search-icon">search</span>
-                    <input type="text" id="searchPedidosInput" class="pro-search-input" placeholder="Buscar por Nº de pedido o Tienda..." oninput="filterPedidos()" onkeyup="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
+                    <input type="text" id="searchPedidosInput" class="pro-search-input" placeholder="Buscar por Nº de pedido o Tienda..." oninput="filterPedidos()" onkeydown="if(event.key==='Enter') this.blur()">
                     <div class="pro-search-actions">
                         <button type="button" id="clearPedidosSearchBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearPedidosSearch()" title="Borrar búsqueda">
                             <span class="material-icons-round">close</span>
@@ -113,7 +144,7 @@ async function renderPedidos(isBack = false) {
             </div>
 
             <div class="pedidos-table-header">
-                <div>Nº · TIENDA / FECHA</div>
+                <div>Nº · TIENDA / FECHA (${sortedOrders.length})</div>
                 <div style="text-align: right;">IMPORTE</div>
             </div>
         </div>
@@ -125,8 +156,11 @@ async function renderPedidos(isBack = false) {
         contentHtml += '<div class="text-center p-8 text-gray-400">No hay pedidos registrados</div>';
     } else {
         sortedOrders.forEach(order => {
-            const rawAmount = Math.round(parseFloat(order.amount) || 0);
+            const totalFloat = parseFloat(order.amount) || 0;
+            const rawAmount = Math.round(totalFloat);
             const amount = formatCurrency(rawAmount);
+            const noTampoAmt = Math.max(0, parseFloat(order.noTampoAmount) || 0);
+            const pendingTampoAmt = getOrderPendingTampoAmount(order);
             const shortDate = formatPedidoShortDate(order.dateISO || order.date) || '--/--/--';
             const cleanComment = String(order.comments || '').trim();
             const sinTampoFull = formatPedidoShortDate(order.noTampo);
@@ -137,28 +171,46 @@ async function renderPedidos(isBack = false) {
             let statusType = 'almacen';
             let statusClass = 'status-almacen';
             let statusHtml = `<span class="pedido-status-badge status-almacen">Almacén</span>`;
+            let statusSearchLabel = 'Almacén';
+            let amountSubHtml = '';
 
             if (order.facturadoTodo) {
                 statusType = 'servido';
                 statusClass = 'status-servido';
                 if (order.noTampo && sinTampoDM && todoDM) {
+                    statusSearchLabel = `Sin tampo ${sinTampoDM} Tampo ${todoDM}`;
                     statusHtml = `<span class="pedido-status-badge status-servido">Sin tampo ${sinTampoDM} · Tampo ${todoDM}</span>`;
                 } else if (todoFull) {
+                    statusSearchLabel = `Facturado ${todoFull}`;
                     statusHtml = `<span class="pedido-status-badge status-servido">Facturado · ${todoFull}</span>`;
                 } else {
+                    statusSearchLabel = 'Facturado';
                     statusHtml = `<span class="pedido-status-badge status-servido">Facturado</span>`;
                 }
             } else if (order.noTampo) {
                 statusType = 'tampo';
                 statusClass = 'status-tampo';
-                const sinTampoChip = sinTampoFull
-                    ? `<span class="pedido-status-badge status-tampo-soft">Sin Tampo ${sinTampoFull}</span>`
+                statusSearchLabel = `Sin Tampo ${sinTampoFull} Falta el Tampo`;
+                const sinTampoLabel = sinTampoFull
+                    ? (noTampoAmt > 0
+                        ? `Sin Tampo ${sinTampoFull} · ${formatCurrency(Math.round(noTampoAmt))}`
+                        : `Sin Tampo ${sinTampoFull}`)
+                    : '';
+                const sinTampoChip = sinTampoLabel
+                    ? `<span class="pedido-status-badge status-tampo-soft">${sinTampoLabel}</span>`
                     : '';
                 statusHtml = `${sinTampoChip}<span class="pedido-status-badge status-tampo">Falta el Tampo</span>`;
+                if (noTampoAmt > 0) {
+                    amountSubHtml = `<div class="p-amount-pending">Falta ${formatCurrency(Math.round(pendingTampoAmt))}</div>`;
+                }
             }
 
+            const searchIndex = normalizePedidosSearch(
+                `${order.displayId || ''} ${order.shop || ''} ${shortDate} ${cleanComment} ${statusSearchLabel} ${rawAmount}`
+            );
+
             contentHtml += `
-                <div class="pedido-row ${statusClass}" data-status="${statusType}" data-amount="${rawAmount}" onclick="openEditOrderModal('${order.id}')">
+                <div class="pedido-row ${statusClass}" data-status="${statusType}" data-amount="${rawAmount}" data-search="${escapePedidosHtml(searchIndex)}" onclick="openEditOrderModal('${order.id}')">
                     <div class="pedido-card-main">
                         <div class="pedido-card-top">
                             <span class="pedido-num-pill">${escapePedidosHtml(order.displayId)}</span>
@@ -173,7 +225,10 @@ async function renderPedidos(isBack = false) {
                         </div>
                         ${cleanComment ? `<div class="pedido-card-note">${escapePedidosHtml(cleanComment)}</div>` : ''}
                     </div>
-                    <div class="p-amount">${amount}</div>
+                    <div class="p-amount-col">
+                        <div class="p-amount">${amount}</div>
+                        ${amountSubHtml}
+                    </div>
                 </div>
             `;
         });
@@ -193,28 +248,17 @@ async function renderPedidos(isBack = false) {
     contentHtml += renderBottomNav('pedidos');
     app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
     
-    if (activeFilter !== 'all') {
-        filterPedidos();
-    }
     if (window.activeCurrentNav) window.activeCurrentNav('pedidos');
 }
 
-function setPedidosStatusFilter(status) {
-    const safeStatus = (status && status !== 'servido') ? status : 'all';
-    window.currentPedidosStatusFilter = safeStatus;
-    const tabs = document.querySelectorAll('#pedidosStatusTabs [data-status-tab]');
-    tabs.forEach(btn => {
-        const tab = btn.getAttribute('data-status-tab');
-        btn.classList.toggle('is-active', tab === safeStatus);
-    });
+function setPedidosStatusFilter() {
+    // Mantenido por compatibilidad: la lista completa se muestra siempre sin filtros de estado
     filterPedidos();
 }
 
 function filterPedidos() {
     const input = document.getElementById('searchPedidosInput');
-    const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-    const filter = norm(input ? input.value : '');
-    const activeStatus = window.currentPedidosStatusFilter || 'all';
+    const filter = normalizePedidosSearch(input ? input.value : '');
     
     // Usar utilidad global para el botón X
     toggleClearSearch('searchPedidosInput', 'clearPedidosSearchBtn');
@@ -224,12 +268,9 @@ function filterPedidos() {
 
     const rows = document.querySelectorAll('.pedido-row');
     rows.forEach(row => {
-        const text = norm(row.innerText);
-        const rowStatus = row.getAttribute('data-status') || 'almacen';
-        const matchText = !filter || text.includes(filter);
-        const matchStatus = activeStatus === 'all' || rowStatus === activeStatus;
-        const show = matchText && matchStatus;
-        row.style.display = show ? '' : 'none';
+        const searchData = row.dataset.search || '';
+        const show = !filter || searchData.includes(filter);
+        row.classList.toggle('is-hidden', !show);
         if (show) {
             visibleCount++;
             visibleAmount += parseFloat(row.getAttribute('data-amount')) || 0;
@@ -238,16 +279,10 @@ function filterPedidos() {
 
     const summaryBar = document.getElementById('pedidosFilterSummaryBar');
     if (summaryBar) {
-        if (activeStatus !== 'all' || filter) {
-            const labels = {
-                all: 'Filtrados',
-                almacen: '🟡 En Almacén (Pendientes)',
-                tampo: '🔵 Facturado parcial (Falta el Tampo)',
-                servido: '🟢 Facturados completos'
-            };
+        if (filter) {
             summaryBar.style.display = 'flex';
             summaryBar.innerHTML = `
-                <span>${labels[activeStatus] || 'Pedidos'}: <strong>${visibleCount}</strong></span>
+                <span>Resultados: <strong>${visibleCount}</strong></span>
                 <span>Total: <strong style="color: #0284c7;">${formatCurrency(Math.round(visibleAmount))}</strong></span>
             `;
         } else {
@@ -264,100 +299,168 @@ function injectPedidoModals() {
     if (document.getElementById('newOrderModal')) return;
     
     const modalsHtml = `
-    <!-- Modal ¿NUEVO?/Editar Pedido -->
+    <!-- Modal Nuevo / Editar Pedido -->
     <div id="newOrderModal" class="modal-overlay new-order-modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="text-xl font-bold">¿NUEVO? Pedido</h2>
-                <button class="icon-btn text-white" onclick="closeNewOrderModal()"><span class="material-icons-round">close</span></button>
+            <div class="modal-header order-modal-header">
+                <div class="order-modal-head-left">
+                    <div class="order-modal-head-icon">
+                        <span class="material-icons-round" id="orderModalHeadIcon">receipt_long</span>
+                    </div>
+                    <div class="order-modal-head-text">
+                        <h2 id="orderModalTitle" class="order-modal-title">Nuevo Pedido</h2>
+                        <p id="orderModalSubtitle" class="order-modal-subtitle">Completa los datos del pedido</p>
+                    </div>
+                </div>
+                <button type="button" class="order-modal-close-btn" onclick="closeNewOrderModal()" title="Cerrar">
+                    <span class="material-icons-round">close</span>
+                </button>
             </div>
-            <div class="modal-body">
-                <form id="newOrderForm" onsubmit="event.preventDefault(); saveNewOrder();">
-                    <div class="flex gap-4 mb-4">
-                        <div class="flex-1">
-                            <label class="order-form-label">FECHA</label>
-                            <input type="date" id="orderDate" class="order-input" onkeydown="handleOrderFormEnter(event, 'orderId')">
+
+            <form id="newOrderForm" class="order-modal-form" onsubmit="event.preventDefault(); saveNewOrder();">
+                <div class="modal-body order-modal-body">
+                    <!-- Sección 1: Datos principales -->
+                    <section class="order-section-card">
+                        <div class="order-section-header">
+                            <span class="order-section-title">
+                                <span class="material-icons-round">shopping_bag</span>
+                                <span>Datos del Pedido</span>
+                            </span>
                         </div>
-                        <div style="width: 140px;">
-                            <label class="order-form-label">Nº</label>
-                            <div class="order-input-wrapper">
-                                <input type="number" id="orderId" class="order-input" placeholder="Auto" onkeydown="handleOrderFormEnter(event, 'orderClient')">
-                                <button type="button" class="btn-auto-plus" onclick="autoIncrementOrderNumber()">+1</button>
+
+                        <div class="order-top-grid">
+                            <div class="order-field">
+                                <label class="order-form-label" for="orderDate">FECHA</label>
+                                <input type="date" id="orderDate" class="order-input" onkeydown="handleOrderFormEnter(event, 'orderId')">
+                            </div>
+                            <div class="order-field">
+                                <label class="order-form-label" for="orderId">Nº PEDIDO</label>
+                                <div class="order-input-wrapper">
+                                    <input type="number" id="orderId" class="order-input" placeholder="Auto" oninput="updateOrderModalSubtitle()" onkeydown="handleOrderFormEnter(event, 'orderClient')">
+                                    <button type="button" class="btn-auto-plus" onclick="autoIncrementOrderNumber()" title="Siguiente número">+1</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="order-form-group" style="margin-bottom: 0.75rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
-                            <label class="order-form-label" style="margin: 0;">TIENDA / CLIENTE</label>
-                            <div class="flex items-center gap-2" style="transform: translateY(4px);">
-                                <span class="toggle-label" style="font-size: 10.5px; font-weight: 900; color: #64748b; letter-spacing: 0.5px;">¿NUEVO?</span>
-                                <label class="switch" style="transform: scale(0.7); margin: 0; transform-origin: right center;">
-                                    <input type="checkbox" id="isNewClientSwitch">
-                                    <span class="slider"></span>
+                        <div class="order-field">
+                            <div class="order-field-head">
+                                <label class="order-form-label" for="orderClient">TIENDA / CLIENTE</label>
+                                <label class="order-new-client-pill" title="Marcar si es cliente nuevo">
+                                    <span class="order-new-client-text">¿Cliente nuevo?</span>
+                                    <span class="switch">
+                                        <input type="checkbox" id="isNewClientSwitch">
+                                        <span class="slider"></span>
+                                    </span>
                                 </label>
                             </div>
-                        </div>
-                        <div class="pro-search-bar" style="margin-bottom: 0;">
-                            <span class="material-icons-round pro-search-icon">search</span>
-                            <input type="text" id="orderClient" class="pro-search-input" list="clientsListDatalist" placeholder="Buscar cliente o código..." required onkeydown="handleOrderFormEnter(event, 'orderAmount')" onkeyup="toggleClearSearch('orderClient', 'clearOrderClientBtn')" oninput="toggleClearSearch('orderClient', 'clearOrderClientBtn'); handleClientInputJump(this.value)">
-                            <input type="hidden" id="orderClientCode" value="">
-                            <div class="pro-search-actions">
-                                <button type="button" id="clearOrderClientBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearSearchField('orderClient', 'clearOrderClientBtn'); document.getElementById('orderClientCode').value = ''; document.getElementById('orderClient').focus();" title="Borrar texto">
-                                    <span class="material-icons-round">close</span>
-                                </button>
-                                <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('orderClient', this, (val) => handleClientInputJump(val))" title="Dictar cliente">
-                                    <span class="material-icons-round">mic</span>
-                                </button>
+                            <div class="pro-search-bar" style="margin-bottom: 0;">
+                                <span class="material-icons-round pro-search-icon">search</span>
+                                <input type="text" id="orderClient" class="pro-search-input" list="clientsListDatalist" placeholder="Buscar cliente o código..." required onkeydown="handleOrderFormEnter(event, 'orderAmount')" onkeyup="toggleClearSearch('orderClient', 'clearOrderClientBtn')" oninput="toggleClearSearch('orderClient', 'clearOrderClientBtn'); handleClientInputJump(this.value); updateOrderModalSubtitle()">
+                                <input type="hidden" id="orderClientCode" value="">
+                                <div class="pro-search-actions">
+                                    <button type="button" id="clearOrderClientBtn" class="pro-search-clear-btn" style="display: none;" onclick="clearSearchField('orderClient', 'clearOrderClientBtn'); document.getElementById('orderClientCode').value = ''; updateOrderModalSubtitle(); document.getElementById('orderClient').focus();" title="Borrar texto">
+                                        <span class="material-icons-round">close</span>
+                                    </button>
+                                    <button type="button" class="pro-search-mic-btn" onclick="window.toggleVoiceDictation('orderClient', this, (val) => { handleClientInputJump(val); updateOrderModalSubtitle(); })" title="Dictar cliente">
+                                        <span class="material-icons-round">mic</span>
+                                    </button>
+                                </div>
+                                <datalist id="clientsListDatalist"></datalist>
                             </div>
-                            <datalist id="clientsListDatalist"></datalist>
                         </div>
-                    </div>
 
-                    <div class="order-form-group" style="margin-bottom: 0.75rem;">
-                        <label class="order-form-label">IMPORTE (€)</label>
-                        <input type="number" step="0.01" id="orderAmount" class="order-input" placeholder="0" required onkeydown="handleOrderFormEnter(event, 'orderNoTampo')">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="order-form-label">FACTURADO SIN TAMPO</label>
-                            <input type="date" id="orderNoTampo" class="order-input" onkeydown="handleOrderFormEnter(event, 'orderFacturadoTodo')">
+                        <div class="order-field">
+                            <label class="order-form-label" for="orderAmount">IMPORTE TOTAL</label>
+                            <div class="order-currency-box">
+                                <input type="number" step="0.01" inputmode="decimal" id="orderAmount" class="order-input order-currency-input" placeholder="0" required oninput="syncOrderBillingUI()" onkeydown="handleOrderFormEnter(event, 'orderNoTampo')">
+                                <span class="order-currency-unit">€</span>
+                            </div>
                         </div>
-                        <div>
-                            <label class="order-form-label">FACTURADO TODO</label>
-                            <input type="date" id="orderFacturadoTodo" class="order-input" onkeydown="handleOrderFormEnter(event, 'orderComments')">
-                        </div>
-                    </div>
+                    </section>
 
-                    <div class="order-form-group" style="margin-bottom: 0.75rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <label class="order-form-label" style="margin: 0;">COMENTARIOS</label>
-                            <button type="button" onclick="window.toggleVoiceDictation('orderComments', this)" style="display: inline-flex; align-items: center; gap: 4px; background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">
-                                <span class="material-icons-round" style="font-size: 15px;">mic</span>
+                    <!-- Sección 2: Estado de facturación -->
+                    <section class="order-section-card order-billing-card">
+                        <div class="order-section-header">
+                            <span class="order-section-title">
+                                <span class="material-icons-round">receipt</span>
+                                <span>Facturación</span>
+                            </span>
+                            <span id="orderStatusPreviewBadge" class="order-status-pill is-almacen">En Almacén</span>
+                        </div>
+
+                        <!-- Sub-bloque: Facturado sin tampo -->
+                        <div id="noTampoBlock" class="order-billing-block">
+                            <div class="order-field">
+                                <label class="order-form-label" for="orderNoTampo">FACTURADO SIN TAMPO (FECHA)</label>
+                                <div class="order-date-row">
+                                    <input type="date" id="orderNoTampo" class="order-input" oninput="syncOrderBillingUI()" onchange="syncOrderBillingUI()" onkeydown="handleOrderFormEnter(event, 'orderNoTampoAmount')">
+                                    <button type="button" id="clearNoTampoDateBtn" class="order-date-clear-btn" onclick="clearOrderDateField('orderNoTampo')" title="Quitar fecha sin tampo">
+                                        <span class="material-icons-round">close</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="noTampoAmountGroup" class="order-no-tampo-amount-panel" hidden>
+                                <div class="order-field">
+                                    <label class="order-form-label" for="orderNoTampoAmount">IMPORTE FACTURADO SIN TAMPO (€)</label>
+                                    <div class="order-currency-box">
+                                        <input type="number" step="0.01" min="0" inputmode="decimal" id="orderNoTampoAmount" class="order-input order-currency-input" placeholder="0" oninput="syncOrderBillingUI()" onkeydown="handleOrderFormEnter(event, 'orderFacturadoTodo')">
+                                        <span class="order-currency-unit">€</span>
+                                    </div>
+                                </div>
+                                <div id="noTampoRemainingPreview" class="order-tampo-calc-bar">
+                                    <span>Falta por salir (Tampo):</span>
+                                    <strong>0 €</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub-bloque: Facturado todo -->
+                        <div id="facturadoTodoBlock" class="order-billing-block">
+                            <div class="order-field">
+                                <label class="order-form-label" for="orderFacturadoTodo">FACTURADO TODO (FECHA)</label>
+                                <div class="order-date-row">
+                                    <input type="date" id="orderFacturadoTodo" class="order-input" oninput="syncOrderBillingUI()" onchange="syncOrderBillingUI()" onkeydown="handleOrderFormEnter(event, 'orderComments')">
+                                    <button type="button" id="clearFacturadoTodoDateBtn" class="order-date-clear-btn" onclick="clearOrderDateField('orderFacturadoTodo')" title="Quitar fecha facturado todo">
+                                        <span class="material-icons-round">close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Sección 3: Comentarios -->
+                    <section class="order-section-card">
+                        <div class="order-section-header">
+                            <span class="order-section-title">
+                                <span class="material-icons-round">notes</span>
+                                <span>Comentarios</span>
+                            </span>
+                            <button type="button" class="order-dictate-btn" onclick="window.toggleVoiceDictation('orderComments', this)">
+                                <span class="material-icons-round">mic</span>
                                 <span>Dictar</span>
                             </button>
                         </div>
-                        <textarea id="orderComments" class="order-input" rows="2" placeholder="Pulsa 'Dictar' o escribe notas sobre el pedido..." onkeydown="handleOrderFormEnter(event, 'isNewClientSwitch')"></textarea>
-                    </div>
+                        <textarea id="orderComments" class="order-input order-textarea" rows="2" placeholder="Pulsa 'Dictar' o escribe notas sobre el pedido..."></textarea>
+                    </section>
+                </div>
 
-                    <!-- PREMIUM FOOTER -->
-                    <div style="display: flex; gap: 10px; margin-top: 1.25rem;">
-                        <div id="btnDeleteOrder" style="display: none; flex: 0.45 !important; width: auto !important;">
-                            <button type="button" style="width: 100%; height: 48px; background: #ffffff !important; border: 2px solid #fee2e2 !important; color: #ef4444 !important; border-radius: 14px !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important;" onclick="deleteCurrentOrder()">
-                                <span class="material-icons-round" style="font-size: 22px;">delete_outline</span>
-                            </button>
-                        </div>
-                        <button type="button" style="flex: 1 !important; height: 48px; background: #f1f5f9 !important; border: none !important; color: #64748b !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 14.5px !important; cursor: pointer !important; width: auto !important;" onclick="closeNewOrderModal()">
-                            Cancelar
-                        </button>
-                        <button type="submit" style="flex: 1.2 !important; height: 48px; background: #009ee3 !important; border: none !important; color: #ffffff !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 14.5px !important; cursor: pointer !important; box-shadow: 0 6px 16px rgba(0, 158, 227, 0.25) !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; width: auto !important;">
-                            <span class="material-icons-round" style="font-size: 20px;">check</span>
-                            Guardar
+                <!-- Pie fijo de acciones -->
+                <div class="order-modal-footer">
+                    <div id="btnDeleteOrder" class="order-btn-delete-wrap">
+                        <button type="button" class="order-btn-delete" onclick="deleteCurrentOrder()" title="Eliminar pedido">
+                            <span class="material-icons-round" style="font-size: 22px;">delete_outline</span>
                         </button>
                     </div>
-                </form>
-            </div>
+                    <button type="button" class="order-btn-cancel" onclick="closeNewOrderModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="order-btn-save">
+                        <span class="material-icons-round" style="font-size: 20px;">check</span>
+                        <span>Guardar</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -453,6 +556,101 @@ function injectPedidoModals() {
     refreshOrderClientsDatalist();
 }
 
+function updateOrderModalSubtitle() {
+    const subtitleEl = document.getElementById('orderModalSubtitle');
+    if (!subtitleEl) return;
+    const idVal = (document.getElementById('orderId')?.value || '').trim();
+    const clientVal = (document.getElementById('orderClient')?.value || '').trim();
+    if (idVal && clientVal) {
+        subtitleEl.textContent = `Pedido #${idVal} · ${clientVal}`;
+    } else if (clientVal) {
+        subtitleEl.textContent = clientVal;
+    } else if (idVal) {
+        subtitleEl.textContent = `Pedido #${idVal}`;
+    } else {
+        subtitleEl.textContent = 'Completa los datos del pedido';
+    }
+}
+
+function clearOrderDateField(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.value = '';
+    if (inputId === 'orderNoTampo') {
+        const partialInput = document.getElementById('orderNoTampoAmount');
+        if (partialInput) {
+            partialInput.value = '';
+            if (typeof partialInput._syncClearBtn === 'function') partialInput._syncClearBtn();
+        }
+    }
+    syncOrderBillingUI();
+}
+
+function syncOrderBillingUI() {
+    const amountEl = document.getElementById('orderAmount');
+    const noTampoEl = document.getElementById('orderNoTampo');
+    const noTampoAmountEl = document.getElementById('orderNoTampoAmount');
+    const facturadoTodoEl = document.getElementById('orderFacturadoTodo');
+
+    const clearNoTampoBtn = document.getElementById('clearNoTampoDateBtn');
+    const clearTodoBtn = document.getElementById('clearFacturadoTodoDateBtn');
+    const noTampoAmountGroup = document.getElementById('noTampoAmountGroup');
+    const noTampoBlock = document.getElementById('noTampoBlock');
+    const facturadoTodoBlock = document.getElementById('facturadoTodoBlock');
+    const statusBadge = document.getElementById('orderStatusPreviewBadge');
+    const remainingBar = document.getElementById('noTampoRemainingPreview');
+
+    const hasNoTampo = !!(noTampoEl && noTampoEl.value);
+    const hasFacturadoTodo = !!(facturadoTodoEl && facturadoTodoEl.value);
+    const totalAmount = parseFloat(amountEl ? amountEl.value : '') || 0;
+    const partialAmount = Math.max(0, parseFloat(noTampoAmountEl ? noTampoAmountEl.value : '') || 0);
+
+    if (clearNoTampoBtn) clearNoTampoBtn.style.display = hasNoTampo ? 'inline-flex' : 'none';
+    if (clearTodoBtn) clearTodoBtn.style.display = hasFacturadoTodo ? 'inline-flex' : 'none';
+
+    if (noTampoAmountGroup) {
+        noTampoAmountGroup.hidden = !hasNoTampo;
+    }
+
+    if (noTampoBlock) {
+        noTampoBlock.classList.toggle('is-active-tampo', hasNoTampo && !hasFacturadoTodo);
+    }
+    if (facturadoTodoBlock) {
+        facturadoTodoBlock.classList.toggle('is-active-servido', hasFacturadoTodo);
+    }
+
+    if (statusBadge) {
+        statusBadge.classList.remove('is-almacen', 'is-tampo', 'is-servido');
+        if (hasFacturadoTodo) {
+            statusBadge.classList.add('is-servido');
+            statusBadge.textContent = 'Facturado Todo';
+        } else if (hasNoTampo) {
+            statusBadge.classList.add('is-tampo');
+            statusBadge.textContent = 'Falta Tampo';
+        } else {
+            statusBadge.classList.add('is-almacen');
+            statusBadge.textContent = 'En Almacén';
+        }
+    }
+
+    if (remainingBar && hasNoTampo) {
+        if (totalAmount > 0 && partialAmount > totalAmount) {
+            remainingBar.classList.add('is-warning');
+            remainingBar.innerHTML = `
+                <span>Supera el total del pedido</span>
+                <strong>Máx. ${formatCurrency(Math.round(totalAmount))}</strong>
+            `;
+        } else {
+            remainingBar.classList.remove('is-warning');
+            const remaining = Math.max(0, totalAmount - partialAmount);
+            remainingBar.innerHTML = `
+                <span>Falta por salir (Tampo):</span>
+                <strong>${formatCurrency(Math.round(remaining))}</strong>
+            `;
+        }
+    }
+}
+
 async function refreshOrderClientsDatalist() {
     const clients = await dataManager.getClients();
     window._cachedOrderClients = clients;
@@ -471,20 +669,29 @@ function openNewOrderModal() {
     form.reset();
     const codeInput = document.getElementById('orderClientCode');
     if (codeInput) codeInput.value = '';
+    const partialInput = document.getElementById('orderNoTampoAmount');
+    if (partialInput) partialInput.value = '';
     
     const btnDelete = document.getElementById('btnDeleteOrder');
     if (btnDelete) btnDelete.style.display = 'none';
     
-    const title = modal.querySelector('h2');
-    if (title) title.textContent = '¿NUEVO? Pedido';
+    const title = document.getElementById('orderModalTitle') || modal.querySelector('h2');
+    if (title) title.textContent = 'Nuevo Pedido';
+    const headIcon = document.getElementById('orderModalHeadIcon');
+    if (headIcon) headIcon.textContent = 'add_shopping_cart';
     
     document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
     delete document.getElementById('orderId').dataset.originalId;
     
     modal.classList.add('open');
-    // Limpiar botón borrar buscador
+    // Limpiar botón borrar buscador y sincronizar UI dinámica
     const clearBtn = document.getElementById('clearOrderClientBtn');
     if (clearBtn) clearBtn.style.display = 'none';
+    syncOrderBillingUI();
+    updateOrderModalSubtitle();
+    if (typeof window.enhanceClearableInputs === 'function') {
+        window.enhanceClearableInputs(modal);
+    }
 }
 
 async function openNewOrderForClient(clientCode) {
@@ -504,10 +711,11 @@ async function openNewOrderForClient(clientCode) {
     const clearBtn = document.getElementById('clearOrderClientBtn');
     if (clientInput) clientInput.value = client.name || '';
     if (codeInput) codeInput.value = client.code || '';
-    if (clearBtn) clearBtn.style.display = 'block';
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
 
     // Calcular automáticamente el siguiente Nº de pedido de este año
     await autoIncrementOrderNumber();
+    updateOrderModalSubtitle();
 
     setTimeout(() => {
         const amountInput = document.getElementById('orderAmount');
@@ -532,6 +740,7 @@ async function autoIncrementOrderNumber() {
     const nextId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
     const input = document.getElementById('orderId');
     input.value = nextId;
+    updateOrderModalSubtitle();
     // Saltar automáticamente al siguiente campo
     document.getElementById('orderClient').focus();
 }
@@ -575,12 +784,21 @@ async function saveNewOrder() {
     const amount = parseFloat(document.getElementById('orderAmount').value);
     const displayId = parseInt(document.getElementById('orderId').value);
     const noTampo = document.getElementById('orderNoTampo').value;
+    const rawNoTampoAmount = parseFloat(document.getElementById('orderNoTampoAmount')?.value);
+    const noTampoAmount = (noTampo && !isNaN(rawNoTampoAmount) && rawNoTampoAmount > 0) ? rawNoTampoAmount : 0;
     const facturadoTodo = document.getElementById('orderFacturadoTodo').value;
     const comments = document.getElementById('orderComments').value;
     const isNewClient = document.getElementById('isNewClientSwitch').checked;
 
     if (!date || !rawShop || isNaN(amount)) {
         alert('Por favor, rellena los campos obligatorios');
+        return;
+    }
+
+    if (noTampo && noTampoAmount > amount) {
+        alert('El importe facturado sin tampo no puede superar el importe total del pedido.');
+        const partialEl = document.getElementById('orderNoTampoAmount');
+        if (partialEl) partialEl.focus();
         return;
     }
 
@@ -613,6 +831,7 @@ async function saveNewOrder() {
         clientCode,
         amount,
         noTampo,
+        noTampoAmount,
         facturadoTodo,
         comments,
         year,
@@ -642,10 +861,13 @@ async function openEditOrderModal(orderId) {
     if (!order) return;
 
     const modal = document.getElementById('newOrderModal');
+    modal.style.zIndex = '1250';
     modal.classList.add('open');
     
-    const title = modal.querySelector('h2');
+    const title = document.getElementById('orderModalTitle') || modal.querySelector('h2');
     if (title) title.textContent = 'Editar Pedido';
+    const headIcon = document.getElementById('orderModalHeadIcon');
+    if (headIcon) headIcon.textContent = 'edit_note';
     
     const btnDelete = document.getElementById('btnDeleteOrder');
     if (btnDelete) btnDelete.style.display = 'block';
@@ -660,17 +882,27 @@ async function openEditOrderModal(orderId) {
         }
     }
 
-    document.getElementById('orderDate').value = order.date;
-    document.getElementById('orderClient').value = currentShopName;
+    document.getElementById('orderDate').value = toInputDateValue(order.date || order.dateISO);
+    document.getElementById('orderClient').value = currentShopName || '';
     const codeInput = document.getElementById('orderClientCode');
     if (codeInput) codeInput.value = currentClientCode;
     document.getElementById('orderAmount').value = order.amount;
     document.getElementById('orderId').value = order.displayId;
     document.getElementById('orderId').dataset.originalId = order.id;
-    document.getElementById('orderNoTampo').value = order.noTampo || '';
-    document.getElementById('orderFacturadoTodo').value = order.facturadoTodo || '';
+    document.getElementById('orderNoTampo').value = toInputDateValue(order.noTampo);
+    const partialVal = parseFloat(order.noTampoAmount) || 0;
+    const partialInput = document.getElementById('orderNoTampoAmount');
+    if (partialInput) partialInput.value = partialVal > 0 ? partialVal : '';
+    document.getElementById('orderFacturadoTodo').value = toInputDateValue(order.facturadoTodo);
     document.getElementById('orderComments').value = order.comments || '';
     document.getElementById('isNewClientSwitch').checked = !!order.persistedIsNewClient;
+
+    toggleClearSearch('orderClient', 'clearOrderClientBtn');
+    syncOrderBillingUI();
+    updateOrderModalSubtitle();
+    if (typeof window.enhanceClearableInputs === 'function') {
+        window.enhanceClearableInputs(modal);
+    }
 }
 
 async function deleteCurrentOrder() {
@@ -873,7 +1105,10 @@ window.closeNewOrderModal = closeNewOrderModal;
 window.saveNewOrder = saveNewOrder;
 window.deleteCurrentOrder = deleteCurrentOrder;
 window.openEditOrderModal = openEditOrderModal;
-window.autoFillOrderId = autoFillOrderId;
+window.autoIncrementOrderNumber = autoIncrementOrderNumber;
+window.syncOrderBillingUI = syncOrderBillingUI;
+window.clearOrderDateField = clearOrderDateField;
+window.updateOrderModalSubtitle = updateOrderModalSubtitle;
 window.openExportPedidosModal = openExportPedidosModal;
 window.closeExportPedidosModal = closeExportPedidosModal;
 window.executeExportXlsx = executeExportXlsx;

@@ -244,41 +244,8 @@
 .alert-card-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     flex-shrink: 0;
-}
-
-.btn-alert-circle {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: transform 0.14s ease, opacity 0.15s ease;
-}
-
-.btn-alert-circle:active {
-    transform: scale(0.92);
-}
-
-.btn-alert-call {
-    background: #1a73e8;
-    box-shadow: 0 3px 10px rgba(26, 115, 232, 0.25);
-}
-
-.btn-alert-whatsapp {
-    background: #25d366;
-    box-shadow: 0 3px 10px rgba(37, 211, 102, 0.25);
-}
-
-.btn-alert-circle.is-disabled {
-    opacity: 0.32;
-    pointer-events: none;
-    box-shadow: none;
 }
 
 .alerts-empty-state {

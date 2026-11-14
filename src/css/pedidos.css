@@ -37,125 +37,115 @@
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
-.pedidos-status-tabs {
+.pedidos-summary-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
     padding: 0 12px 10px 12px;
 }
 
-.pedidos-status-pill {
+.pedidos-kpi-card {
     min-width: 0;
-    min-height: 44px;
-    border-radius: 13px;
-    padding: 6px 6px;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-    border: 1.5px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
     background: #ffffff;
-    color: #334155;
     display: flex;
     flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.045);
+}
+
+.pedidos-kpi-card.is-almacen {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-color: #fcd34d;
+    border-left: 4px solid #f59e0b;
+}
+
+.pedidos-kpi-card.is-tampo {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #93c5fd;
+    border-left: 4px solid #2563eb;
+}
+
+.pedidos-kpi-top {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 2px;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-    transition: transform 0.14s ease, background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    justify-content: space-between;
+    gap: 6px;
 }
 
-.pedidos-status-pill:active {
-    transform: scale(0.96);
-}
-
-.pedidos-pill-top {
+.pedidos-kpi-label {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 5px;
-    line-height: 1.15;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
     white-space: nowrap;
 }
 
+.pedidos-kpi-card.is-almacen .pedidos-kpi-label {
+    color: #92400e;
+}
+
+.pedidos-kpi-card.is-tampo .pedidos-kpi-label {
+    color: #1e40af;
+}
+
 .pedidos-status-dot {
-    width: 7px;
-    height: 7px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.pedidos-pill-count {
-    font-size: 14.5px;
+.pedidos-kpi-card.is-almacen .pedidos-status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22);
+}
+
+.pedidos-kpi-card.is-tampo .pedidos-status-dot {
+    background: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22);
+}
+
+.pedidos-kpi-count {
+    font-size: 10.5px;
     font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    line-height: 1.25;
+    white-space: nowrap;
 }
 
-/* Estados de color de las pestañas superiores */
-.pedidos-status-pill[data-status-tab="all"] {
-    background: #ffffff;
-    border-color: #cbd5e1;
-    color: #334155;
-}
-.pedidos-status-pill[data-status-tab="all"] .pedidos-pill-count {
-    color: #0284c7;
-}
-.pedidos-status-pill[data-status-tab="all"].is-active {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-    border-color: #0284c7;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.24);
-}
-.pedidos-status-pill[data-status-tab="all"].is-active .pedidos-pill-count {
-    color: #ffffff;
-}
-
-.pedidos-status-pill[data-status-tab="almacen"] {
-    background: #fffbeb;
-    border-color: #fde68a;
+.pedidos-kpi-card.is-almacen .pedidos-kpi-count {
+    background: rgba(255, 255, 255, 0.85);
     color: #b45309;
-}
-.pedidos-status-pill[data-status-tab="almacen"] .pedidos-pill-count {
-    color: #d97706;
-}
-.pedidos-status-pill[data-status-tab="almacen"] .pedidos-status-dot {
-    background: #f59e0b;
-}
-.pedidos-status-pill[data-status-tab="almacen"].is-active {
-    background: #f59e0b;
-    border-color: #f59e0b;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
-}
-.pedidos-status-pill[data-status-tab="almacen"].is-active .pedidos-pill-count {
-    color: #ffffff;
-}
-.pedidos-status-pill[data-status-tab="almacen"].is-active .pedidos-status-dot {
-    background: #ffffff;
+    border: 1px solid #fde68a;
 }
 
-.pedidos-status-pill[data-status-tab="tampo"] {
-    background: #eff6ff;
-    border-color: #bfdbfe;
+.pedidos-kpi-card.is-tampo .pedidos-kpi-count {
+    background: rgba(255, 255, 255, 0.85);
     color: #1d4ed8;
+    border: 1px solid #bfdbfe;
 }
-.pedidos-status-pill[data-status-tab="tampo"] .pedidos-pill-count {
-    color: #2563eb;
+
+.pedidos-kpi-amount {
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
 }
-.pedidos-status-pill[data-status-tab="tampo"] .pedidos-status-dot {
-    background: #2563eb;
+
+.pedidos-kpi-card.is-almacen .pedidos-kpi-amount {
+    color: #78350f;
 }
-.pedidos-status-pill[data-status-tab="tampo"].is-active {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-}
-.pedidos-status-pill[data-status-tab="tampo"].is-active .pedidos-pill-count {
-    color: #ffffff;
-}
-.pedidos-status-pill[data-status-tab="tampo"].is-active .pedidos-status-dot {
-    background: #ffffff;
+
+.pedidos-kpi-card.is-tampo .pedidos-kpi-amount {
+    color: #1e3a8a;
 }
 
 .pedidos-search-wrap {
@@ -219,6 +209,10 @@
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.035);
     cursor: pointer;
     transition: transform 0.14s ease, filter 0.15s ease;
+}
+
+.pedido-row.is-hidden {
+    display: none !important;
 }
 
 .pedido-row:active {
@@ -348,6 +342,14 @@
     margin-top: 1px;
 }
 
+.p-amount-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
 .p-amount {
     font-size: 15.5px;
     font-weight: 900;
@@ -355,6 +357,19 @@
     text-align: right;
     white-space: nowrap;
     letter-spacing: -0.3px;
+    font-variant-numeric: tabular-nums;
+}
+
+.p-amount-pending {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #1d4ed8;
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    padding: 1px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Botón flotante Nuevo Pedido */

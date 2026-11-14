@@ -1,376 +1,645 @@
-/* Departamentos Premium Styles */
+/* ═══════════════════════════════════════════════════════════
+   DEPARTAMENTOS — DISEÑO UNIFICADO MÓVIL VERTICAL
+   ═══════════════════════════════════════════════════════════ */
 
+.dept-view-main {
+    padding: 12px 14px 108px;
+}
+
+.dept-search-bar {
+    margin-bottom: 10px;
+}
+
+.dept-summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 4px 8px;
+}
+
+.dept-summary-count {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.dept-summary-hint {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: right;
+}
+
+/* ─── LISTA DE TARJETAS ─────────────────────────────────── */
 .dept-container {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.25rem;
+    gap: 9px;
 }
 
-.dept-card-premium {
+.dept-card {
     position: relative;
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 24px;
-    padding: 0.85rem 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 11px 12px 11px 15px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    gap: 11px;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
     cursor: pointer;
     overflow: hidden;
+    transition: transform 0.14s ease, background-color 0.15s ease;
 }
 
-.dept-card-premium:active {
-    transform: scale(0.96) translateY(2px);
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+.dept-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--dept-accent, #009ee3);
 }
 
-.dept-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    color: #0369a1;
-    position: relative;
-    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8);
-}
-
-.dept-icon-wrapper i, 
-.dept-icon-wrapper .material-icons-round {
-    font-size: 24px;
-    filter: drop-shadow(0 2px 4px rgba(3, 105, 161, 0.15));
-}
-
-.dept-info {
-    flex: 1;
-    margin-left: 1.25rem;
-}
-
-.dept-name {
-    font-size: 1.05rem;
-    font-weight: 900;
-    color: #1e293b;
-    margin: 0;
-    line-height: 1.1;
-    letter-spacing: -0.4px;
-}
-
-.dept-contact-badge {
-    display: inline-flex;
-    align-items: center;
-    background: rgba(14, 165, 233, 0.08);
-    color: #0ea5e9;
-    padding: 3px 10px;
-    border-radius: 99px;
-    font-size: 0.6rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-top: 4px;
-    border: 1px solid rgba(14, 165, 233, 0.15);
-}
-
-.dept-chevron {
-    color: #cbd5e1;
-    transition: transform 0.3s ease;
-}
-
-.dept-card-premium:hover .dept-chevron {
-    transform: translateX(4px);
-    color: #0ea5e9;
-}
-
-/* Animations */
-@keyframes deptPopIn {
-    0% {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-.stagger-in {
-    animation: deptPopIn 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-/* Modal Detalle Premium */
-#deptDetailModal .modal-content {
+.dept-card:active {
+    transform: scale(0.985);
     background: #f8fafc;
-    border-radius: 36px;
-    border: none;
-    overflow: hidden;
 }
 
-.contact-card-header {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
-    padding: 3rem 2rem;
-    text-align: center;
-    color: white;
-    position: relative;
-}
-
-.contact-card-avatar {
-    width: 90px;
-    height: 90px;
-    background: white;
-    border-radius: 32px;
-    margin: 0 auto 1.5rem;
+.dept-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #0369a1;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-    border: 4px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
 }
 
-.contact-card-avatar i, 
-.contact-card-avatar .material-icons-round {
-    font-size: 44px;
-}
-
-.contact-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-top: -30px;
-    padding: 0 1.5rem;
-    position: relative;
-    z-index: 10;
-}
-
-.btn-contact-action {
-    min-height: 110px;
-    border-radius: 28px;
-    background: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 16px 12px;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
-    border: 1.5px solid #f1f5f9;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    cursor: pointer;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-contact-action:hover {
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
-    border-color: #e2e8f0;
-}
-
-.btn-contact-action i,
-.btn-contact-action .material-icons-round {
-    font-size: 28px;
-    margin-bottom: 4px;
-}
-
-.contact-label {
-    font-size: 10px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    opacity: 0.5;
-    margin-bottom: 2px;
-}
-
-.contact-data {
-    font-size: 13px;
-    font-weight: 900;
-    width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 6px;
-}
-
-.btn-whatsapp { color: #16a34a; background: #f0fdf4; border: 2px solid #22c55e !important; }
-.btn-phone { color: #2563eb; background: #f0f9ff; border: 2px solid #3b82f6 !important; }
-
-.contact-email-premium {
-    margin: 1.25rem 1.5rem 0.85rem;
-    background: white;
-    border-radius: 28px;
-    padding: 22px 24px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
-    border: 1.5px solid #f8fafc;
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.contact-email-premium:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
-    border-color: #e2e8f0;
-}
-
-.contact-email-premium:active {
-    transform: scale(0.97);
-}
-
-.email-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    background: #f8fafc;
-    color: #64748b;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #f1f5f9;
-}
-
-.email-icon-wrapper .material-icons-round {
-    font-size: 24px;
-}
-
-.email-content-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0; /* Importante para el truncamiento si fuera necesario, pero aquí el usuario quiere que se vea */
-}
-
-.contact-data-full {
-    font-size: 14.5px;
-    font-weight: 800;
-    color: #1e293b;
-    white-space: nowrap !important;
-    overflow: hidden;
-    line-height: 1.2;
-}
-
-.email-arrow {
-    color: #cbd5e1;
+.dept-card-icon .material-icons-round {
     font-size: 22px;
 }
 
-.contact-details-body {
-    padding: 2rem 1.75rem 1.5rem;
+.dept-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
-.detail-section {
-    margin-bottom: 1.5rem;
-}
-
-.detail-section-header {
+.dept-card-head {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 0.85rem;
-    color: #1e293b;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
-.detail-section-header .material-icons-round {
+.dept-card-title {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.dept-card-person {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #0369a1;
+    background: #e0f2fe;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.dept-card-preview {
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #64748b;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dept-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ─── ESTADO VACÍO / SIN RESULTADOS ─────────────────────── */
+.dept-empty-state {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    margin-top: 1rem;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+}
+
+.dept-empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    margin: 0 auto 14px;
+    background: #e0f2fe;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dept-empty-icon .material-icons-round {
+    font-size: 32px;
+}
+
+.dept-empty-title {
+    margin: 0 0 6px;
     font-size: 18px;
-    color: #94a3b8;
+    font-weight: 900;
+    color: #0f172a;
 }
 
-.detail-label {
-    font-size: 0.7rem;
+.dept-empty-sub {
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.dept-empty-btn {
+    height: 46px;
+    padding: 0 20px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0, 158, 227, 0.28);
+}
+
+.dept-no-match {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+/* ─── CABECERA ÚNICA LIMPIA PARA MODALES DE DEPARTAMENTOS ── */
+.dept-detail-modal-content,
+.dept-form-modal-content {
+    padding: 0 !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+    background: #f8fafc !important;
+}
+
+.dept-modal-header {
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    padding: 15px 16px 13px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    color: #ffffff;
+}
+
+.dept-modal-header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+}
+
+.dept-modal-header-text {
+    min-width: 0;
+    flex: 1;
+}
+
+.dept-modal-header-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.14);
+}
+
+.dept-modal-header-badge .material-icons-round {
+    font-size: 20px;
+}
+
+.dept-modal-title {
+    margin: 0;
+    font-size: 21px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.18;
+    letter-spacing: -0.3px;
+    word-break: break-word;
+}
+
+.dept-modal-person {
+    margin-top: 5px;
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.96);
+    line-height: 1.2;
+}
+
+.dept-modal-person-sub {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 2px;
+}
+
+.dept-modal-sub {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.dept-modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.dept-modal-close:active {
+    transform: scale(0.93);
+}
+
+/* ─── CUERPO DEL DETALLE (CANALES EMPAREJADOS) ─────────── */
+.dept-detail-body {
+    background: #f1f5f9;
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dept-channels-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 4px 14px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.dept-channel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.dept-channel-row:last-child {
+    border-bottom: none;
+}
+
+.dept-channel-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dept-channel-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.dept-channel-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.25;
+    text-align: left;
+    word-break: break-word;
+}
+
+.dept-channel-email {
+    font-size: 13.5px;
+    word-break: break-all;
+}
+
+.dept-copy-mini {
+    font-size: 14px !important;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.dept-channel-action {
+    flex-shrink: 0;
+}
+
+.dept-muted {
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 13.5px;
+}
+
+.dept-copyable {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dept-copyable:active,
+.dept-copyable.is-copied {
+    background-color: #e0f2fe;
+    color: #0284c7;
+}
+
+/* ─── TARJETA DE FUNCIONES (LISTA UNIFORME ALINEADA) ────── */
+.dept-functions-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 12px 14px 6px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.dept-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.dept-section-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
     font-weight: 900;
     color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
+    letter-spacing: 0.6px;
 }
 
-.functions-block-premium {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid #f1f5f9;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+.dept-section-title .material-icons-round {
+    font-size: 16px;
+    color: #0284c7;
 }
 
-.functions-list {
+.dept-section-count {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #0369a1;
+    background: #e0f2fe;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.dept-fn-list {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
 }
 
-.functions-list li {
+.dept-fn-item {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    color: #475569;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 2px;
+    border-bottom: 1px solid #f1f5f9;
     font-size: 13.5px;
     font-weight: 700;
+    color: #1e293b;
+    line-height: 1.3;
+}
+
+.dept-fn-item:last-child {
+    border-bottom: none;
+}
+
+.dept-fn-item .material-icons-round {
+    font-size: 16px;
+    color: #16a34a;
+    flex-shrink: 0;
+}
+
+.dept-functions-empty {
+    margin: 0;
+    padding: 10px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
     line-height: 1.4;
 }
 
-.functions-list li .material-icons-round {
-    font-size: 16px;
-    color: #10b981;
-    margin-top: 1px;
+/* ─── PIE DEL MODAL (IDÉNTICO A FICHA CLIENTE .cd-footer) ── */
+.dept-detail-footer-bar {
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
 }
 
-.functions-text {
-    margin: 0;
+.dept-footer-btn {
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.14s ease, filter 0.15s ease;
+}
+
+.dept-footer-btn:active {
+    transform: scale(0.97);
+}
+
+.dept-footer-edit {
+    background: #bae6fd;
+    color: #0c4a6e;
+}
+
+.dept-footer-delete {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.dept-footer-close {
+    background: #475569;
+    color: #ffffff;
+}
+
+/* ─── FORMULARIO NUEVO / EDITAR DEPARTAMENTO ─────────────── */
+.dept-form-body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.dept-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.dept-form-row-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dept-form-label {
+    font-size: 11px;
+    font-weight: 800;
     color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding-left: 2px;
+}
+
+.dept-form-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 13px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
     font-size: 14px;
     font-weight: 700;
-    line-height: 1.6;
+    box-sizing: border-box;
 }
 
-/* Dept Action Buttons (Unique to prevent conflicts) */
-.btn-dept-edit, 
-.btn-dept-delete {
+.dept-form-input:focus {
+    outline: none;
+    border-color: #009ee3;
+    box-shadow: 0 0 0 3px rgba(0, 158, 227, 0.14);
+}
+
+.dept-form-textarea {
+    min-height: 84px;
+    resize: vertical;
+    line-height: 1.4;
+}
+
+.dept-form-footer {
+    display: flex;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.dept-btn-cancel {
     flex: 1;
-    max-width: 140px;
-    height: 52px;
-    display: flex !important; /* Force display just in case */
+    height: 46px;
+    border-radius: 13px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.dept-btn-save {
+    flex: 1.5;
+    height: 46px;
+    border-radius: 13px;
+    border: none;
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    border: none;
-    border-radius: 18px;
-    font-weight: 900;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    gap: 6px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 6px 16px rgba(0, 158, 227, 0.25);
 }
 
-.btn-dept-edit {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%) !important;
-    color: white !important;
-    box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+/* ─── MODO OSCURO ───────────────────────────────────────── */
+body.dark-mode .dept-summary-count { color: #cbd5e1; }
+body.dark-mode .dept-card,
+body.dark-mode .dept-empty-state,
+body.dark-mode .dept-channels-card,
+body.dark-mode .dept-functions-card,
+body.dark-mode .dept-detail-footer-bar {
+    background: #1e293b;
+    border-color: #334155;
 }
-
-.btn-dept-edit:active,
-.btn-dept-delete:active {
-    transform: scale(0.95) translateY(2px);
+body.dark-mode .dept-card-title,
+body.dark-mode .dept-empty-title,
+body.dark-mode .dept-channel-value,
+body.dark-mode .dept-fn-item {
+    color: #f8fafc;
 }
-
-.btn-dept-delete {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-    color: white !important;
-    box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2);
+body.dark-mode .dept-detail-body,
+body.dark-mode .dept-detail-modal-content,
+body.dark-mode .dept-form-modal-content {
+    background: #0f172a !important;
 }
-
-.btn-dept-edit .material-icons-round,
-.btn-dept-delete .material-icons-round {
-    font-size: 20px;
-    color: white !important;
+body.dark-mode .dept-channel-row,
+body.dark-mode .dept-section-head,
+body.dark-mode .dept-fn-item {
+    border-bottom-color: #334155;
+}
+body.dark-mode .dept-btn-cancel,
+body.dark-mode .dept-form-input {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+}
+body.dark-mode .dept-form-label {
+    color: #94a3b8;
 }

@@ -11,6 +11,8 @@
     --primary-dark: #007bb1;
     --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --glass-bg: rgba(255, 255, 255, 0.8);
+    --radius-card: 20px;
+    --radius-btn: 14px;
     --transition-speed: 0.3s;
 }
 
@@ -67,4 +69,163 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BOTONES CORPORATIVOS UNIFICADOS (MAPS, LLAMAR, WHATSAPP, MAIL...)
+   ═══════════════════════════════════════════════════════════ */
+.app-corp-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-around;
+    gap: 8px;
+    width: 100%;
+}
+
+.app-corp-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-corp-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    padding: 2px 0;
+    min-width: 52px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.14s ease, opacity 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-corp-btn:active {
+    transform: scale(0.92);
+}
+
+.app-corp-btn.is-disabled {
+    opacity: 0.36;
+    pointer-events: none;
+    filter: grayscale(1);
+}
+
+.app-corp-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 3px 9px rgba(15, 23, 42, 0.13);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.app-corp-circle .material-icons-round {
+    font-size: 20px;
+    color: #ffffff;
+}
+
+.app-corp-btn.is-compact {
+    min-width: 44px;
+    gap: 3px;
+}
+
+.app-corp-btn.is-compact .app-corp-circle {
+    width: 38px;
+    height: 38px;
+}
+
+.app-corp-btn.is-compact .app-corp-circle svg {
+    width: 21px;
+    height: 21px;
+}
+
+.app-corp-btn.is-compact .app-corp-circle .material-icons-round {
+    font-size: 18px;
+}
+
+.app-corp-circle.is-maps {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+
+.app-corp-circle.is-phone {
+    background: linear-gradient(135deg, #2563eb 0%, #1a73e8 100%);
+    box-shadow: 0 3px 10px rgba(26, 115, 232, 0.25);
+}
+
+.app-corp-circle.is-whatsapp {
+    background: #25d366;
+    box-shadow: 0 3px 10px rgba(37, 211, 102, 0.26);
+}
+
+.app-corp-circle.is-mail {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+}
+
+.app-corp-circle.is-visit {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+}
+
+.app-corp-btn.is-done .app-corp-circle.is-visit {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    box-shadow: 0 3px 10px rgba(22, 163, 74, 0.28);
+}
+
+.app-corp-circle.is-order {
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.26);
+}
+
+.app-corp-circle.is-detail {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+}
+
+.app-corp-circle.is-detail .material-icons-round {
+    color: #0f172a;
+}
+
+.app-corp-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #334155;
+    line-height: 1.15;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.app-corp-btn.is-done .app-corp-label {
+    color: #15803d;
+    font-weight: 800;
+}
+
+body.dark-mode .app-corp-label {
+    color: #cbd5e1;
+}
+
+body.dark-mode .app-corp-btn.is-done .app-corp-label {
+    color: #4ade80;
+}
+
+body.dark-mode .app-corp-circle.is-maps,
+body.dark-mode .app-corp-circle.is-mail {
+    background: #ffffff;
+}
+
+body.dark-mode .app-corp-circle.is-detail {
+    background: #334155;
+    border-color: #475569;
+}
+
+body.dark-mode .app-corp-circle.is-detail .material-icons-round {
+    color: #f8fafc;
 }

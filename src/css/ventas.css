@@ -1,166 +1,344 @@
-/* --- VISTA ANÃ LISIS DE VENTAS (REDISEÃ‘O PREMIUM) --- */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   VISTAS ANALÍTICAS UNIFICADAS (Ventas Mensuales · Facturación Real · Comisiones)
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
-.analysis-view-container {
-    height: calc(100vh - 120px);
-    display: flex;
-    flex-direction: column;
-    padding: 0.25rem 0.5rem;
-    overflow: hidden;
-}
-
-.analysis-premium-card {
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+.ana-wrapper {
+    height: calc(100vh - 115px);
+    padding: 0.55rem 0.65rem 0.65rem;
+    background: #f1f5f9;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    height: 100%;
-    border: 1px solid #f1f5f9;
 }
 
-.analysis-table-wrapper {
+.ana-card {
     flex: 1;
-    overflow-x: auto;
-    overflow-y: hidden; /* No vertical scroll */
-    position: relative;
+    min-height: 0;
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
-/* Header Estilo Dark */
-.analysis-header {
-    display: flex;
-    background: #1e293b;
-    color: white;
+.ana-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ana-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 5px;
+}
+
+.ana-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ana-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+/* Tabla comparativa multi-año */
+.ana-table {
+    width: max-content;
+    min-width: 100%;
+    height: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.ana-table thead th {
     position: sticky;
     top: 0;
-    z-index: 50;
-    min-width: max-content;
+    z-index: 30;
+    background: #1e293b;
+    color: #94a3b8;
+    padding: 8px 6px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ana-table th.ana-sticky-col,
+.ana-table td.ana-sticky-col {
+    position: sticky;
+    left: 0;
+    width: 86px;
+    min-width: 86px;
+    max-width: 86px;
+    text-align: left;
+    padding-left: 12px;
+    padding-right: 8px;
+    box-shadow: 4px 0 10px -4px rgba(15, 23, 42, 0.09);
+}
+
+.ana-table th.ana-sticky-col {
+    z-index: 45;
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+.ana-year-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.ana-year-pill.is-current {
+    background: rgba(0, 158, 227, 0.28);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 158, 227, 0.25);
+}
+
+.ana-year-col {
+    width: 100px;
+    min-width: 100px;
+}
+
+/* Filas mensuales */
+.ana-row td {
+    padding: 3px 4px;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: center;
+    vertical-align: middle;
+    background: #ffffff;
+}
+
+.ana-row:nth-child(even) td {
+    background: #f8fafc;
+}
+
+.ana-row td.ana-sticky-col {
+    z-index: 20;
+    background: #ffffff;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.ana-row:nth-child(even) td.ana-sticky-col {
+    background: #f8fafc;
+}
+
+.ana-row td.ana-year-col.is-current {
+    background: rgba(0, 158, 227, 0.035);
+}
+
+.ana-row:nth-child(even) td.ana-year-col.is-current {
+    background: rgba(0, 158, 227, 0.055);
+}
+
+/* Celda interactiva */
+.ana-cell-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 3px 4px;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.12s ease, background-color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.ana-cell-btn:active {
+    transform: scale(0.96);
+    background: rgba(0, 158, 227, 0.08);
+}
+
+.ana-cell-static {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 2px 3px;
+}
+
+.ana-val-main {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+.ana-val-main.is-plain {
+    color: #0284c7;
+}
+
+.ana-val-main.is-current-plain {
+    color: #0369a1;
+}
+
+.ana-empty-dash {
+    font-size: 13px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+/* Variación YoY en Ventas Mensuales */
+.ana-delta-chip {
+    margin-top: 2px;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 999px;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+}
+
+.ana-delta-chip.is-up {
+    background: rgba(22, 163, 74, 0.12);
+    color: #15803d;
+}
+
+.ana-delta-chip.is-down {
+    background: rgba(220, 38, 38, 0.11);
+    color: #b91c1c;
+}
+
+.ana-delta-chip.is-flat {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Píldora suave de tramo (Facturación Real y Comisiones) */
+.ana-tier-box {
+    width: 100%;
+    border-radius: 10px;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border: 1px solid transparent;
+}
+
+.ana-tier-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
     width: 100%;
 }
 
-.analysis-header-cell {
-    padding: 6px 10px;
-    font-size: 11px;
+.ana-pct-badge {
+    font-size: 9.5px;
+    font-weight: 900;
+    padding: 1px 5px;
+    border-radius: 999px;
+    line-height: 1.2;
+    flex-shrink: 0;
+}
+
+/* Paleta de tramos suaves */
+.ana-tier-box.is-t2 {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(220, 38, 38, 0.24);
+}
+.ana-tier-box.is-t2 .ana-val-main { color: #b91c1c; }
+.ana-tier-box.is-t2 .ana-pct-badge { background: rgba(220, 38, 38, 0.16); color: #b91c1c; }
+
+.ana-tier-box.is-t3 {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(217, 119, 6, 0.3);
+}
+.ana-tier-box.is-t3 .ana-val-main { color: #b45309; }
+.ana-tier-box.is-t3 .ana-pct-badge { background: rgba(245, 158, 11, 0.22); color: #92400e; }
+
+.ana-tier-box.is-t4 {
+    background: rgba(0, 123, 255, 0.09);
+    border-color: rgba(0, 123, 255, 0.26);
+}
+.ana-tier-box.is-t4 .ana-val-main { color: #0369a1; }
+.ana-tier-box.is-t4 .ana-pct-badge { background: rgba(0, 123, 255, 0.16); color: #075985; }
+
+.ana-tier-box.is-t5 {
+    background: rgba(34, 197, 94, 0.11);
+    border-color: rgba(22, 163, 74, 0.28);
+}
+.ana-tier-box.is-t5 .ana-val-main { color: #15803d; }
+.ana-tier-box.is-t5 .ana-pct-badge { background: rgba(34, 197, 94, 0.18); color: #166534; }
+
+/* Barra fina de progreso en Facturación Real */
+.ana-prog-track {
+    width: 100%;
+    height: 3.5px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.ana-prog-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+
+.ana-tier-box.is-t2 .ana-prog-fill { background: #dc2626; }
+.ana-tier-box.is-t3 .ana-prog-fill { background: #d97706; }
+.ana-tier-box.is-t4 .ana-prog-fill { background: #007BFF; }
+.ana-tier-box.is-t5 .ana-prog-fill { background: #16a34a; }
+
+/* Subtítulo Base en Comisiones */
+.ana-base-sub {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #64748b;
+    text-align: left;
+    line-height: 1.15;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Fila fija TOTAL abajo */
+.ana-total-row td {
+    position: sticky;
+    bottom: 0;
+    z-index: 35;
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+    padding: 7px 5px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.ana-total-row td.ana-sticky-col {
+    z-index: 50;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 12.5px;
     font-weight: 900;
     text-transform: uppercase;
-    text-align: center;
     letter-spacing: 0.5px;
 }
 
-.col-month-fixed {
-    width: 90px;
-    min-width: 90px;
-    text-align: left;
-    padding-left: 20px;
-    position: sticky;
-    left: 0;
-    z-index: 60;
-    background: #1e293b;
-}
-
-.col-year-dynamic {
-    width: 110px;
-    min-width: 110px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.year-capsule {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 2px 16px; border-radius: 10px;
-    font-weight: 800;
-    color: white;
-    font-size: 12px;
-}
-
-/* Filas de Meses */
-.analysis-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: max-content;
-    width: 100%;
-}
-
-.analysis-row {
-    flex: 1;
-    display: flex;
-    border-bottom: 1px solid #f8fafc;
-    transition: background 0.2s ease;
-}
-
-.analysis-row:hover { background: #fdfdfd; }
-
-.cell-month-label {
-    width: 90px;
-    min-width: 90px;
-    display: flex;
-    align-items: center;
-    padding-left: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #64748b;
-    position: sticky;
-    left: 0;
-    z-index: 40;
-    background: white;
-}
-
-.analysis-row:nth-child(even) .cell-month-label { background: #fafafa; }
-.analysis-row:nth-child(even) { background: #fafafa; }
-
-.cell-data-input {
-    width: 110px;
-    min-width: 110px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0px 4px; }
-
-.v-input-premium {
-    width: 100%;
-    border: none;
-    background: transparent;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 800;
-    color: #334155;
-    font-family: inherit;
-    padding: 2px; }
-
-.v-input-premium:focus {
-    outline: none;
-    color: #0ea5e9;
-}
-
-/* Fila de Totales */
-.analysis-total-row {
-    display: flex;
-    background: #f0fdf4 !important; border-top: 2px solid #bef264 !important; box-shadow: 0 -4px 15px rgba(34, 197, 94, 0.08);
-    min-width: max-content;
-    width: 100%;
-    padding: 4px 0; }
-
-.cell-total-label {
-    width: 90px;
-    min-width: 90px;
-    padding-left: 20px;
-    display: flex;
-    align-items: center;
-    font-size: 13px;
-    font-weight: 900;
-    color: #166534 !important; position: sticky;
-    left: 0;
-    z-index: 45; background: #f0fdf4 !important;
-}
-
-.cell-year-total-complex {
-    width: 110px;
-    min-width: 110px;
+.ana-total-stack {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -168,35 +346,434 @@
     gap: 2px;
 }
 
-.total-value-main { font-size: 14px; font-weight: 950; color: #15803d;
+.ana-total-num {
+    font-size: 13.5px;
+    font-weight: 900;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
-.variation-badge {
+.ana-total-num.is-current {
+    color: #0369a1;
+}
+
+/* Total Anual Acumulado destacado con el color del tramo anual alcanzado */
+.ana-total-tier-pill {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 100%;
+    padding: 4px 6px;
+    border-radius: 10px;
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
+}
+
+.ana-total-tier-pill.is-t2 { background: #dc2626; }
+.ana-total-tier-pill.is-t3 { background: #d97706; }
+.ana-total-tier-pill.is-t4 { background: #007BFF; }
+.ana-total-tier-pill.is-t5 { background: #16a34a; }
+
+.ana-total-tier-val {
+    font-size: 13.5px;
+    font-weight: 900;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+
+.ana-total-tier-tag {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    letter-spacing: 0.3px;
+    line-height: 1.35;
+}
+
+/* Pie fijo de la tarjeta (fuera del scroll para nunca chocar con el scrollbar) */
+.ana-footer {
+    flex-shrink: 0;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ana-legend-items {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex: 1;
+    gap: 6px;
+}
+
+.ana-legend-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #475569;
+}
+
+.ana-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ana-legend-dot.is-t2 { background: #dc2626; }
+.ana-legend-dot.is-t3 { background: #eab308; }
+.ana-legend-dot.is-t4 { background: #007BFF; }
+.ana-legend-dot.is-t5 { background: #16a34a; }
+.ana-legend-dot.is-up { background: #16a34a; }
+.ana-legend-dot.is-down { background: #dc2626; }
+
+.ana-footer-hint {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MODAL RÁPIDO DE EDICIÓN DE MES (Ventas Mensuales y Facturación Real)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.ana-modal-card {
+    width: 92%;
+    max-width: 390px;
+    background: #ffffff;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+    border: 1px solid #e2e8f0;
+}
+
+.ana-modal-head {
+    background: linear-gradient(135deg, #009ee3 0%, #0284c7 100%);
+    color: #ffffff;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ana-modal-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.ana-modal-sub {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.ana-modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.ana-modal-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ana-modal-label {
+    font-size: 11.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+}
+
+.ana-modal-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ana-modal-input {
+    width: 100%;
+    padding: 14px 42px 14px 16px;
+    border-radius: 14px;
+    border: 2px solid #cbd5e1;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 22px;
+    font-weight: 900;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.ana-modal-input:focus {
+    border-color: #009ee3;
+    background: #ffffff;
+}
+
+.ana-modal-euro {
+    position: absolute;
+    right: 16px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #64748b;
+    pointer-events: none;
+}
+
+.ana-modal-context {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: #475569;
+}
+
+.ana-modal-targets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    text-align: center;
+}
+
+.ana-modal-target-chip {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 6px 4px;
+}
+
+.ana-modal-target-chip span {
+    display: block;
     font-size: 10px;
     font-weight: 800;
-    padding: 1px 6px;
-    border-radius: 4px;
+    color: #64748b;
 }
 
-.var-up { color: #10b981; }   /* Green 500 */
-.var-down { color: #ef4444; } /* Red 500 */
-.var-neutral { color: #94a3b8; }
-
-/* Ocultar scrollbar pero mantener funcionalidad */
-.analysis-table-wrapper::-webkit-scrollbar {
-    height: 4px;
+.ana-modal-target-chip strong {
+    font-size: 12px;
+    font-weight: 900;
+    color: #0f172a;
 }
-.analysis-table-wrapper::-webkit-scrollbar-track { background: transparent; }
-.analysis-table-wrapper::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
+
+.ana-modal-quick-btn {
+    border: 1px solid #bae6fd;
+    background: #f0f9ff;
+    color: #0369a1;
     border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
 }
 
-/* --- PRO REDESIGN --- */
-/* Removed background highlight */
-/* Removed header highlight */
-.v-input-current { font-size: 14.5px !important; font-weight: 950 !important; }
-.v-val-up { color: #10b981 !important; }
-.v-val-down { color: #ef4444 !important; }
+.ana-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 10px;
+    padding: 0 18px 18px;
+}
 
+.ana-btn-cancel {
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
 
+.ana-btn-save {
+    height: 44px;
+    border-radius: 12px;
+    border: none;
+    background: #009ee3;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0, 158, 227, 0.28);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MODO OSCURO
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+body.dark-mode .ana-wrapper {
+    background: #0f172a;
+}
+
+body.dark-mode .ana-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode .ana-table thead th,
+body.dark-mode .ana-table th.ana-sticky-col {
+    background: #0f172a;
+    border-bottom-color: #334155;
+}
+
+body.dark-mode .ana-row td,
+body.dark-mode .ana-row td.ana-sticky-col {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+body.dark-mode .ana-row td.ana-sticky-col {
+    color: #cbd5e1;
+    box-shadow: 4px 0 10px -4px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-mode .ana-row:nth-child(even) td,
+body.dark-mode .ana-row:nth-child(even) td.ana-sticky-col {
+    background: #172033;
+}
+
+body.dark-mode .ana-row td.ana-year-col.is-current {
+    background: rgba(56, 189, 248, 0.06);
+}
+
+body.dark-mode .ana-val-main {
+    color: #f8fafc;
+}
+
+body.dark-mode .ana-val-main.is-plain,
+body.dark-mode .ana-val-main.is-current-plain {
+    color: #38bdf8;
+}
+
+body.dark-mode .ana-delta-chip.is-up {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+}
+
+body.dark-mode .ana-delta-chip.is-down {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+
+body.dark-mode .ana-tier-box.is-t2 {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(248, 113, 113, 0.35);
+}
+body.dark-mode .ana-tier-box.is-t2 .ana-val-main,
+body.dark-mode .ana-tier-box.is-t2 .ana-pct-badge { color: #fca5a5; }
+
+body.dark-mode .ana-tier-box.is-t3 {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(251, 191, 36, 0.35);
+}
+body.dark-mode .ana-tier-box.is-t3 .ana-val-main,
+body.dark-mode .ana-tier-box.is-t3 .ana-pct-badge { color: #fcd34d; }
+
+body.dark-mode .ana-tier-box.is-t4 {
+    background: rgba(56, 189, 248, 0.16);
+    border-color: rgba(56, 189, 248, 0.35);
+}
+body.dark-mode .ana-tier-box.is-t4 .ana-val-main,
+body.dark-mode .ana-tier-box.is-t4 .ana-pct-badge { color: #7dd3fc; }
+
+body.dark-mode .ana-tier-box.is-t5 {
+    background: rgba(34, 197, 94, 0.16);
+    border-color: rgba(74, 222, 128, 0.35);
+}
+body.dark-mode .ana-tier-box.is-t5 .ana-val-main,
+body.dark-mode .ana-tier-box.is-t5 .ana-pct-badge { color: #86efac; }
+
+body.dark-mode .ana-prog-track {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode .ana-base-sub {
+    color: #94a3b8;
+}
+
+body.dark-mode .ana-total-row td,
+body.dark-mode .ana-total-row td.ana-sticky-col {
+    background: #0f172a;
+    border-top-color: #334155;
+    color: #f8fafc;
+}
+
+body.dark-mode .ana-total-num {
+    color: #f8fafc;
+}
+
+body.dark-mode .ana-total-num.is-current {
+    color: #38bdf8;
+}
+
+body.dark-mode .ana-footer {
+    background: #1e293b;
+    border-top-color: #334155;
+}
+
+body.dark-mode .ana-legend-pill {
+    color: #cbd5e1;
+}
+
+body.dark-mode .ana-footer-hint {
+    color: #94a3b8;
+}
+
+body.dark-mode .ana-modal-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-mode .ana-modal-input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+body.dark-mode .ana-modal-context {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark-mode .ana-modal-target-chip {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-mode .ana-modal-target-chip strong {
+    color: #f8fafc;
+}
+
+body.dark-mode .ana-btn-cancel {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}

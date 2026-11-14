@@ -227,16 +227,6 @@ async function renderAlertas(isBack = false) {
     const overdueCount = entries.filter(e => e.days > 45).length;
     const okCount = entries.length - overdueCount;
 
-    const callSvg = `
-        <svg viewBox="0 0 24 24" width="21" height="21" fill="#ffffff" aria-hidden="true">
-            <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z"/>
-        </svg>`;
-
-    const whatsappSvg = `
-        <svg viewBox="0 0 32 32" width="23" height="23" fill="#ffffff" aria-hidden="true">
-            <path d="M16 3C8.82 3 3 8.82 3 16c0 2.48.7 4.8 1.91 6.77L3.4 28.6l6-1.48A12.93 12.93 0 0 0 16 29c7.18 0 13-5.82 13-13S23.18 3 16 3zm7.58 18.23c-.32.9-1.87 1.72-2.6 1.83-.66.1-1.5.14-2.42-.15-.56-.18-1.28-.42-2.2-.82-3.87-1.67-6.4-5.58-6.6-5.84-.2-.26-1.57-2.09-1.57-3.99s.99-2.83 1.35-3.22c.35-.39.77-.49 1.03-.49.26 0 .51 0 .74.01.24.01.56-.09.87.67.32.77 1.09 2.66 1.18 2.86.1.19.16.42.03.68-.13.26-.2.42-.39.64-.19.23-.41.51-.58.68-.19.19-.4.4-.17.79.23.39 1.01 1.66 2.17 2.69 1.49 1.33 2.75 1.74 3.14 1.94.39.19.62.16.85-.1.23-.26.97-1.13 1.23-1.52.26-.39.52-.32.87-.19.35.13 2.25 1.06 2.64 1.25.39.19.64.29.74.45.1.16.1.94-.22 1.84z"/>
-        </svg>`;
-
     let contentHtml = '<main class="alerts-view-main">';
     
     contentHtml += `
@@ -318,18 +308,24 @@ async function renderAlertas(isBack = false) {
                     </div>
 
                     <div class="alert-card-actions">
-                        <button type="button"
-                                class="btn-alert-circle btn-alert-call ${hasPhone ? '' : 'is-disabled'}"
-                                onclick="event.stopPropagation(); ${hasPhone ? `window.location.href='tel:${cleanCallPhone}'` : ''}"
-                                title="${hasPhone ? 'Llamar' : 'Sin teléfono'}">
-                            ${callSvg}
-                        </button>
-                        <button type="button"
-                                class="btn-alert-circle btn-alert-whatsapp ${hasPhone ? '' : 'is-disabled'}"
-                                onclick="event.stopPropagation(); ${hasPhone ? `window.openAppWhatsApp('${cleanWaPhone}')` : ''}"
-                                title="${hasPhone ? 'WhatsApp' : 'Sin teléfono'}">
-                            ${whatsappSvg}
-                        </button>
+                        ${window.renderCorpActionBtn({
+                            type: 'phone',
+                            onclick: hasPhone ? `window.location.href='tel:${cleanCallPhone}'` : '',
+                            label: 'Llamar',
+                            title: hasPhone ? 'Llamar' : 'Sin teléfono',
+                            disabled: !hasPhone,
+                            compact: true,
+                            stopPropagation: true
+                        })}
+                        ${window.renderCorpActionBtn({
+                            type: 'whatsapp',
+                            onclick: hasPhone ? `window.openAppWhatsApp('${cleanWaPhone}')` : '',
+                            label: 'Whatsapp',
+                            title: hasPhone ? 'Whatsapp' : 'Sin teléfono',
+                            disabled: !hasPhone,
+                            compact: true,
+                            stopPropagation: true
+                        })}
                     </div>
                 </div>
             `;
@@ -381,141 +377,399 @@ window.clearAlertSearch = function() {
     clearSearchField('alertSearchInput', 'clearAlertSearchBtn', () => filterAlerts());
 };
 
-// --- VENTAS HISTÓRICAS ---
-async function renderVentas(isBack = false) {
-    if (typeof updateHistoryState === 'function') updateHistoryState('ventas', isBack);
-    const app = document.getElementById('app');
-    const headerHtml = getCommonHeaderHtml('Ventas Mensuales');
-    const history = await dataManager.getSalesHistory();
-    const allOrders = await dataManager.getOrders();
+// --- UTILIDADES COMPARTIDAS PARA VENTAS, FACTURACIÓN Y COMISIONES ---
+const ANA_MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-    // Calcular totales de pedidos por año y mes
-    const calculatedTotals = {};
+function anaFormatNoSymbol(val) {
+    return formatCurrency(Math.round(val || 0)).replace(' \u20ac', '').replace(' €', '');
+}
+
+function getAnalyticsYears(history = {}, extraYears = []) {
+    const currentYear = new Date().getFullYear();
+    const numericYears = new Set([currentYear]);
+    Object.keys(history || {}).forEach(k => {
+        const parsed = parseInt(k, 10);
+        if (!Number.isNaN(parsed) && parsed >= 2000) numericYears.add(parsed);
+    });
+    extraYears.forEach(y => {
+        const parsed = parseInt(y, 10);
+        if (!Number.isNaN(parsed) && parsed >= 2000) numericYears.add(parsed);
+    });
+
+    const minYear = Math.min(...numericYears);
+    const maxYear = Math.max(currentYear, ...numericYears);
+    const years = [];
+    for (let y = minYear; y <= maxYear; y++) years.push(y);
+    return years;
+}
+
+function getMonthlyOrderTotals(allOrders = []) {
+    const totals = {};
     allOrders.forEach(o => {
-        const d = new Date(o.dateISO);
+        const rawDate = o.dateISO || o.date;
+        if (!rawDate) return;
+        const d = new Date(rawDate);
+        if (Number.isNaN(d.getTime())) return;
         const y = d.getFullYear();
         const m = d.getMonth();
-        if (!calculatedTotals[y]) calculatedTotals[y] = Array(12).fill(0);
-        calculatedTotals[y][m] += (parseFloat(o.amount) || 0);
+        if (!totals[y]) totals[y] = Array(12).fill(0);
+        totals[y][m] += (parseFloat(o.amount) || 0);
     });
+    return totals;
+}
 
-    const years = Object.keys(history).map(Number).sort((a,b) => a - b);
-    const monthsFull = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+function getCommissionTierInfo(value, goals, monthIdx) {
+    if (!value || value <= 0 || !goals) return null;
+    const g3 = (goals.data3 && parseFloat(goals.data3[monthIdx])) || 0;
+    const g4 = (goals.data4 && parseFloat(goals.data4[monthIdx])) || 0;
+    const g5 = (goals.data5 && parseFloat(goals.data5[monthIdx])) || 0;
 
-    // Cálculo de Totales por Año (considerando el mayor entre manual y calculado)
-    const totalsByYear = {};
-    years.forEach(y => {
-        let yearTotal = 0;
-        for (let mIdx = 0; mIdx < 12; mIdx++) {
-            const hVal = (history[y] && history[y][mIdx]) || 0;
-            const cVal = (calculatedTotals[y] && calculatedTotals[y][mIdx]) || 0;
-            yearTotal += Math.max(hVal, cVal);
-        }
-        totalsByYear[y] = yearTotal;
-    });
+    let pct = 2;
+    let tierKey = 't2';
+    if (value >= g5) { pct = 5; tierKey = 't5'; }
+    else if (value >= g4) { pct = 4; tierKey = 't4'; }
+    else if (value >= g3) { pct = 3; tierKey = 't3'; }
 
-        const currentYear = new Date().getFullYear();
-    let contentHtml = '<main class="analysis-view-container">';
-    
-    contentHtml += `
-        <div class="analysis-premium-card">
-            <div class="analysis-table-wrapper" id="analysisTableWrapper">
-                <!-- CABECERA -->
-                <div class="analysis-header">
-                    <div class="analysis-header-cell col-month-fixed">MES</div>
-                    ${years.map(y => `
-                        <div class="analysis-header-cell col-year-dynamic ${y === currentYear ? 'current-year-col' : ''}">
-                            <span class="year-capsule ${y === currentYear ? 'year-capsule-current' : ''}">${y}</span>
-                        </div>
-                    `).join('')}
-                </div>
+    const rawProgress = g5 > 0 ? Math.round((value / g5) * 100) : 0;
+    return {
+        pct,
+        tierKey,
+        amount: Math.round(value * (pct / 100)),
+        progressPct: Math.max(8, Math.min(100, rawProgress)),
+        g3,
+        g4,
+        g5
+    };
+}
 
-                <!-- CUERPO DE LA TABLA -->
-                <div class="analysis-body">
-                    ${monthsFull.map((m, mIdx) => `
-                        <div class="analysis-row">
-                            <div class="cell-month-label col-month-fixed">${m}</div>
-                            ${years.map((y, yIdx) => {
-                                const storedVal = (history[y] && history[y][mIdx]) || 0;
-                                const calcVal = (calculatedTotals[y] && calculatedTotals[y][mIdx]) || 0;
-                                const val = Math.max(storedVal, calcVal);
+function getAnnualCommissionTier(totalFacturado, goals) {
+    if (!totalFacturado || totalFacturado <= 0 || !goals) return null;
+    const sum3 = (goals.data3 || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
+    const sum4 = (goals.data4 || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
+    const sum5 = (goals.data5 || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
 
-                                let growthClass = '';
-                                if (yIdx > 0 && val > 0) {
-                                    const prevY = years[yIdx - 1];
-                                    const prevStored = (history[prevY] && history[prevY][mIdx]) || 0;
-                                    const prevCalc = (calculatedTotals[prevY] && calculatedTotals[prevY][mIdx]) || 0;
-                                    const prevVal = Math.max(prevStored, prevCalc);
-                                    
-                                    if (prevVal > 0) {
-                                        if (val > prevVal) growthClass = 'v-val-up';
-                                        else if (val < prevVal) growthClass = 'v-val-down';
-                                    }
-                                }
+    if (totalFacturado >= sum5) return { pct: 5, tierKey: 't5', sum3, sum4, sum5 };
+    if (totalFacturado >= sum4) return { pct: 4, tierKey: 't4', sum3, sum4, sum5 };
+    if (totalFacturado >= sum3) return { pct: 3, tierKey: 't3', sum3, sum4, sum5 };
+    return { pct: 2, tierKey: 't2', sum3, sum4, sum5 };
+}
 
-                                const isCurrent = y === currentYear ? 'current-year-col' : '';
-
-                                return `
-                                    <div class="cell-data-input col-year-dynamic ${isCurrent}">
-                                        <input type="text" 
-                                               class="v-input-premium ${growthClass} ${y === currentYear ? 'v-input-current' : ''}" 
-                                               value="${val === 0 ? '-' : formatCurrency(Math.round(val)).replace(' \u20ac', '')}"
-                                               onfocus="this.select()"
-                                               onchange="handleSalesUpdate(${y}, ${mIdx}, this.value)">
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    `).join('')}
-                </div>
-
-                <!-- FILA DE TOTALES -->
-                <div class="analysis-total-row">
-                    <div class="cell-total-label col-month-fixed">TOTAL</div>
-                    ${years.map((y, idx) => {
-                        const total = totalsByYear[y];
-                        let variationHtml = '';
-                        
-                        if (idx > 0) {
-                            const prevTotal = totalsByYear[years[idx-1]];
-                            if (prevTotal > 0) {
-                                const diff = ((total - prevTotal) / prevTotal) * 100;
-                                const isUp = diff > 0;
-                                const isDown = diff < 0;
-                                variationHtml = `<span class="variation-badge ${isUp ? 'var-up' : (isDown ? 'var-down' : 'var-neutral')}">
-                                    ${isUp ? '+' : ''}${Math.round(diff)}%
-                                </span>`;
-                            }
-                        }
-                        
-                        const isCurrent = y === currentYear ? 'current-year-col' : '';
-
-                        return `
-                            <div class="cell-year-total-complex col-year-dynamic ${isCurrent}">
-                                <span class="total-value-main ${y === currentYear ? 'v-input-current' : ''}">${formatCurrency(Math.round(total)).replace(' \u20ac', '')}</span>
-                                ${variationHtml}
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
+function buildTierLegendFooter(hintText) {
+    return `
+        <footer class="ana-footer">
+            <div class="ana-legend-items">
+                <span class="ana-legend-pill"><span class="ana-legend-dot is-t2"></span>2%</span>
+                <span class="ana-legend-pill"><span class="ana-legend-dot is-t3"></span>3%</span>
+                <span class="ana-legend-pill"><span class="ana-legend-dot is-t4"></span>4%</span>
+                <span class="ana-legend-pill"><span class="ana-legend-dot is-t5"></span>5%</span>
             </div>
+            ${hintText ? `<span class="ana-footer-hint">${hintText}</span>` : ''}
+        </footer>
+    `;
+}
+
+function renderAnalyticsTableView({ title, isBack, stateKey, scrollId, years, currentYear, buildCellFn, buildTotalCellFn, footerHtml, preserveScrollLeft = null }) {
+    if (typeof updateHistoryState === 'function') updateHistoryState(stateKey, isBack);
+    const app = document.getElementById('app');
+    const headerHtml = getCommonHeaderHtml(title);
+
+    let contentHtml = `<main class="ana-wrapper">
+        <div class="ana-card">
+            <div class="ana-scroll" id="${scrollId}">
+                <table class="ana-table">
+                    <thead>
+                        <tr>
+                            <th class="ana-sticky-col">MES</th>
+                            ${years.map(y => `
+                                <th class="ana-year-col ${y === currentYear ? 'is-current' : ''}">
+                                    <span class="ana-year-pill ${y === currentYear ? 'is-current' : ''}">${y}</span>
+                                </th>
+                            `).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${ANA_MONTHS.map((m, mIdx) => `
+                            <tr class="ana-row">
+                                <td class="ana-sticky-col">${m}</td>
+                                ${years.map((y, yIdx) => `
+                                    <td class="ana-year-col ${y === currentYear ? 'is-current' : ''}">
+                                        ${buildCellFn(y, yIdx, mIdx)}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr class="ana-total-row">
+                            <td class="ana-sticky-col">TOTAL</td>
+                            ${years.map((y, yIdx) => `
+                                <td class="ana-year-col ${y === currentYear ? 'is-current' : ''}">
+                                    ${buildTotalCellFn(y, yIdx)}
+                                </td>
+                            `).join('')}
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            ${footerHtml || ''}
         </div>
     </main>`;
 
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
+    app.innerHTML = headerHtml + contentHtml;
+    if (window.restoreScroll) window.restoreScroll();
 
-    // Autoscroll al final (año actual)
     setTimeout(() => {
-        const wrapper = document.getElementById('analysisTableWrapper');
-        if (wrapper) wrapper.scrollLeft = wrapper.scrollWidth;
-    }, 100);
+        const container = document.getElementById(scrollId);
+        if (!container) return;
+        container.scrollLeft = preserveScrollLeft !== null ? preserveScrollLeft : container.scrollWidth;
+    }, 40);
 }
 
-async function handleSalesUpdate(year, monthIdx, value) {
-    const num = parseFloat(value.replace(/\./g, '').replace(',', '.'));
-    await dataManager.updateSalesHistory(year, monthIdx, isNaN(num) ? 0 : num);
-    renderVentas();
+// --- MODAL RÁPIDO DE EDICIÓN (VENTAS Y FACTURACIÓN) ---
+let _anaEditState = null;
+
+async function openAnalyticsEditModal(mode, year, monthIdx) {
+    let modal = document.getElementById('analyticsEditModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'analyticsEditModal';
+        modal.className = 'modal-overlay';
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeAnalyticsEditModal();
+        });
+        document.body.appendChild(modal);
+    }
+
+    const scrollId = mode === 'sales' ? 'salesScrollContainer' : 'facturaScrollContainer';
+    const scrollEl = document.getElementById(scrollId);
+    const savedScrollLeft = scrollEl ? scrollEl.scrollLeft : null;
+
+    let currentVal = 0;
+    let calcVal = 0;
+    let goals = null;
+
+    if (mode === 'sales') {
+        const [history, allOrders] = await Promise.all([
+            dataManager.getSalesHistory(),
+            dataManager.getOrders()
+        ]);
+        const calcTotals = getMonthlyOrderTotals(allOrders);
+        const hVal = (history[String(year)] && history[String(year)][monthIdx]) || 0;
+        calcVal = (calcTotals[year] && calcTotals[year][monthIdx]) || 0;
+        currentVal = Math.max(hVal, calcVal);
+    } else {
+        const [history, yearGoals] = await Promise.all([
+            dataManager.getInvoiceHistory(),
+            dataManager.getGoalsForYear(year)
+        ]);
+        currentVal = (history[String(year)] && history[String(year)][monthIdx]) || 0;
+        goals = yearGoals;
+    }
+
+    _anaEditState = { mode, year, monthIdx, calcVal, goals, savedScrollLeft };
+
+    const monthName = ANA_MONTHS[monthIdx];
+    const modeLabel = mode === 'sales' ? 'Ventas Mensuales' : 'Facturación Real';
+    const inputDisplay = currentVal > 0 ? anaFormatNoSymbol(currentVal) : '';
+
+    let contextHtml = '';
+    if (mode === 'sales') {
+        contextHtml = `
+            <div class="ana-modal-context">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <span>Suma de pedidos del mes:</span>
+                    <strong>${anaFormatNoSymbol(calcVal)} €</strong>
+                </div>
+                ${calcVal > 0 ? `
+                    <button type="button" class="ana-modal-quick-btn" onclick="applyCalculatedOrderSales()">
+                        Usar suma automática (${anaFormatNoSymbol(calcVal)} €)
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    } else if (goals) {
+        const g3 = (goals.data3 && goals.data3[monthIdx]) || 0;
+        const g4 = (goals.data4 && goals.data4[monthIdx]) || 0;
+        const g5 = (goals.data5 && goals.data5[monthIdx]) || 0;
+        contextHtml = `
+            <div class="ana-modal-context">
+                <span style="font-weight:800; font-size:11px; text-transform:uppercase;">Objetivos ${monthName} ${year}</span>
+                <div class="ana-modal-targets">
+                    <div class="ana-modal-target-chip"><span>3%</span><strong>${anaFormatNoSymbol(g3)} €</strong></div>
+                    <div class="ana-modal-target-chip"><span>4%</span><strong>${anaFormatNoSymbol(g4)} €</strong></div>
+                    <div class="ana-modal-target-chip"><span>5%</span><strong>${anaFormatNoSymbol(g5)} €</strong></div>
+                </div>
+            </div>
+        `;
+    }
+
+    modal.innerHTML = `
+        <div class="ana-modal-card" role="dialog" aria-modal="true" aria-label="Editar ${modeLabel}">
+            <div class="ana-modal-head">
+                <div>
+                    <h3 class="ana-modal-title">${monthName} ${year}</h3>
+                    <span class="ana-modal-sub">${modeLabel}</span>
+                </div>
+                <button type="button" class="ana-modal-close" onclick="closeAnalyticsEditModal()" aria-label="Cerrar">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="ana-modal-body">
+                <label class="ana-modal-label" for="anaModalAmountInput">Importe del mes</label>
+                <div class="ana-modal-input-wrap">
+                    <input type="text"
+                           id="anaModalAmountInput"
+                           class="ana-modal-input"
+                           inputmode="decimal"
+                           data-no-clear="true"
+                           value="${inputDisplay}"
+                           placeholder="0"
+                           onkeydown="if(event.key==='Enter'){ event.preventDefault(); saveAnalyticsEditModal(); }">
+                    <span class="ana-modal-euro">€</span>
+                </div>
+                ${contextHtml}
+            </div>
+            <div class="ana-modal-actions">
+                <button type="button" class="ana-btn-cancel" onclick="closeAnalyticsEditModal()">Cancelar</button>
+                <button type="button" class="ana-btn-save" onclick="saveAnalyticsEditModal()">Guardar</button>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('open');
+    setTimeout(() => {
+        const input = document.getElementById('anaModalAmountInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 60);
+}
+
+function applyCalculatedOrderSales() {
+    if (!_anaEditState) return;
+    const input = document.getElementById('anaModalAmountInput');
+    if (input) {
+        input.value = _anaEditState.calcVal > 0 ? anaFormatNoSymbol(_anaEditState.calcVal) : '0';
+        input.focus();
+        input.select();
+    }
+}
+
+function closeAnalyticsEditModal() {
+    const modal = document.getElementById('analyticsEditModal');
+    if (modal) modal.classList.remove('open');
+}
+
+async function saveAnalyticsEditModal() {
+    if (!_anaEditState) return;
+    const input = document.getElementById('anaModalAmountInput');
+    const raw = input ? input.value : '0';
+    const { mode, year, monthIdx, savedScrollLeft } = _anaEditState;
+    closeAnalyticsEditModal();
+
+    if (mode === 'sales') {
+        await handleSalesUpdate(year, monthIdx, raw, savedScrollLeft);
+    } else {
+        await handleFacturaUpdate(year, monthIdx, raw, savedScrollLeft);
+    }
+}
+
+// --- VENTAS MENSUALES ---
+async function renderVentas(isBack = false, preserveScrollLeft = null) {
+    const [history, allOrders] = await Promise.all([
+        dataManager.getSalesHistory(),
+        dataManager.getOrders()
+    ]);
+
+    const calculatedTotals = getMonthlyOrderTotals(allOrders);
+    const orderYears = Object.keys(calculatedTotals).map(Number);
+    const years = getAnalyticsYears(history, orderYears);
+    const currentYear = new Date().getFullYear();
+
+    // Precalcular valores y totales por año (siempre reflejando la suma de pedidos cuando sea mayor)
+    const gridValues = {};
+    const totalsByYear = {};
+    years.forEach(y => {
+        gridValues[y] = Array(12).fill(0);
+        let yearTotal = 0;
+        for (let mIdx = 0; mIdx < 12; mIdx++) {
+            const hVal = (history[String(y)] && history[String(y)][mIdx]) || 0;
+            const cVal = (calculatedTotals[y] && calculatedTotals[y][mIdx]) || 0;
+            const val = Math.max(hVal, cVal);
+            gridValues[y][mIdx] = val;
+            yearTotal += val;
+        }
+        totalsByYear[y] = yearTotal;
+    });
+
+    const footerHtml = `
+        <footer class="ana-footer">
+            <div class="ana-legend-items" style="justify-content:flex-start; gap:14px;">
+                <span class="ana-legend-pill"><span class="ana-legend-dot is-up"></span>Sube vs año ant.</span>
+                <span class="ana-legend-pill"><span class="ana-legend-dot is-down"></span>Baja</span>
+            </div>
+            <span class="ana-footer-hint">Pulsa un mes para editar</span>
+        </footer>
+    `;
+
+    renderAnalyticsTableView({
+        title: 'Ventas Mensuales',
+        isBack,
+        stateKey: 'ventas',
+        scrollId: 'salesScrollContainer',
+        years,
+        currentYear,
+        preserveScrollLeft,
+        footerHtml,
+        buildCellFn: (y, yIdx, mIdx) => {
+            const val = gridValues[y][mIdx];
+            let deltaHtml = '';
+            if (yIdx > 0 && val > 0) {
+                const prevVal = gridValues[years[yIdx - 1]][mIdx];
+                if (prevVal > 0) {
+                    const diffPct = Math.round(((val - prevVal) / prevVal) * 100);
+                    const cls = diffPct > 0 ? 'is-up' : (diffPct < 0 ? 'is-down' : 'is-flat');
+                    deltaHtml = `<span class="ana-delta-chip ${cls}">${diffPct > 0 ? '+' : ''}${diffPct}%</span>`;
+                }
+            }
+            const valHtml = val === 0
+                ? `<span class="ana-empty-dash">—</span>`
+                : `<span class="ana-val-main ${y === currentYear ? 'is-current-plain' : ''}">${anaFormatNoSymbol(val)}</span>`;
+            return `
+                <button type="button" class="ana-cell-btn" onclick="openAnalyticsEditModal('sales', ${y}, ${mIdx})">
+                    ${valHtml}
+                    ${deltaHtml}
+                </button>
+            `;
+        },
+        buildTotalCellFn: (y, yIdx) => {
+            const total = totalsByYear[y];
+            let variationHtml = '';
+            if (yIdx > 0) {
+                const prevTotal = totalsByYear[years[yIdx - 1]];
+                if (prevTotal > 0) {
+                    const diff = Math.round(((total - prevTotal) / prevTotal) * 100);
+                    const cls = diff > 0 ? 'is-up' : (diff < 0 ? 'is-down' : 'is-flat');
+                    variationHtml = `<span class="ana-delta-chip ${cls}">${diff > 0 ? '+' : ''}${diff}%</span>`;
+                }
+            }
+            return `
+                <div class="ana-total-stack">
+                    <span class="ana-total-num ${y === currentYear ? 'is-current' : ''}">${anaFormatNoSymbol(total)}</span>
+                    ${variationHtml}
+                </div>
+            `;
+        }
+    });
+}
+
+async function handleSalesUpdate(year, monthIdx, value, preserveScrollLeft = null) {
+    const clean = (value ?? '').toString().replace(/\./g, '').replace(',', '.').trim();
+    const num = parseFloat(clean);
+    await dataManager.saveSalesHistory(year, monthIdx, Number.isNaN(num) ? 0 : num);
+    renderVentas(false, preserveScrollLeft);
 }
 
 // --- MEDIAS MENSUALES ---
@@ -731,13 +985,29 @@ window.handleSalesUpdate = handleSalesUpdate;
 window.renderMedias = renderMedias;
 window.openRankingModal = openRankingModal;
 window.closeRankingModal = closeRankingModal;
-// --- OBJETIVOS VIEW (REDiseño V7 - SINGLE SCREEN) ---
-async function renderObjetivos(isBack = false) {
+// --- OBJETIVOS VIEW (V7 + SOPORTE POR AÑO) ---
+async function renderObjetivos(isBack = false, selectedYear = null) {
     if (typeof updateHistoryState === 'function') updateHistoryState('objetivos', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Objetivos Mensuales');
-    const goals = await dataManager.getDetailedGoals();
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    const currentYear = new Date().getFullYear();
+    const targetYear = selectedYear !== null && selectedYear !== undefined
+        ? parseInt(selectedYear, 10)
+        : (window._objSelectedYear || currentYear);
+    window._objSelectedYear = targetYear;
+
+    const [goals, goalsHistory] = await Promise.all([
+        dataManager.getDetailedGoals(targetYear),
+        dataManager.getGoalsHistory()
+    ]);
+
+    const yearSet = new Set([currentYear, currentYear + 1, targetYear]);
+    Object.keys(goalsHistory || {}).forEach(y => {
+        const numY = parseInt(y, 10);
+        if (!Number.isNaN(numY) && numY >= 2023) yearSet.add(numY);
+    });
+    const objYears = Array.from(yearSet).sort((a, b) => a - b);
 
     // Cálculo de Totales Anuales
     const total3 = (goals.data3 || []).reduce((a, b) => a + (b || 0), 0);
@@ -746,7 +1016,19 @@ async function renderObjetivos(isBack = false) {
 
     let contentHtml = `<main class="objetivos-v7-wrapper">
         <div class="v7-obj-table card shadow-xl">
-            <!-- CABECERA PROFESIONAL -->
+            <!-- SELECTOR DE AÑO (Objetivos guardados por año) -->
+            <div class="v7-obj-yearbar">
+                <span class="v7-obj-yearbar-label">Objetivos año</span>
+                <div class="v7-obj-yearbar-pills">
+                    ${objYears.map(y => `
+                        <button type="button"
+                                class="v7-obj-year-btn ${y === targetYear ? 'is-active' : ''}"
+                                onclick="renderObjetivos(true, ${y})">${y}</button>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- CABECERA -->
             <div class="v7-obj-header">
                 <div class="col-label">MES</div>
                 <div class="v7-pill p3">3 %</div>
@@ -756,17 +1038,17 @@ async function renderObjetivos(isBack = false) {
 
             <!-- CUERPO DE LA TABLA (12 MESES) -->
             <div class="v7-obj-body">
-                ${months.map((m, i) => `
+                ${ANA_MONTHS.map((m, i) => `
                     <div class="v7-obj-row">
                         <div class="v7-month-name">${m}</div>
                         <div class="v7-col-val">
-                            <input type="text" class="v7-input v7-val-3" value="${formatCurrency(Math.round(goals.data3[i])).replace(' €', '')}" onfocus="this.select()" onchange="handleGoalUpdate(3, ${i}, this.value)">
+                            <input type="text" class="v7-input v7-val-3" value="${anaFormatNoSymbol(goals.data3[i])}" onfocus="this.select()" onchange="handleGoalUpdate(3, ${i}, this.value, ${targetYear})">
                         </div>
                         <div class="v7-col-val">
-                            <input type="text" class="v7-input v7-val-4" value="${formatCurrency(Math.round(goals.data4[i])).replace(' €', '')}" onfocus="this.select()" onchange="handleGoalUpdate(4, ${i}, this.value)">
+                            <input type="text" class="v7-input v7-val-4" value="${anaFormatNoSymbol(goals.data4[i])}" onfocus="this.select()" onchange="handleGoalUpdate(4, ${i}, this.value, ${targetYear})">
                         </div>
                         <div class="v7-col-val">
-                            <input type="text" class="v7-input v7-val-5" value="${formatCurrency(Math.round(goals.data5[i])).replace(' €', '')}" onfocus="this.select()" onchange="handleGoalUpdate(5, ${i}, this.value)">
+                            <input type="text" class="v7-input v7-val-5" value="${anaFormatNoSymbol(goals.data5[i])}" onfocus="this.select()" onchange="handleGoalUpdate(5, ${i}, this.value, ${targetYear})">
                         </div>
                     </div>
                 `).join('')}
@@ -775,428 +1057,441 @@ async function renderObjetivos(isBack = false) {
             <!-- FILA DE TOTALES ANUALES -->
             <div class="v7-obj-row total-row">
                 <div class="v7-total-label">TOTAL</div>
-                <div class="v7-total-val">${formatCurrency(Math.round(total3)).replace(' €', '')}</div>
-                <div class="v7-total-val">${formatCurrency(Math.round(total4)).replace(' €', '')}</div>
-                <div class="v7-total-val">${formatCurrency(Math.round(total5)).replace(' €', '')}</div>
+                <div class="v7-total-val">${anaFormatNoSymbol(total3)}</div>
+                <div class="v7-total-val">${anaFormatNoSymbol(total4)}</div>
+                <div class="v7-total-val">${anaFormatNoSymbol(total5)}</div>
             </div>
         </div>
     </main>`;
-    
+
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
+    app.innerHTML = headerHtml + contentHtml;
+    if (window.restoreScroll) window.restoreScroll();
 }
 
-async function handleGoalUpdate(level, monthIdx, value) {
-    // Limpiar cualquier separador de miles (puntos) y tratar la coma como decimal si existiera
+async function handleGoalUpdate(level, monthIdx, value, year = null) {
     const cleanValue = value.toString().replace(/\./g, '').replace(',', '.');
     const num = parseFloat(cleanValue);
-    
-    // Persistir el cambio
-    await dataManager.updateGoal(level, monthIdx, isNaN(num) ? 0 : num);
-    
-    // Forzar el redibujado de la tabla completa (esto actualizará los totales y formateará el input)
-    renderObjetivos();
+    const targetYear = year !== null && year !== undefined ? parseInt(year, 10) : (window._objSelectedYear || new Date().getFullYear());
+
+    await dataManager.updateGoal(level, monthIdx, Number.isNaN(num) ? 0 : num, targetYear);
+    renderObjetivos(true, targetYear);
 }
 
-// --- FACTURACIÓN REAL (V7 PREMIUM) ---
-async function renderFactura(isBack = false) {
-    if (typeof updateHistoryState === 'function') updateHistoryState('factura', isBack);
-    const app = document.getElementById('app');
-    const headerHtml = getCommonHeaderHtml('Facturación Real');
+// --- FACTURACIÓN REAL ---
+async function renderFactura(isBack = false, preserveScrollLeft = null) {
     const history = await dataManager.getInvoiceHistory();
-
     const currentYear = new Date().getFullYear();
-    const years = [2023, 2024, 2025, 2026];
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const years = getAnalyticsYears(history);
 
-    // Auto-guardar snapshot del año en curso con los objetivos actuales.
-    // Así, cuando el año termine y se acceda desde el año siguiente,
-    // los colores del año pasado quedan congelados con los objetivos que estaban vigentes.
+    // Sincronizar snapshot del año actual con sus objetivos vigentes
     const currentGoals = await dataManager.getDetailedGoals();
     await dataManager.saveGoalsSnapshot(currentYear, currentGoals);
 
-    // Cargar objetivos para cada año:
-    //   - Año actual → objetivos activos (live)
-    //   - Año pasado con snapshot → snapshot congelada
-    //   - Año pasado sin snapshot → null (sin colores)
     const goalsPerYear = {};
     for (const y of years) {
         goalsPerYear[y] = await dataManager.getGoalsForYear(y);
     }
 
-    // Helper: devuelve el color de fondo según el valor vs los tres objetivos del mes
-    function getCellColor(value, goals, monthIdx) {
-        if (!value || value === 0) return null;   // Celda vacía → sin color
-        if (!goals) return null;                   // Sin snapshot → sin color
-        const g3 = goals.data3[monthIdx] || 0;
-        const g4 = goals.data4[monthIdx] || 0;
-        const g5 = goals.data5[monthIdx] || 0;
-        if (value >= g5) return '#22c55e';  // Verde  ≥ 5%
-        if (value >= g4) return '#007BFF';  // Azul   ≥ 4%
-        if (value >= g3) return '#eab308';  // Morado ≥ 3%
-        return '#dc2626';                   // Rojo   < 3%
-    }
-
-    // Calcular totales por año
-    const annualTotals = years.map(y => {
+    const annualTotals = {};
+    years.forEach(y => {
         const data = history[String(y)] || Array(12).fill(0);
-        return data.reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+        annualTotals[y] = data.reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
     });
 
-    let contentHtml = `<main class="v7-factura-wrapper">
-        <div class="v7-factura-card">
-            <div class="v7-factura-scroll" id="facturaScrollContainer">
-                <table class="v7-factura-table">
-                    <thead>
-                        <tr>
-                            <th class="sticky-col">MES</th>
-                            ${years.map(y => `<th><span class="v7-year-pill">${y}</span></th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${months.map((m, mIdx) => `
-                            <tr class="v7-factura-row">
-                                <td class="sticky-col">${m}</td>
-                                ${years.map(y => {
-                                    const yearData = history[String(y)] || Array(12).fill(0);
-                                    const val = yearData[mIdx] || 0;
-                                    const color = getCellColor(val, goalsPerYear[y], mIdx);
-                                    const tdStyle = color
-                                        ? `style="background-color:${color}; border-radius:10px; padding:4px 8px;"`
-                                        : '';
-                                    const inputClass = color
-                                        ? 'v7-factura-input v7-factura-input--colored'
-                                        : 'v7-factura-input';
-                                    return `
-                                        <td ${tdStyle}>
-                                            <input type="text" class="${inputClass}"
-                                                   value="${val === 0 ? '-' : formatCurrency(Math.round(val)).replace(' €', '')}"
-                                                   placeholder="0"
-                                                   onfocus="this.select()"
-                                                   onchange="handleFacturaUpdate(${y}, ${mIdx}, this.value)">
-                                        </td>
-                                    `;
-                                }).join('')}
-                            </tr>
-                        `).join('')}
-                        <tr class="v7-factura-total-row">
-                            <td class="sticky-col" style="color: #0f172a; font-weight: 900 !important; font-size: 14px;">TOTAL</td>
-                            ${annualTotals.map(total => `
-                                <td>${formatCurrency(Math.round(total)).replace(' €', '')}</td>
-                            `).join('')}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    renderAnalyticsTableView({
+        title: 'Facturación Real',
+        isBack,
+        stateKey: 'factura',
+        scrollId: 'facturaScrollContainer',
+        years,
+        currentYear,
+        preserveScrollLeft,
+        footerHtml: buildTierLegendFooter('Pulsa para editar'),
+        buildCellFn: (y, _yIdx, mIdx) => {
+            const yearData = history[String(y)] || Array(12).fill(0);
+            const val = parseFloat(yearData[mIdx]) || 0;
+            const goals = goalsPerYear[y];
+            const tier = getCommissionTierInfo(val, goals, mIdx);
 
-        <!-- Leyenda de colores -->
-        <div style="display: flex; justify-content: space-around; align-items: center; padding: 10px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -8px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #dc2626;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #eab308;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">3%</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #007BFF;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">4%</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #22c55e;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">5%</span>
-            </div>
-        </div>
-    </main>`;
+            let innerHtml = '';
+            if (val === 0) {
+                innerHtml = `<span class="ana-empty-dash">—</span>`;
+            } else if (tier) {
+                innerHtml = `
+                    <div class="ana-tier-box is-${tier.tierKey}">
+                        <div class="ana-tier-top">
+                            <span class="ana-val-main">${anaFormatNoSymbol(val)}</span>
+                            <span class="ana-pct-badge">${tier.pct}%</span>
+                        </div>
+                        <div class="ana-prog-track">
+                            <div class="ana-prog-fill" style="width:${tier.progressPct}%;"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                innerHtml = `<span class="ana-val-main is-plain">${anaFormatNoSymbol(val)}</span>`;
+            }
 
-    contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
-
-    // Auto-scroll al año más reciente
-    setTimeout(() => {
-        const container = document.getElementById('facturaScrollContainer');
-        if (container) container.scrollLeft = container.scrollWidth;
-    }, 50);
+            return `
+                <button type="button" class="ana-cell-btn" onclick="openAnalyticsEditModal('factura', ${y}, ${mIdx})">
+                    ${innerHtml}
+                </button>
+            `;
+        },
+        buildTotalCellFn: (y) => {
+            const total = annualTotals[y] || 0;
+            const annTier = getAnnualCommissionTier(total, goalsPerYear[y]);
+            if (annTier) {
+                return `
+                    <div class="ana-total-tier-pill is-${annTier.tierKey}">
+                        <span class="ana-total-tier-val">${anaFormatNoSymbol(total)}</span>
+                        <span class="ana-total-tier-tag">${annTier.pct}%</span>
+                    </div>
+                `;
+            }
+            return `<span class="ana-total-num ${y === currentYear ? 'is-current' : ''}">${anaFormatNoSymbol(total)}</span>`;
+        }
+    });
 }
 
-async function handleFacturaUpdate(year, monthIdx, value) {
-    const cleanVal = value.toString().replace(/\./g, '').replace(',', '.');
+async function handleFacturaUpdate(year, monthIdx, value, preserveScrollLeft = null) {
+    const cleanVal = (value ?? '').toString().replace(/\./g, '').replace(',', '.').trim();
     const num = parseFloat(cleanVal);
-    await dataManager.saveInvoiceHistory(year, monthIdx, isNaN(num) ? 0 : num);
-    renderFactura();
+    await dataManager.saveInvoiceHistory(year, monthIdx, Number.isNaN(num) ? 0 : num);
+    renderFactura(false, preserveScrollLeft);
 }
 
 window.renderObjetivos = renderObjetivos;
 window.handleGoalUpdate = handleGoalUpdate;
 window.renderFactura = renderFactura;
 window.handleFacturaUpdate = handleFacturaUpdate;
+window.openAnalyticsEditModal = openAnalyticsEditModal;
+window.closeAnalyticsEditModal = closeAnalyticsEditModal;
+window.saveAnalyticsEditModal = saveAnalyticsEditModal;
+window.applyCalculatedOrderSales = applyCalculatedOrderSales;
 
-// --- COMISIONES (V7 PREMIUM) ---
+// --- COMISIONES ---
 async function renderComisiones(isBack = false) {
-    if (typeof updateHistoryState === 'function') updateHistoryState('comisiones', isBack);
-    const app = document.getElementById('app');
-    const headerHtml = getCommonHeaderHtml('Comisiones');
     const history = await dataManager.getInvoiceHistory();
-
     const currentYear = new Date().getFullYear();
-    // Años dinámicos: desde 2023 hasta el año actual
-    const years = [];
-    for (let y = 2023; y <= currentYear; y++) years.push(y);
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const years = getAnalyticsYears(history);
 
-    // Auto-guardar snapshot del año en curso
+    // Sincronizar snapshot del año en curso
     const currentGoals = await dataManager.getDetailedGoals();
     await dataManager.saveGoalsSnapshot(currentYear, currentGoals);
 
-    // Cargar objetivos por año (snapshot congelada para pasados, null si no existe)
     const goalsPerYear = {};
     for (const y of years) {
         goalsPerYear[y] = await dataManager.getGoalsForYear(y);
     }
 
-    // Determinar nivel alcanzado y % comisión
-    function getCommissionInfo(value, goals, monthIdx) {
-        if (!value || value === 0) return { pct: 0, amount: 0, color: null };
-        if (!goals) return { pct: 0, amount: 0, color: null }; // Sin snapshot → sin color
-        const g3 = goals.data3[monthIdx] || 0;
-        const g4 = goals.data4[monthIdx] || 0;
-        const g5 = goals.data5[monthIdx] || 0;
-        if (value >= g5) return { pct: 5, amount: Math.round(value * 0.05), color: '#22c55e' };
-        if (value >= g4) return { pct: 4, amount: Math.round(value * 0.04), color: '#007BFF' };
-        if (value >= g3) return { pct: 3, amount: Math.round(value * 0.03), color: '#eab308' };
-        return { pct: 2, amount: Math.round(value * 0.02), color: '#dc2626' };
-    }
-
-    // Color para el TOTAL anual: comparar total facturado vs suma de objetivos anuales
-    function getTotalColor(totalFacturado, goals) {
-        if (!totalFacturado || totalFacturado === 0) return null;
-        if (!goals) return null;
-        const sumG3 = (goals.data3 || []).reduce((a, b) => a + (b || 0), 0);
-        const sumG4 = (goals.data4 || []).reduce((a, b) => a + (b || 0), 0);
-        const sumG5 = (goals.data5 || []).reduce((a, b) => a + (b || 0), 0);
-        if (totalFacturado >= sumG5) return '#22c55e';
-        if (totalFacturado >= sumG4) return '#007BFF';
-        if (totalFacturado >= sumG3) return '#eab308';
-        return '#dc2626';
-    }
-
-    // Calcular totales anuales de comisiones y facturación
-    const annualCommissions = years.map(y => {
+    const annualCommissions = {};
+    const annualFacturado = {};
+    years.forEach(y => {
         const data = history[String(y)] || Array(12).fill(0);
-        let total = 0;
+        let commTotal = 0;
+        let invTotal = 0;
         for (let m = 0; m < 12; m++) {
             const val = parseFloat(data[m]) || 0;
-            const info = getCommissionInfo(val, goalsPerYear[y], m);
-            total += info.amount;
+            invTotal += val;
+            const tier = getCommissionTierInfo(val, goalsPerYear[y], m);
+            if (tier) commTotal += tier.amount;
         }
-        return total;
+        annualCommissions[y] = commTotal;
+        annualFacturado[y] = invTotal;
     });
 
-    const annualFacturado = years.map(y => {
-        const data = history[String(y)] || Array(12).fill(0);
-        return data.reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+    renderAnalyticsTableView({
+        title: 'Comisiones',
+        isBack,
+        stateKey: 'comisiones',
+        scrollId: 'comisionesScrollContainer',
+        years,
+        currentYear,
+        footerHtml: buildTierLegendFooter('Base: facturación real'),
+        buildCellFn: (y, _yIdx, mIdx) => {
+            const goals = goalsPerYear[y];
+            if (!goals) {
+                return `<div class="ana-cell-static"><span class="ana-empty-dash">—</span></div>`;
+            }
+            const yearData = history[String(y)] || Array(12).fill(0);
+            const val = parseFloat(yearData[mIdx]) || 0;
+            const tier = getCommissionTierInfo(val, goals, mIdx);
+            if (!tier) {
+                return `<div class="ana-cell-static"><span class="ana-empty-dash">—</span></div>`;
+            }
+            return `
+                <div class="ana-cell-static">
+                    <div class="ana-tier-box is-${tier.tierKey}">
+                        <div class="ana-tier-top">
+                            <span class="ana-val-main">${anaFormatNoSymbol(tier.amount)}</span>
+                            <span class="ana-pct-badge">${tier.pct}%</span>
+                        </div>
+                        <span class="ana-base-sub">Base: ${anaFormatNoSymbol(val)}</span>
+                    </div>
+                </div>
+            `;
+        },
+        buildTotalCellFn: (y) => {
+            const goals = goalsPerYear[y];
+            if (!goals) {
+                return `<span class="ana-empty-dash">—</span>`;
+            }
+            const totalComm = annualCommissions[y] || 0;
+            const totalInv = annualFacturado[y] || 0;
+            const annTier = getAnnualCommissionTier(totalInv, goals);
+            if (annTier) {
+                return `
+                    <div class="ana-total-tier-pill is-${annTier.tierKey}">
+                        <span class="ana-total-tier-val">${anaFormatNoSymbol(totalComm)}</span>
+                        <span class="ana-total-tier-tag">${annTier.pct}%</span>
+                    </div>
+                `;
+            }
+            return `<span class="ana-total-num ${y === currentYear ? 'is-current' : ''}">${anaFormatNoSymbol(totalComm)}</span>`;
+        }
     });
-
-    let contentHtml = `<main class="v7-factura-wrapper">
-        <div class="v7-factura-card">
-            <div class="v7-factura-scroll" id="comisionesScrollContainer">
-                <table class="v7-factura-table">
-                    <thead>
-                        <tr>
-                            <th class="sticky-col">MES</th>
-                            ${years.map(y => `<th><span class="v7-year-pill">${y}</span></th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${months.map((m, mIdx) => `
-                            <tr class="v7-factura-row">
-                                <td class="sticky-col">${m}</td>
-                                ${years.map(y => {
-                                    const yearData = history[String(y)] || Array(12).fill(0);
-                                    const val = parseFloat(yearData[mIdx]) || 0;
-                                    const info = getCommissionInfo(val, goalsPerYear[y], mIdx);
-                                    const color = info.color;
-                                    const tdStyle = color
-                                        ? `style="background-color:${color}; border-radius:10px; padding:4px 8px;"`
-                                        : '';
-                                    const textClass = color ? 'v7-comision-val v7-comision-val--colored' : 'v7-comision-val';
-                                    const displayVal = val === 0 ? '-' : formatCurrency(info.amount).replace(' €', '');
-                                    return `
-                                        <td ${tdStyle}>
-                                            <span class="${textClass}">${displayVal}</span>
-                                        </td>
-                                    `;
-                                }).join('')}
-                            </tr>
-                        `).join('')}
-                        <tr class="v7-factura-total-row">
-                            <td class="sticky-col" style="color: #0f172a; font-weight: 900 !important; font-size: 14px;">TOTAL</td>
-                            ${years.map((y, yIdx) => {
-                                const totalColor = getTotalColor(annualFacturado[yIdx], goalsPerYear[y]);
-                                const tdStyle = totalColor
-                                    ? `style="background-color:${totalColor} !important; border-radius:10px; color:#ffffff; font-weight:900;"`
-                                    : '';
-                                const valStr = formatCurrency(Math.round(annualCommissions[yIdx])).replace(' €', '');
-                                return `<td ${tdStyle}>${valStr}</td>`;
-                            }).join('')}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- Leyenda de colores -->
-        <div style="display: flex; justify-content: space-around; align-items: center; padding: 10px 10px; background: white; border-top: 1px solid #f1f5f9; border-radius: 0 0 16px 16px; margin-top: -8px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #dc2626;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">2%</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #eab308;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">3%</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #007BFF;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">4%</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #22c55e;"></div>
-                <span style="font-size: 12px; font-weight: 800; color: #64748b;">5%</span>
-            </div>
-        </div>
-    </main>`;
-
-    contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
-
-    // Auto-scroll al año más reciente
-    setTimeout(() => {
-        const container = document.getElementById('comisionesScrollContainer');
-        if (container) container.scrollLeft = container.scrollWidth;
-    }, 50);
 }
 
 window.renderComisiones = renderComisiones;
 
-// --- OBJETIVOS TRIMESTRALES (V7 PREMIUM) ---
-async function renderObjetivosTrimestrales(isBack = false) {
+// --- OBJETIVOS TRIMESTRALES (V2 COMPACTO POR AÑO) ---
+const QUARTERLY_META = [
+    { key: 'q1', idx: 0, title: '1er Trimestre', months: 'Ene – Mar' },
+    { key: 'q2', idx: 1, title: '2º Trimestre', months: 'Abr – Jun' },
+    { key: 'q3', idx: 2, title: '3er Trimestre', months: 'Jul – Sep' },
+    { key: 'q4', idx: 3, title: '4º Trimestre', months: 'Oct – Dic' }
+];
+
+function getQuarterStatusInfo(targetYear, qIdx, targetVal, actualVal) {
+    if (!targetVal || targetVal <= 0) {
+        return { key: 'pending', label: 'Sin objetivo', pct: 0 };
+    }
+    const pct = Math.max(0, Math.round((actualVal / targetVal) * 100));
+    if (actualVal >= targetVal) {
+        return { key: 'success', label: 'Conseguido', pct };
+    }
+    const now = new Date();
+    const nowYear = now.getFullYear();
+    const nowQuarter = Math.floor(now.getMonth() / 3);
+    if (targetYear < nowYear || (targetYear === nowYear && qIdx < nowQuarter)) {
+        return { key: 'danger', label: 'No conseguido', pct };
+    }
+    if (targetYear === nowYear && qIdx === nowQuarter) {
+        return { key: 'progress', label: 'En curso', pct };
+    }
+    return { key: 'pending', label: 'Pendiente', pct };
+}
+
+async function renderObjetivosTrimestrales(isBack = false, selectedYear = null) {
     if (typeof updateHistoryState === 'function') updateHistoryState('trimestrales', isBack);
     const app = document.getElementById('app');
     const headerHtml = getCommonHeaderHtml('Objetivos Trimestrales');
-    const currentYear = new Date().getFullYear();
-    const quarterly = await dataManager.getQuarterlyGoals(currentYear);
-    const invoiceHistory = await dataManager.getInvoiceHistory();
-    const history2026 = invoiceHistory[String(currentYear)] || Array(12).fill(0);
-    
-    // Cálculo automático por trimestre (Sincronización Total)
+
+    const nowYear = new Date().getFullYear();
+    const targetYear = selectedYear !== null && selectedYear !== undefined
+        ? parseInt(selectedYear, 10)
+        : (window._trimSelectedYear || nowYear);
+    window._trimSelectedYear = targetYear;
+
+    const [quarterly, invoiceHistory, availableYears] = await Promise.all([
+        dataManager.getQuarterlyGoals(targetYear),
+        dataManager.getInvoiceHistory(),
+        dataManager.getQuarterlyGoalYears()
+    ]);
+
+    const yearSet = new Set([...(availableYears || []), targetYear]);
+    const trimYears = Array.from(yearSet).sort((a, b) => a - b);
+
+    const yearInvoices = invoiceHistory[String(targetYear)] || Array(12).fill(0);
+    const sumRange = (start) =>
+        (parseFloat(yearInvoices[start]) || 0) +
+        (parseFloat(yearInvoices[start + 1]) || 0) +
+        (parseFloat(yearInvoices[start + 2]) || 0);
+
     const autoValues = {
-        q1: (parseFloat(history2026[0]) || 0) + (parseFloat(history2026[1]) || 0) + (parseFloat(history2026[2]) || 0),
-        q2: (parseFloat(history2026[3]) || 0) + (parseFloat(history2026[4]) || 0) + (parseFloat(history2026[5]) || 0),
-        q3: (parseFloat(history2026[6]) || 0) + (parseFloat(history2026[7]) || 0) + (parseFloat(history2026[8]) || 0),
-        q4: (parseFloat(history2026[9]) || 0) + (parseFloat(history2026[10]) || 0) + (parseFloat(history2026[11]) || 0)
+        q1: sumRange(0),
+        q2: sumRange(3),
+        q3: sumRange(6),
+        q4: sumRange(9)
     };
 
-    // Nombres compactos para ahorrar espacio
-    const labels = {
-        q1: '1er trimestre',
-        q2: '2º trimestre',
-        q3: '3er trimestre',
-        q4: '4º trimestre'
-    };
+    const cardsHtml = QUARTERLY_META.map(meta => {
+        const qData = quarterly[meta.key] || { target: 0 };
+        const targetVal = parseFloat(qData.target) || 0;
+        const actualVal = autoValues[meta.key] || 0;
+        const status = getQuarterStatusInfo(targetYear, meta.idx, targetVal, actualVal);
+        const diff = actualVal - targetVal;
+        const barWidth = targetVal > 0 ? Math.min(100, Math.max(actualVal > 0 ? 4 : 0, status.pct)) : 0;
 
-    let contentHtml = `<main class="trim-container" style="padding: 1rem; overflow-y: auto; padding-bottom: 100px;">
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-            ${Object.keys(labels).map(key => {
-                const data = quarterly[key] || { target: 0, actual: 0 };
-                
-                // Sincronizar automáticamente con el valor calculado
-                const actualValue = autoValues[key];
-                const isMet = actualValue >= data.target && data.target > 0;
-                
-                return `
-                    <div style="background: white; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-                        <div style="font-weight: 900; font-size: 1.1rem; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; text-transform: uppercase;">
-                            ${labels[key]}
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 16px; align-items: center;">
-                            <div style="display: flex; align-items: center; justify-content: center; width: 100%; gap: 15px;">
-                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase; width: 90px; text-align: right;">Objetivo:</span>
-                                <div class="trim-input-group" style="width: 140px;">
-                                    <input type="text" id="target_${key}" class="trim-input" 
-                                           style="padding: 8px 25px 8px 8px; font-size: 1.1rem; text-align: center;"
-                                           value="${formatCurrency(Math.round(data.target)).replace(' €', '')}"
-                                           onfocus="this.select()" onblur="formatNumericInput(this)">
-                                    <span class="trim-currency" style="right: 8px;">€</span>
-                                </div>
-                            </div>
-                            <div style="display: flex; align-items: center; justify-content: center; width: 100%; gap: 15px;">
-                                <span style="font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase; width: 90px; text-align: right;">Facturado:</span>
-                                <div class="trim-input-group" style="width: 140px;">
-                                    <input type="text" id="actual_${key}" class="trim-input" 
-                                           style="padding: 8px 25px 8px 8px; font-size: 1.1rem; color: #009ee3; text-align: center;"
-                                           value="${formatCurrency(Math.round(actualValue)).replace(' €', '')}"
-                                           onfocus="this.select()" onblur="formatNumericInput(this)">
-                                    <span class="trim-currency" style="right: 8px; color: #009ee3;">€</span>
-                                </div>
-                            </div>
-                            <div style="display: flex; justify-content: center; width: 100%; margin-top: 4px;">
-                                <span class="trim-status ${isMet ? 'status-success' : 'status-danger'}" style="font-size: 0.8rem; padding: 6px 16px; white-space: nowrap; border-radius: 999px;">
-                                    ${isMet ? 'CONSEGUIDO' : 'NO CONSEGUIDO'}
-                                </span>
-                            </div>
-                        </div>
+        let diffText = '—';
+        if (targetVal > 0) {
+            diffText = `${diff >= 0 ? '+' : '-'}${anaFormatNoSymbol(Math.abs(diff))} €`;
+        }
+        const pctLabel = targetVal > 0 ? `${status.pct}% logrado` : 'Sin definir';
+        const targetDisplay = targetVal > 0 ? `${anaFormatNoSymbol(targetVal)} €` : 'Definir';
+
+        return `
+            <article class="trim-q-card is-${status.key}">
+                <div class="trim-q-head">
+                    <div class="trim-q-title-wrap">
+                        <span class="trim-q-title">${meta.title}</span>
+                        <span class="trim-q-months">${meta.months}</span>
                     </div>
-                `;
-            }).join('')}
-        </div>
+                    <span class="trim-status-pill is-${status.key}">${status.label}</span>
+                </div>
 
-        <div class="trim-save-container">
-            <button class="btn-trim-save" onclick="handleSaveQuarterly()">
-                <span class="material-icons-round">save</span>
-                <span>Guardar Cambios</span>
-            </button>
+                <div class="trim-q-metrics">
+                    <div class="trim-metric-col">
+                        <span class="trim-metric-lbl">Facturado</span>
+                        <span class="trim-metric-val is-facturado">${anaFormatNoSymbol(actualVal)} €</span>
+                    </div>
+
+                    <div class="trim-metric-col is-center">
+                        <span class="trim-metric-lbl">Objetivo</span>
+                        <button type="button" class="trim-target-btn" onclick="openQuarterlyEditModal(${targetYear}, '${meta.key}')">
+                            <span>${targetDisplay}</span>
+                            <span class="material-icons-round">edit</span>
+                        </button>
+                    </div>
+
+                    <div class="trim-metric-col is-right">
+                        <span class="trim-metric-lbl">${pctLabel}</span>
+                        <span class="trim-metric-val is-${status.key}">${diffText}</span>
+                    </div>
+                </div>
+
+                <div class="trim-prog-track">
+                    <div class="trim-prog-fill is-${status.key}" style="width: ${barWidth}%;"></div>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+    let contentHtml = `<main class="trim-v2-wrapper">
+        <div class="trim-yearbar">
+            <span class="trim-yearbar-label">Objetivos año</span>
+            <div class="trim-yearbar-pills">
+                ${trimYears.map(y => `
+                    <button type="button"
+                            class="trim-year-pill ${y === targetYear ? 'is-active' : ''}"
+                            onclick="renderObjetivosTrimestrales(true, ${y})">${y}</button>
+                `).join('')}
+            </div>
+        </div>
+        <div class="trim-grid">
+            ${cardsHtml}
         </div>
     </main>`;
 
     contentHtml += renderBottomNav(null);
-    app.innerHTML = headerHtml + contentHtml; if(window.restoreScroll) window.restoreScroll();
+    app.innerHTML = headerHtml + contentHtml;
+    if (window.restoreScroll) window.restoreScroll();
 }
 
-async function handleSaveQuarterly() {
-    const quarterly = {};
-    const keys = ['q1', 'q2', 'q3', 'q4'];
-    
-    keys.forEach(key => {
-        const targetVal = document.getElementById(`target_${key}`).value;
-        const actualVal = document.getElementById(`actual_${key}`).value;
-        
-        const targetNum = parseFloat(targetVal.replace(/\./g, '').replace(',', '.')) || 0;
-        const actualNum = parseFloat(actualVal.replace(/\./g, '').replace(',', '.')) || 0;
-        
-        quarterly[key] = {
-            target: targetNum,
-            actual: actualNum
-        };
-    });
+let _quarterlyEditState = null;
 
-    const currentYear = new Date().getFullYear();
-    await dataManager.saveQuarterlyGoals(currentYear, quarterly);
-    
-    // Feedback visual y recarga
-    const btn = document.querySelector('.btn-trim-save');
-    const originalContent = btn.innerHTML;
-    btn.innerHTML = '<span class="material-icons-round">check_circle</span><span>¡Guardado!</span>';
-    btn.style.background = '#16a34a';
-    
+async function openQuarterlyEditModal(year, qKey) {
+    let modal = document.getElementById('analyticsEditModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'analyticsEditModal';
+        modal.className = 'modal-overlay';
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeAnalyticsEditModal();
+        });
+        document.body.appendChild(modal);
+    }
+
+    const [quarterly, invoiceHistory] = await Promise.all([
+        dataManager.getQuarterlyGoals(year),
+        dataManager.getInvoiceHistory()
+    ]);
+
+    const meta = QUARTERLY_META.find(m => m.key === qKey) || QUARTERLY_META[0];
+    const currentTarget = (quarterly[qKey] && parseFloat(quarterly[qKey].target)) || 0;
+    const invoices = invoiceHistory[String(year)] || Array(12).fill(0);
+    const startIdx = meta.idx * 3;
+    const actualVal =
+        (parseFloat(invoices[startIdx]) || 0) +
+        (parseFloat(invoices[startIdx + 1]) || 0) +
+        (parseFloat(invoices[startIdx + 2]) || 0);
+
+    _quarterlyEditState = { year, qKey, quarterly };
+    const inputDisplay = currentTarget > 0 ? anaFormatNoSymbol(currentTarget) : '';
+
+    modal.innerHTML = `
+        <div class="ana-modal-card" role="dialog" aria-modal="true" aria-label="Editar objetivo trimestral">
+            <div class="ana-modal-head">
+                <div>
+                    <h3 class="ana-modal-title">${meta.title} ${year}</h3>
+                    <span class="ana-modal-sub">${meta.months} · Objetivos Trimestrales</span>
+                </div>
+                <button type="button" class="ana-modal-close" onclick="closeAnalyticsEditModal()" aria-label="Cerrar">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="ana-modal-body">
+                <label class="ana-modal-label" for="quarterlyModalInput">Objetivo del trimestre</label>
+                <div class="ana-modal-input-wrap">
+                    <input type="text"
+                           id="quarterlyModalInput"
+                           class="ana-modal-input"
+                           inputmode="decimal"
+                           data-no-clear="true"
+                           value="${inputDisplay}"
+                           placeholder="0"
+                           onkeydown="if(event.key==='Enter'){ event.preventDefault(); saveQuarterlyEditModal(); }">
+                    <span class="ana-modal-euro">€</span>
+                </div>
+                <div class="ana-modal-context">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <span>Facturado real (${meta.months}):</span>
+                        <strong>${anaFormatNoSymbol(actualVal)} €</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="ana-modal-actions">
+                <button type="button" class="ana-btn-cancel" onclick="closeAnalyticsEditModal()">Cancelar</button>
+                <button type="button" class="ana-btn-save" onclick="saveQuarterlyEditModal()">Guardar</button>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('open');
     setTimeout(() => {
-        renderObjetivosTrimestrales();
-    }, 1000);
+        const input = document.getElementById('quarterlyModalInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 60);
+}
+
+async function saveQuarterlyEditModal() {
+    if (!_quarterlyEditState) return;
+    const { year, qKey, quarterly } = _quarterlyEditState;
+    const input = document.getElementById('quarterlyModalInput');
+    const clean = (input ? input.value : '0').toString().replace(/\./g, '').replace(',', '.').trim();
+    const targetNum = parseFloat(clean);
+
+    const updated = {
+        q1: { target: (quarterly.q1 && parseFloat(quarterly.q1.target)) || 0 },
+        q2: { target: (quarterly.q2 && parseFloat(quarterly.q2.target)) || 0 },
+        q3: { target: (quarterly.q3 && parseFloat(quarterly.q3.target)) || 0 },
+        q4: { target: (quarterly.q4 && parseFloat(quarterly.q4.target)) || 0 }
+    };
+    updated[qKey] = { target: Number.isNaN(targetNum) ? 0 : targetNum };
+
+    closeAnalyticsEditModal();
+    await dataManager.saveQuarterlyGoals(year, updated);
+    renderObjetivosTrimestrales(true, year);
 }
 
 window.renderObjetivosTrimestrales = renderObjetivosTrimestrales;
-window.handleSaveQuarterly = handleSaveQuarterly;
+window.openQuarterlyEditModal = openQuarterlyEditModal;
+window.saveQuarterlyEditModal = saveQuarterlyEditModal;
 
 
 

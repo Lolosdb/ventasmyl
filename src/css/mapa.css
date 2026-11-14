@@ -389,66 +389,11 @@
     font-size: 12px;
 }
 
-.popup-actions-stack {
-    display: flex;
-    flex-direction: column;
+.popup-corp-grid {
+    padding-top: 8px;
+    margin-top: 6px;
+    border-top: 1px solid #f1f5f9;
     gap: 6px;
-}
-
-.popup-actions-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-}
-
-/* Botones dentro del Popup */
-.popup-btn {
-    width: 100%;
-    min-height: 36px;
-    padding: 7px 10px;
-    border-radius: 10px;
-    border: none;
-    font-weight: 800;
-    font-size: 11px;
-    text-transform: uppercase;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    cursor: pointer;
-    transition: transform 0.14s ease;
-}
-
-.popup-btn .material-icons-round {
-    font-size: 16px;
-}
-
-.popup-btn:active {
-    transform: scale(0.96);
-}
-
-.btn-detail {
-    background: #e0f2fe;
-    color: #0369a1;
-    border: 1px solid #bae6fd;
-}
-
-.btn-go-direct {
-    background: #f0fdf4;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
-}
-
-.btn-popup-order {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-    color: #ffffff;
-    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);
-}
-
-.btn-popup-visit {
-    background: #f5f3ff;
-    color: #6d28d9;
-    border: 1px solid #ddd6fe;
 }
 
 /* Notificaciones Toast */

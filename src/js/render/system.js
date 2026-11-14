@@ -249,7 +249,113 @@ async function renderAjustes(isBack = false) {
     }, 100);
 }
 
-// --- LOGICA DE // Función núcleo de backup (puede ser manual o automática)
+// --- HELPERS INTERNOS DE BACKUP (SIN DUPLICACIÓN Y BLOQUEO ÚNICO DIARIO) ---
+let _autoBackupInFlight = false;
+
+function _getBackupScriptUrl() {
+    let url = localStorage.getItem('apps_script_url');
+    if (!url || url.includes('/edit')) {
+        url = DEFAULT_SCRIPT_URL;
+        localStorage.setItem('apps_script_url', DEFAULT_SCRIPT_URL);
+    }
+    return url;
+}
+
+function _getLocalDateKey(date = new Date()) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function _extractBackupDateTime(file) {
+    const rawName = String(file?.name || '');
+    const match = rawName.match(/(\d{4})-(\d{2})-(\d{2})[_T-](\d{2})-(\d{2})/);
+    if (match) {
+        const [, yyyy, mm, dd, hh, min] = match;
+        const parsedDate = new Date(
+            parseInt(yyyy, 10),
+            parseInt(mm, 10) - 1,
+            parseInt(dd, 10),
+            parseInt(hh, 10),
+            parseInt(min, 10),
+            0,
+            0
+        );
+        return {
+            dateKey: `${yyyy}-${mm}-${dd}`,
+            hours: parseInt(hh, 10),
+            minutes: parseInt(min, 10),
+            timestamp: Number.isNaN(parsedDate.getTime()) ? null : parsedDate.getTime()
+        };
+    }
+    const d = file?.date ? new Date(file.date) : null;
+    if (d && !Number.isNaN(d.getTime())) {
+        return {
+            dateKey: _getLocalDateKey(d),
+            hours: d.getHours(),
+            minutes: d.getMinutes(),
+            timestamp: d.getTime()
+        };
+    }
+    return null;
+}
+
+async function _fetchRemoteBackupFiles(url) {
+    const parseJsonSafe = (text) => {
+        try {
+            return JSON.parse(text);
+        } catch (jsonErr) {
+            if (text && text.trim().startsWith('<')) {
+                throw new Error("El servidor de Google devolvió una página HTML en lugar de datos JSON. Esto ocurre cuando la URL es incorrecta o la Aplicación Web en Google Apps Script no está configurada para 'Cualquier persona' (Anyone).");
+            }
+            throw jsonErr;
+        }
+    };
+
+    const sep = url.includes('?') ? '&' : '?';
+    let response = await fetch(`${url}${sep}action=list`);
+    let result = parseJsonSafe(await response.text());
+    let isSuccess = result.status === "success" || result.success;
+
+    if (!isSuccess && !result.files) {
+        response = await fetch(`${url}${sep}action=getBackups`);
+        result = parseJsonSafe(await response.text());
+        isSuccess = result.status === "success" || result.success;
+    }
+
+    if (!isSuccess) {
+        throw new Error(result.message || "El servidor no devolvió copias válidas.");
+    }
+
+    const files = Array.isArray(result.files) ? result.files : [];
+    return files.filter(f => !String(f.name || '').toLowerCase().endsWith('.xlsx'));
+}
+
+async function _markAutoBackupDoneForDate(dateKey, displayTimestamp = null) {
+    localStorage.setItem('last_auto_backup_date', dateKey);
+
+    if (displayTimestamp && !Number.isNaN(displayTimestamp)) {
+        const currentStoredTs = parseInt(localStorage.getItem('last_auto_backup') || '0', 10) || 0;
+        if (displayTimestamp >= currentStoredTs) {
+            const d = new Date(displayTimestamp);
+            localStorage.setItem('last_auto_backup', String(displayTimestamp));
+            localStorage.setItem('last_auto_backup_str', d.toLocaleString());
+        }
+    }
+
+    try {
+        if (typeof dataManager !== 'undefined' && dataManager.db) {
+            await dataManager.db.put('config', {
+                key: 'auto_backup_log',
+                lastAutoDate: dateKey,
+                updatedAt: new Date().toISOString()
+            });
+        }
+    } catch (e) {
+        console.warn("[Auto-Backup] No se pudo guardar marca en IndexedDB:", e);
+    }
+}
+
+// --- LOGICA DE BACKUP EN DRIVE (manual o automática) ---
 async function performDriveBackup(isSilent = false) {
     try {
         const fullData = await dataManager.exportFullBackup();
@@ -266,26 +372,22 @@ async function performDriveBackup(isSilent = false) {
             return false;
         }
 
-        // Prevent backup spam from quick reloads
+        const todayKey = _getLocalDateKey(new Date());
         if (isSilent) {
-            localStorage.setItem("last_auto_backup", new Date().getTime().toString());
+            localStorage.setItem('last_auto_backup_date', todayKey);
         }
         console.log(`[Backup] Exportando ${totalOrders} pedidos, ${totalClients} clientes...`);
 
         const payload = {
             action: 'fullBackup',
+            isAuto: Boolean(isSilent),
             data: {
                 ...fullData,
                 timestamp: new Date().toISOString()
             }
         };
 
-        let url = localStorage.getItem('apps_script_url');
-        if (!url || url.includes('/edit')) {
-            url = DEFAULT_SCRIPT_URL;
-            localStorage.setItem('apps_script_url', DEFAULT_SCRIPT_URL);
-        }
-
+        const url = _getBackupScriptUrl();
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -307,20 +409,33 @@ async function performDriveBackup(isSilent = false) {
             const nowStr = now.toLocaleString();
             localStorage.setItem('last_auto_backup', now.getTime().toString());
             localStorage.setItem('last_auto_backup_str', nowStr);
-            
+
+            if (isSilent) {
+                await _markAutoBackupDoneForDate(_getLocalDateKey(now), now.getTime());
+            }
+
             const backups = JSON.parse(localStorage.getItem('app_backups') || '[]');
             backups.unshift({ date: now.toISOString(), status: 'OK', count: fullData.orders.length });
             localStorage.setItem('app_backups', JSON.stringify(backups.slice(0, 10)));
-            
+
             if (!isSilent) alert(`Copia de seguridad en la nube completada (${fullData.orders.length} pedidos, ${fullData.clients.length} clientes).`);
             if (window.currentView === 'ajustes') renderAjustes();
             return true;
         } else {
+            if (isSilent && localStorage.getItem('last_auto_backup_date') === todayKey) {
+                localStorage.removeItem('last_auto_backup_date');
+            }
             if (!isSilent) alert("Fallo en Drive: " + (result.message || "Error al guardar la copia."));
             return false;
         }
     } catch (e) {
         console.error("Backup Error", e);
+        if (isSilent) {
+            const todayKey = _getLocalDateKey(new Date());
+            if (localStorage.getItem('last_auto_backup_date') === todayKey) {
+                localStorage.removeItem('last_auto_backup_date');
+            }
+        }
         if (!isSilent) alert("Error al realizar la copia de seguridad: " + e.message);
         return false;
     }
@@ -421,49 +536,8 @@ async function openBackupsModal() {
     let driveFiles = null;
 
     try {
-        let url = localStorage.getItem('apps_script_url');
-        if (!url || url.includes('/edit')) {
-            url = DEFAULT_SCRIPT_URL;
-            localStorage.setItem('apps_script_url', DEFAULT_SCRIPT_URL);
-        }
-        let response = await fetch(url + (url.includes('?') ? '&' : '?') + "action=list");
-        let text = await response.text();
-        let result;
-        try {
-            result = JSON.parse(text);
-        } catch (jsonErr) {
-            if (text.trim().startsWith('<')) {
-                throw new Error("El servidor de Google devolvió una página HTML en lugar de datos JSON. Esto ocurre cuando la URL es incorrecta o la Aplicación Web en Google Apps Script no está configurada para 'Cualquier persona' (Anyone).");
-            }
-            throw jsonErr;
-        }
-
-        const isSuccess = result.status === "success" || result.success;
-
-        if (isSuccess) {
-            const files = Array.isArray(result.files) ? result.files : [];
-            driveFiles = files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
-        } else if (!result.files) {
-            response = await fetch(url + (url.includes('?') ? '&' : '?') + "action=getBackups");
-            text = await response.text();
-            try {
-                result = JSON.parse(text);
-            } catch (jsonErr) {
-                if (text.trim().startsWith('<')) {
-                    throw new Error("El servidor de Google devolvió una página HTML en lugar de datos JSON. Verifica la URL y los permisos en Google Apps Script.");
-                }
-                throw jsonErr;
-            }
-
-            if (result.status === "success" || result.success) {
-                const files = Array.isArray(result.files) ? result.files : [];
-                driveFiles = files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
-            } else {
-                driveError = result.message || "El servidor no devolvió copias válidas.";
-            }
-        } else {
-            driveError = result.message || "El servidor no devolvió copias válidas.";
-        }
+        const url = _getBackupScriptUrl();
+        driveFiles = await _fetchRemoteBackupFiles(url);
     } catch (e) {
         console.error("Error al obtener copias de Drive:", e);
         driveError = e.message || "Error de conexión con Google Drive.";
@@ -797,40 +871,88 @@ async function testConnection() {
     }
 }
 
-// Periódico Automático
-// Periódico Automático
+// Periódico Automático: ÚNICA copia automática al día de Lunes a Viernes desde las 20:30
 function startBackupScheduler() {
-    const checkAndRun = () => {
-        const lastBackupTime = localStorage.getItem('last_auto_backup');
+    if (window._backupSchedulerStarted) return;
+    window._backupSchedulerStarted = true;
+
+    const checkAndRun = async () => {
+        if (_autoBackupInFlight) return;
+
         const now = new Date();
-        const day = now.getDay(); 
+        const day = now.getDay();
         const hours = now.getHours();
         const minutes = now.getMinutes();
 
-        // Configuración: Lunes (1) a Viernes (5) después de las 20:30
+        // Configuración: Lunes (1) a Viernes (5) desde las 20:30 en adelante
         const isWorkDay = (day >= 1 && day <= 5);
         const isAfterTime = (hours > 20 || (hours === 20 && minutes >= 30));
+        if (!isWorkDay || !isAfterTime) return;
 
-        if (isWorkDay && isAfterTime) {
-            // Comprobar si ya se hizo una copia HOY
-            if (lastBackupTime) {
-                const lastDate = new Date(parseInt(lastBackupTime));
-                if (lastDate.toDateString() === now.toDateString()) {
-                    console.log("Auto-Backup: Ya se realizó la copia correspondiente a hoy.");
+        const todayKey = _getLocalDateKey(now);
+
+        // Capa 1: comprobar marca rápida en localStorage
+        if (localStorage.getItem('last_auto_backup_date') === todayKey) {
+            return;
+        }
+
+        // Migración suave desde la marca anterior last_auto_backup (solo si fue hoy >= 20:30)
+        const legacyTs = parseInt(localStorage.getItem('last_auto_backup') || '', 10);
+        if (!Number.isNaN(legacyTs) && legacyTs > 0) {
+            const legacyDate = new Date(legacyTs);
+            if (_getLocalDateKey(legacyDate) === todayKey) {
+                const lh = legacyDate.getHours();
+                const lm = legacyDate.getMinutes();
+                if (lh > 20 || (lh === 20 && lm >= 30)) {
+                    await _markAutoBackupDoneForDate(todayKey, legacyTs);
                     return;
                 }
             }
-            
-            console.log("Iniciando única copia automática del día (Rango 20:30 - 00:00)...");
-            performDriveBackup(true); // El true indica modo silencioso (sin alertas)
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return;
+        }
+
+        _autoBackupInFlight = true;
+        try {
+            // Capa 2: comprobar marca persistente en IndexedDB (resiste resets de localStorage)
+            if (typeof dataManager !== 'undefined' && dataManager.db) {
+                const logRecord = await dataManager.db.get('config', 'auto_backup_log');
+                if (logRecord && logRecord.lastAutoDate === todayKey) {
+                    localStorage.setItem('last_auto_backup_date', todayKey);
+                    return;
+                }
+            }
+
+            // Capa 3: comprobar en Google Drive si ya existe una copia de hoy desde las 20:30
+            // (evita duplicados entre distintos navegadores, PWA o sesiones)
+            const url = _getBackupScriptUrl();
+            const remoteFiles = await _fetchRemoteBackupFiles(url);
+            const existingEveningBackup = remoteFiles
+                .map(f => _extractBackupDateTime(f))
+                .find(info => info && info.dateKey === todayKey && (info.hours > 20 || (info.hours === 20 && info.minutes >= 30)));
+
+            if (existingEveningBackup) {
+                console.log("[Auto-Backup] Ya existe una copia en Drive de hoy desde las 20:30. Omitiendo subida automática.");
+                await _markAutoBackupDoneForDate(todayKey, existingEveningBackup.timestamp);
+                return;
+            }
+
+            console.log("[Auto-Backup] Primera entrada tras las 20:30: ejecutando única copia automática del día...");
+            await performDriveBackup(true);
+        } catch (err) {
+            console.warn("[Auto-Backup] Comprobación omitida temporalmente:", err);
+        } finally {
+            _autoBackupInFlight = false;
         }
     };
 
     // Ejecutar inmediatamente al abrir la app
     checkAndRun();
 
-    // Y dejar un vigilante cada 15 minutos por si la app se queda abierta en segundo plano
-    setInterval(checkAndRun, 15 * 60 * 1000); 
+    // Vigilante cada 15 minutos por si la app se queda abierta al llegar las 20:30
+    setInterval(checkAndRun, 15 * 60 * 1000);
 }
 
 function injectManagementYearsModal() {

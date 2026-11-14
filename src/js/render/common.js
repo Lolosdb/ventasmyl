@@ -111,7 +111,7 @@ function renderNavMenuHTML() {
             ]
         },
         {
-            title: 'Planificación',
+            title: 'Objetivos',
             items: [
                 { icon: 'ads_click', label: 'Objetivos Mensuales', action: 'renderObjetivos()', tone: 'indigo' },
                 { icon: 'event_repeat', label: 'Objetivos Trimestrales', action: 'renderObjetivosTrimestrales()', tone: 'indigo' }
@@ -813,6 +813,10 @@ window.openNearbyRadarModal = async function() {
                 : '';
 
             const safeCode = String(c.code || '').replace(/'/g, "\\'");
+            const mapsAction = hasCoords
+                ? `window.open('https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}', '_blank')`
+                : `window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('${String((c.address || '') + ' ' + (c.location || '')).replace(/'/g, "\\'")}'), '_blank')`;
+            const cleanRadarPhone = String(c.phone || '').replace(/\s+/g, '');
 
             return `
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 12px 14px; box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);">
@@ -845,19 +849,11 @@ window.openNearbyRadarModal = async function() {
                         </div>
                     ` : ''}
 
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9;">
-                        <button onclick="${hasCoords ? `window.open('https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}', '_blank')` : `window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('${String((c.address || '') + ' ' + (c.location || '')).replace(/'/g, "\\'")}'), '_blank')`}" style="background: #16a34a; color: white; border: none; border-radius: 10px; padding: 7px 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                            <span class="material-icons-round" style="font-size: 15px;">near_me</span> IR
-                        </button>
-                        <button onclick="closeNearbyRadarModal(); window.openNewOrderForClient('${safeCode}')" style="background: #009ee3; color: white; border: none; border-radius: 10px; padding: 7px 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                            <span class="material-icons-round" style="font-size: 15px;">add_shopping_cart</span> PEDIDO
-                        </button>
-                        <button onclick="closeNearbyRadarModal(); window.openClientDetailModal('${safeCode}')" style="background: #f1f5f9; color: #1e293b; border: none; border-radius: 10px; padding: 7px 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                            <span class="material-icons-round" style="font-size: 15px;">badge</span> FICHA
-                        </button>
-                        <button onclick="${c.phone ? `window.location.href='tel:${String(c.phone).replace(/\\s+/g, '')}'` : `alert('Sin teléfono registrado')`}" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 10px; padding: 7px 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                            <span class="material-icons-round" style="font-size: 15px;">call</span> LLAMAR
-                        </button>
+                    <div class="app-corp-row" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+                        ${window.renderCorpActionBtn({ type: 'maps', onclick: mapsAction, label: 'Cómo llegar', compact: true })}
+                        ${window.renderCorpActionBtn({ type: 'phone', onclick: cleanRadarPhone ? `window.location.href='tel:${cleanRadarPhone}'` : '', label: 'Llamar', disabled: !cleanRadarPhone, compact: true })}
+                        ${window.renderCorpActionBtn({ type: 'order', onclick: `closeNearbyRadarModal(); window.openNewOrderForClient('${safeCode}')`, label: 'Pedido', compact: true })}
+                        ${window.renderCorpActionBtn({ type: 'detail', onclick: `closeNearbyRadarModal(); window.openClientDetailModal('${safeCode}')`, label: 'Ficha', compact: true })}
                     </div>
                 </div>
             `;
@@ -1364,6 +1360,100 @@ if (typeof document !== 'undefined') {
         startClearableObserver();
     }
 }
+
+// =========================================================================
+// COMPONENTE GLOBAL UNIFICADO DE BOTONES CORPORATIVOS (MAPS, CALL, WA, MAIL)
+// =========================================================================
+window.APP_ACTION_SVGS = {
+    maps: `<svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">
+        <path fill="#1a73e8" d="M24 4c-7.73 0-14 6.27-14 14 0 3.09 1.01 5.95 2.71 8.27L24 44l11.29-17.73A13.92 13.92 0 0 0 38 18c0-7.73-6.27-14-14-14z"/>
+        <path fill="#ea4335" d="M24 4c-5.21 0-9.75 2.85-12.16 7.08L20.1 18h7.8L36.16 11.08C33.75 6.85 29.21 4 24 4z"/>
+        <path fill="#fbbc04" d="M11.84 11.08A13.94 13.94 0 0 0 10 18c0 3.09 1.01 5.95 2.71 8.27L20.1 18l-8.26-6.92z"/>
+        <path fill="#34a853" d="M24 44l11.29-17.73A13.94 13.94 0 0 0 38 18c0-2.5-.66-4.85-1.84-6.92L24 25.5V44z"/>
+        <circle cx="24" cy="18" r="5.5" fill="#ffffff"/>
+    </svg>`,
+    phone: `<svg viewBox="0 0 24 24" width="22" height="22" fill="#ffffff" aria-hidden="true">
+        <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z"/>
+    </svg>`,
+    whatsapp: `<svg viewBox="0 0 32 32" width="24" height="24" fill="#ffffff" aria-hidden="true">
+        <path d="M16 3C8.82 3 3 8.82 3 16c0 2.48.7 4.8 1.91 6.77L3.4 28.6l6-1.48A12.93 12.93 0 0 0 16 29c7.18 0 13-5.82 13-13S23.18 3 16 3zm7.58 18.23c-.32.9-1.87 1.72-2.6 1.83-.66.1-1.5.14-2.42-.15-.56-.18-1.28-.42-2.2-.82-3.87-1.67-6.4-5.58-6.6-5.84-.2-.26-1.57-2.09-1.57-3.99s.99-2.83 1.35-3.22c.35-.39.77-.49 1.03-.49.26 0 .51 0 .74.01.24.01.56-.09.87.67.32.77 1.09 2.66 1.18 2.86.1.19.16.42.03.68-.13.26-.2.42-.39.64-.19.23-.41.51-.58.68-.19.19-.4.4-.17.79.23.39 1.01 1.66 2.17 2.69 1.49 1.33 2.75 1.74 3.14 1.94.39.19.62.16.85-.1.23-.26.97-1.13 1.23-1.52.26-.39.52-.32.87-.19.35.13 2.25 1.06 2.64 1.25.39.19.64.29.74.45.1.16.1.94-.22 1.84z"/>
+    </svg>`,
+    mail: `<svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">
+        <rect x="17" y="10" width="23" height="28" rx="3" fill="#0364b8"/>
+        <path fill="#28a8ea" d="M40 16H17v18c0 2.21 1.79 4 4 4h15c2.21 0 4-1.79 4-4V16z"/>
+        <path fill="#0078d4" d="M17 16l11.5 8.2L40 16v-2.5c0-1.93-1.57-3.5-3.5-3.5h-16c-1.93 0-3.5 1.57-3.5 3.5V16z"/>
+        <path fill="#50d9ff" d="M17 16l11.5 8.2L40 16H17z" opacity="0.45"/>
+        <rect x="6" y="14" width="20" height="20" rx="3.5" fill="#0a58ca"/>
+        <ellipse cx="16" cy="24" rx="4.8" ry="5.6" fill="none" stroke="#ffffff" stroke-width="2.6"/>
+    </svg>`
+};
+
+window.renderCorpActionBtn = function({
+    type = 'phone',
+    onclick = '',
+    href = '',
+    label = '',
+    title = '',
+    disabled = false,
+    compact = false,
+    showLabel = true,
+    done = false,
+    stopPropagation = false,
+    extraClass = ''
+} = {}) {
+    const defaults = {
+        maps: 'Cómo llegar',
+        phone: 'Llamar',
+        whatsapp: 'Whatsapp',
+        mail: 'Mail',
+        visit: 'Visitado',
+        order: 'Pedido',
+        detail: 'Ficha'
+    };
+    const finalLabel = label !== undefined && label !== null && label !== '' ? label : (defaults[type] || '');
+    const finalTitle = title || finalLabel || type;
+
+    let iconHtml = window.APP_ACTION_SVGS[type] || '';
+    if (!iconHtml) {
+        const matIcons = {
+            visit: done ? 'check_circle' : 'add_task',
+            order: 'add_shopping_cart',
+            detail: 'badge'
+        };
+        iconHtml = `<span class="material-icons-round">${matIcons[type] || 'touch_app'}</span>`;
+    }
+
+    const escAttr = (v) => String(v || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;');
+
+    const cls = [
+        'app-corp-btn',
+        compact ? 'is-compact' : '',
+        disabled ? 'is-disabled' : '',
+        done ? 'is-done' : '',
+        extraClass || ''
+    ].filter(Boolean).join(' ');
+
+    const innerHtml = `
+        <span class="app-corp-circle is-${type}">${iconHtml}</span>
+        ${showLabel && finalLabel ? `<span class="app-corp-label">${finalLabel}</span>` : ''}
+    `;
+
+    if (href && !disabled) {
+        const stopAttr = stopPropagation ? ' onclick="event.stopPropagation()"' : '';
+        return `<a href="${escAttr(href)}" target="_blank" rel="noopener" class="${cls}" title="${escAttr(finalTitle)}"${stopAttr}>${innerHtml}</a>`;
+    }
+
+    const rawClick = String(onclick || '').trim();
+    const clickCode = !disabled && rawClick
+        ? (stopPropagation ? `event.stopPropagation(); ${rawClick}` : rawClick)
+        : '';
+    const onclickAttr = clickCode ? ` onclick="${escAttr(clickCode)}"` : '';
+    const disabledAttr = disabled ? ' disabled aria-disabled="true"' : '';
+
+    return `<button type="button" class="${cls}" title="${escAttr(finalTitle)}"${onclickAttr}${disabledAttr}>${innerHtml}</button>`;
+};
 
 
 

@@ -264,7 +264,17 @@ class DataManager {
     }
 
 
-    async getDetailedGoals() {
+    async getDetailedGoals(year = null) {
+        const currentYear = new Date().getFullYear();
+        const targetYear = year !== null && year !== undefined ? parseInt(year, 10) : currentYear;
+
+        if (!Number.isNaN(targetYear) && targetYear < currentYear) {
+            const history = await this.getGoalsHistory();
+            if (history[String(targetYear)] && history[String(targetYear)].data3) {
+                return history[String(targetYear)];
+            }
+        }
+
         const stored = await this.db.get('config', 'goals');
         if (stored && stored.data3) return stored;
 
@@ -276,21 +286,38 @@ class DataManager {
         };
     }
 
-    async saveGoals(goalsData) {
-        // goalsData should look like { data3: [], data4: [], data5: [] }
-        await this.db.put('config', { key: 'goals', ...goalsData });
+    async saveGoals(goalsData, year = null) {
+        const currentYear = new Date().getFullYear();
+        const targetYear = year !== null && year !== undefined ? parseInt(year, 10) : currentYear;
+        const normalized = {
+            data3: [...(goalsData.data3 || Array(12).fill(0))],
+            data4: [...(goalsData.data4 || Array(12).fill(0))],
+            data5: [...(goalsData.data5 || Array(12).fill(0))]
+        };
+
+        if (Number.isNaN(targetYear) || targetYear >= currentYear) {
+            await this.db.put('config', { key: 'goals', ...normalized });
+        }
+        await this.saveGoalsSnapshot(Number.isNaN(targetYear) ? currentYear : targetYear, normalized);
     }
 
-    async updateGoal(level, monthIdx, value) {
-        const goals = await this.getDetailedGoals();
+    async updateGoal(level, monthIdx, value, year = null) {
+        const currentYear = new Date().getFullYear();
+        const targetYear = year !== null && year !== undefined ? parseInt(year, 10) : currentYear;
+        const goals = await this.getDetailedGoals(targetYear);
         const key = `data${level}`;
         if (goals[key]) {
-            goals[key][monthIdx] = parseFloat(value) || 0;
-            await this.saveGoals(goals);
+            const copy = {
+                data3: [...(goals.data3 || Array(12).fill(0))],
+                data4: [...(goals.data4 || Array(12).fill(0))],
+                data5: [...(goals.data5 || Array(12).fill(0))]
+            };
+            copy[key][monthIdx] = parseFloat(value) || 0;
+            await this.saveGoals(copy, targetYear);
         }
     }
 
-    // --- GOALS HISTORY (SNAPSHOTS POR AÑO para Facturación Real) ---
+    // --- GOALS HISTORY (SNAPSHOTS POR AÑO para Facturación Real y Comisiones) ---
     async getGoalsHistory() {
         const stored = await this.db.get('config', 'goals_history');
         return (stored && stored.data) ? stored.data : {};
@@ -299,20 +326,29 @@ class DataManager {
     async saveGoalsSnapshot(year, goalsData) {
         const yearStr = String(year);
         const history = await this.getGoalsHistory();
-        history[yearStr] = {
+        const nextSnapshot = {
             data3: [...(goalsData.data3 || [])],
             data4: [...(goalsData.data4 || [])],
             data5: [...(goalsData.data5 || [])]
         };
+        const prevSnapshot = history[yearStr];
+        if (prevSnapshot && JSON.stringify(prevSnapshot) === JSON.stringify(nextSnapshot)) {
+            return;
+        }
+        history[yearStr] = nextSnapshot;
         await this.db.put('config', { key: 'goals_history', data: history });
     }
 
     // Devuelve los objetivos para un año concreto:
-    //   - Año actual → objetivos activos (siempre en vivo)
-    //   - Año pasado → snapshot guardada, o null si no existe (sin colores)
+    //   - Año actual → objetivos activos (siempre en vivo, sincronizados en snapshot)
+    //   - Año pasado → snapshot guardada, o null si no existe
     async getGoalsForYear(year) {
         const currentYear = new Date().getFullYear();
-        if (parseInt(year) >= currentYear) {
+        if (parseInt(year, 10) >= currentYear) {
+            const history = await this.getGoalsHistory();
+            if (parseInt(year, 10) > currentYear && history[String(year)]) {
+                return history[String(year)];
+            }
             return await this.getDetailedGoals();
         }
         const history = await this.getGoalsHistory();
@@ -360,6 +396,19 @@ class DataManager {
 
         stored.data[yearStr] = cleanData;
         await this.db.put('config', stored);
+    }
+
+    async getQuarterlyGoalYears() {
+        const currentYear = new Date().getFullYear();
+        const yearSet = new Set([currentYear, currentYear + 1]);
+        const stored = await this.db.get('config', 'quarterly_goals_v2');
+        if (stored && stored.data) {
+            Object.keys(stored.data).forEach(y => {
+                const parsed = parseInt(y, 10);
+                if (!Number.isNaN(parsed) && parsed >= 2000) yearSet.add(parsed);
+            });
+        }
+        return Array.from(yearSet).sort((a, b) => a - b);
     }
 
     // --- DEPARTAMENTOS ---
@@ -1748,6 +1797,9 @@ class DataManager {
                                     shop: String(shopVal).trim(),
                                     clientCode: clientCodeVal ? String(clientCodeVal).trim() : null,
                                     amount: amountVal,
+                                    noTampo: o.noTampo || '',
+                                    noTampoAmount: parseFloat(o.noTampoAmount) || 0,
+                                    facturadoTodo: o.facturadoTodo || '',
                                     comments: commentsVal,
                                     year: yearVal,
                                     persistedIsNewClient: isNewClient
