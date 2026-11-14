@@ -3,10 +3,13 @@
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 .ana-wrapper {
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
-    height: auto;
-    padding: 6px 8px 4px;
+    height: calc(100vh - 144px);
+    height: calc(100dvh - 144px);
+    max-height: calc(100vh - 144px);
+    max-height: calc(100dvh - 144px);
+    padding: 6px 8px 6px;
     background: #f1f5f9;
     display: flex;
     flex-direction: column;
@@ -118,7 +121,7 @@
 
 /* Filas mensuales */
 .ana-row {
-    height: 36px;
+    height: 32px;
 }
 
 .ana-row td {
@@ -335,6 +338,46 @@
     padding: 4px 5px;
     text-align: center;
     vertical-align: middle;
+    box-shadow: 0 -2px 6px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 600px), (max-height: 820px) {
+    .ana-table thead th {
+        padding: 7px 4px;
+    }
+
+    .ana-row {
+        height: 30px;
+    }
+
+    .ana-row td {
+        padding: 2px 3px;
+    }
+
+    .ana-cell-btn,
+    .ana-cell-static {
+        padding: 2px 3px;
+        gap: 1px;
+    }
+
+    .ana-val-main {
+        font-size: 0.8125rem;
+        line-height: 1.12;
+    }
+
+    .ana-delta-chip {
+        font-size: 0.6rem;
+        line-height: 1.05;
+        padding: 1px 5px;
+    }
+
+    .ana-total-row td {
+        padding: 4px 4px;
+    }
+
+    .ana-total-num {
+        font-size: 0.85rem;
+    }
 }
 
 .ana-total-row td.ana-sticky-col {
